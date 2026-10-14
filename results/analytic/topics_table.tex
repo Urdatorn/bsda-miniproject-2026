@@ -1,0 +1,55 @@
+% The 39 topics of the analytic model: English gloss, the two label lemmata, their transliteration.
+% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \usepackage{booktabs}.
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lllrr}
+\toprule
+Topic & Label lemmata & Transliteration & Lemmata & Tragic tokens \\
+\midrule
+but-such & ἀλλά-τοιοῦτος & alla-toioutos & 126 & 3420 \\
+still-then & ἔτι-τότε & eti-tote & 146 & 3281 \\
+wretched-miserable & δύστηνος-τλήμων & dystēnos-tlēmōn & 105 & 3066 \\
+man-body & ἄνθρωπος-σῶμα & anthrōpos-sōma & 123 & 2774 \\
+fear-pity & δείδω-οἰκτείρω & deidō-oikteirō & 152 & 2678 \\
+good-just & ἀγαθός-δίκαιος & agathos-dikaios & 110 & 2604 \\
+deem-persuade & ἀξιόω-πείθω & axioō-peithō & 111 & 2560 \\
+all-other & ἅπας-ἕτερος & hapas-heteros & 115 & 2378 \\
+that-child & κεῖνος-τέκος & keinos-tekos & 140 & 2364 \\
+speak-know & ἐρῶ-γιγνώσκω & erō-gignōskō & 124 & 2193 \\
+hear-grieve & ἀκούω-ἀνιάω & akouō-aniaō & 117 & 2187 \\
+matter-provide & πρᾶγμα-παρέχω & pragma-parechō & 95 & 1867 \\
+Greek-barbarian & ἕλλην-βάρβαρος & hellēn-barbaros & 78 & 1852 \\
+hubris-praise & ὕβρις-ἐπαινέω & hybris-epaineō & 113 & 1828 \\
+kill-destroy & ἀναιρέω-ἀπόλλυμι & anaireō-apollymi & 70 & 1812 \\
+marriage-bed & γάμος-λέχος & gamos-lechos & 63 & 1699 \\
+temple-wall & ἱερόν-τεῖχος & hieron-teichos & 78 & 1619 \\
+wrong-err & ἀδικέω-ἐξαμαρτάνω & adikeō-examartanō & 68 & 1504 \\
+Zeus-Semele & ζεύς-σεμέλη & zeus-semelē & 91 & 1480 \\
+hot-lung & θερμός-πλεύμων & thermos-pleumōn & 119 & 1363 \\
+neck-press & αὐχήν-ἐρείδω & auchēn-ereidō & 105 & 1239 \\
+spear-lance & δόρυ-λόγχη & dory-lonchē & 73 & 1229 \\
+Creon-Polynices & κρέων-πολυνείκης & kreōn-polyneikēs & 78 & 1221 \\
+Agamemnon-Troy & ἀγαμέμνων-τροία & agamemnōn-troia & 50 & 1210 \\
+bird-beast & ὄρνις-θήρ & ornis-thēr & 90 & 1189 \\
+unholy-pollution & ἀνόσιος-μίασμα & anosios-miasma & 63 & 1130 \\
+depart-travel & ἀπέρχομαι-πορεύω & aperchomai-poreuō & 66 & 1098 \\
+saviour-piety & σωτήρ-εὐσέβεια & sōtēr-eusebeia & 68 & 1066 \\
+crash-wail & κτύπος-γόος & ktypos-goos & 81 & 1066 \\
+small-ground & βαιός-πέδον & baios-pedon & 170 & 1051 \\
+sacrifice-offer & θυσία-θύω & thysia-thyō & 89 & 953 \\
+flash-fire & σέλας-πῦρ & selas-pyr & 63 & 939 \\
+sail-sea & πλέω-θάλασσα & pleō-thalassa & 81 & 931 \\
+then-equal & ἄρα-ἴσος & ara-isos & 30 & 800 \\
+mane-neck & χαίτη-δειρή & chaitē-deirē & 48 & 636 \\
+prophecy-oracle & μαντεία-χρηστήριον & manteia-chrēstērion & 32 & 581 \\
+sprout-olive & βλαστάνω-ἐλαία & blastanō-elaia & 42 & 480 \\
+river-plain & ποταμός-πεδίον & potamos-pedion & 33 & 324 \\
+third-fifth & τρίτος-πέμπτος & tritos-pemptos & 12 & 299 \\
+\bottomrule
+\end{tabular}
+\caption{The 39 unsupervised topics, in order of their mass in the three tragedians. A topic is named by the two
+non-cognate lemmata nearest its centroid in the word2vec space; the English glosses are the labels used in the
+analysis. The last columns give the cluster's size in the vocabulary and its tokens in the tragic corpus.}
+\label{tab:topics}
+\end{table}
