@@ -68,7 +68,20 @@ the lift of the posterior means.
 
 The dataset `Urdatorn/bsda-miniproject-2026` on the Hugging Face Hub: one bag
 of content lemmata per restored verse, the vocabulary with its cluster labels,
-and the corpus of the three tragedians.
+and the corpus of the three tragedians. The chunk below downloads the three
+files (20 MB) into `data/` the first time the report is knitted.
+
+```{r download}
+# the data directory is not in the repository: fetch the dataset if needed
+hub <- "https://huggingface.co/datasets/Urdatorn/bsda-miniproject-2026"
+dir.create(params$data, showWarnings = FALSE, recursive = TRUE)
+for (f in c("vocab.json", "corpus.parquet", "imputations.parquet")) {
+  if (!file.exists(file.path(params$data, f))) {
+    download.file(paste(hub, "resolve/main", f, sep = "/"),
+                  file.path(params$data, f), mode = "wb", quiet = TRUE)
+  }
+}
+```
 
 ```{r data}
 vocab  <- fromJSON(file.path(params$data, "vocab.json"))

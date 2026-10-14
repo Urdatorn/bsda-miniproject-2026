@@ -19,6 +19,8 @@ pip install -r requirements.txt
 hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir data
 ```
 
+The R Markdown reports download these files themselves if `data/` is missing.
+
 - `vocab.json`: the $V = 3504$ content lemmata (nouns, verbs, adjectives, adverbs, proper names of three or more letters, three or more
   occurrences in the three tragedians, minus particles, light verbs and lemmata present in more than 25 % of Sophocles' 17-line windows).
   The lemmata come from a neural tagger, which damages some (λήσομενανθάνω, γείγνομαι, παήρ), so a lemma is kept only if it is
