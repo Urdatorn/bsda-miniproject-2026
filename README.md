@@ -40,7 +40,7 @@ stream; a cell's documents are cut from its shuffled stream, at most 1000 per ce
 
 Topics are seeded into a latent Dirichlet allocation with strong word priors, plus four free topics. With `--topics hypotheses` the seeds are
 the five philological hypotheses about the lost text (oath and disclosure, countryside and hunt, violence and death, women and marriage,
-kin and names); with `--topics clusters` they are the 39 unsupervised clusters of the analytic model, each seeded with all its lemmata, so that the
+kin and names); with `--topics clusters` they are the 35 unsupervised clusters of the analytic model, each seeded with all its lemmata, so that the
 same amortized workflow runs on unsupervised topics and the corpus decides how much a lemma leaks between clusters. The topic-word
 distributions $\phi$ ($K \times V$) are fitted once on the three tragedians with tomotopy.
 
@@ -58,7 +58,8 @@ the posterior means. Results: `results/amortized_mixed/` (hypotheses) and `resul
 The supervised topics are biased towards existing readings. The analytic model replaces them with hard clusters of the vocabulary: lemmata are embedded
 by word2vec (skip-gram over the whole lemmatised Greek corpus, Spearman 0.53 with the AGREE relatedness benchmark), the vocabulary is clustered
 by Ward's method, and the cut $K = 40$ is chosen where AGREE's related pairs still co-cluster while random pairs no longer do. One cluster of
-rare lemmata with unreliable vectors is dropped, leaving 39 topics, each labelled by the English glosses of the two non-cognate lemmata nearest its centroid
+rare lemmata with unreliable vectors and four clusters of function words (particles, quantifiers, adverbs of time) are dropped, leaving
+35 topics, each labelled by the English glosses of the two non-cognate lemmata nearest its centroid
 (kill-destroy, marriage-bed, unholy-pollution, crash-wail, bird-beast, ...). That construction lives upstream; here the labels arrive in
 `vocab.json` as `cluster_K40`, with the Greek pair beside them as `cluster_K40_lemmata` (wretched-miserable = δύστηνος-τλήμων).
 
