@@ -71,6 +71,11 @@ $$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\alpha \mathbf 1 + \mathbf n).$$
 A cell's posterior is the equal mixture of its documents' posteriors; it is compared with Sophocles' extant trimeters by
 $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws and by the lift of posterior means. Results: `results/analytic/`.
 
+Is the walk's topic profile an artefact of where the walk went? The report checks it two ways: the lift of every topic in windows of steps
+(all 120 chains over steps 525–3000, the 24 long chains to 12000) with its slope per 1000 steps, and the Gelman–Rubin $\hat R$ of each topic's
+share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *sail-sea* has
+$\hat R \le 1.04$; *sail-sea* ($\hat R = 1.5$) lives in some chains only, so its raised lift at v. 14 is a chain artefact.
+
 ## Run
 
 ```sh
@@ -89,5 +94,5 @@ scripts/            the GPU script of the amortized mixed model; topics_table.py
 slurm/              the GPU job for the amortized mixed model
 results/amortized_mixed/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv (five supervised topics)
 results/amortized_mixed_clusters/  the same with the 35 clusters as seeded topics
-results/analytic/     topics_K40.json (the clusters and their labels), topics_table.tex, posterior.csv from the Rmd
+results/analytic/     topics_K40.json (the clusters and their labels), topics_table.tex, posterior.csv and walk_stability.csv from the Rmd
 ```

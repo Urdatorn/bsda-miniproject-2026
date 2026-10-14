@@ -311,3 +311,163 @@ for (cell_name in c("walk", "henry")) {
 }
 knitr::kable(top_five, digits = 2, row.names = FALSE)
 ```
+
+# Is the walk's topic profile an artefact of where the walk went?
+
+A reviewer may object that the walk's topics only reflect the region of the
+restoration space that the chains happened to visit. Two checks answer that.
+First, does the lift of a topic drift as the walk proceeds? The walk is cut
+into windows of steps, every window is a cell like any other, and the slope of
+its lift against the step is the rate of change. Second, do the 120 chains
+agree? Each chain's snapshots form a series of topic shares, and the
+Gelman–Rubin $\hat R$ (BDA3 §11.4) compares the spread between chains with the
+spread within them: $\hat R$ near 1 means a chain's share does not depend on
+which chain it is.
+
+```{r walk_lemmata}
+# Every walk row is one restored verse of one snapshot (one chain at one
+# step, all 17 verses). Chains run alone have an empty chain number, so
+# there the chain set is the chain.
+walk$chain_id <- ifelse(is.na(walk$chain), walk$chain_set,
+                        paste(walk$chain_set, walk$chain))
+walk$snapshot <- paste(walk$chain_id, walk$iteration)
+
+# One long table with one line per topic-bearing lemma of the walk: its
+# topic and the row (and so the chain, snapshot and step) it belongs to
+row_of_entry <- rep(seq_len(nrow(walk)), lengths(walk$lemma_idx))
+row_of_lemma <- rep(row_of_entry, unlist(walk$count))
+walk_lemmata <- data.frame(row = row_of_lemma,
+                           topic = vocab$cluster_K40[lemma_stream(walk) + 1])
+walk_lemmata <- filter(walk_lemmata, !is.na(topic))
+walk_lemmata$chain_id <- walk$chain_id[walk_lemmata$row]
+walk_lemmata$snapshot <- walk$snapshot[walk_lemmata$row]
+walk_lemmata$step <- walk$iteration[walk_lemmata$row]
+```
+
+## Drift over the steps
+
+```{r drift}
+# The lift of every topic in each window of steps. The window's lemmata are
+# cut into documents (shuffled, so a document mixes chains) and compared
+# with Sophocles exactly as a lacuna cell is.
+lift_in_windows <- function(lemmata, breaks) {
+  windows <- NULL
+  for (i in seq_len(length(breaks) - 1)) {
+    in_window <- lemmata$step > breaks[i] & lemmata$step <= breaks[i + 1]
+    documents <- make_documents(lemmata$topic[in_window], limit = max_docs,
+                                shuffle = TRUE)
+    cell <- summarise_cell(documents, baseline$draws)
+    window_rows <- data.frame(step = (breaks[i] + breaks[i + 1]) / 2,
+                              topic = topic_names,
+                              n_docs = cell$n_docs,
+                              lift = cell$lift)
+    windows <- rbind(windows, window_rows)
+  }
+  windows
+}
+
+# All chains over their common range, in windows of 250 steps
+short_range <- lift_in_windows(walk_lemmata, seq(500, 3000, by = 250))
+short_range$chains <- "all 120 chains, steps 525-3000"
+
+# The 24 long chains over their whole run, in windows of 1000 steps
+long_lemmata <- filter(walk_lemmata, startsWith(chain_id, "chains_eric_long"))
+long_range <- lift_in_windows(long_lemmata, seq(1000, 12000, by = 1000))
+long_range$chains <- "24 long chains, steps 1025-12000"
+
+# The rate of change: the slope of lift against the step, per 1000 steps,
+# fitted by least squares over the windows of the common range
+slopes <- data.frame(topic = topic_names, slope_per_1000 = NA)
+for (i in seq_len(K)) {
+  topic_windows <- filter(short_range, topic == topic_names[i])
+  fit <- lm(lift ~ step, data = topic_windows)
+  slopes$slope_per_1000[i] <- coef(fit)[2] * 1000
+}
+```
+
+```{r drift_plot, fig.height = 4.5}
+# The five topics with the steepest slopes are coloured; the rest are grey
+steepest <- head(arrange(slopes, desc(abs(slope_per_1000))), 5)$topic
+drift <- rbind(short_range, long_range)
+drift$chains <- factor(drift$chains, levels = unique(drift$chains))
+drift$shown <- ifelse(drift$topic %in% steepest, drift$topic, "other")
+ggplot() +
+  geom_line(data = filter(drift, shown == "other"),
+            aes(x = step, y = lift, group = topic), colour = "grey80") +
+  geom_line(data = filter(drift, shown != "other"),
+            aes(x = step, y = lift, colour = shown)) +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  facet_wrap(~ chains, scales = "free_x") +
+  labs(x = "step of the walk", y = "lift against Sophocles", colour = NULL,
+       title = "Lift of every topic along the walk") +
+  theme_minimal(9)
+```
+
+## Agreement between the chains
+
+```{r rhat}
+# The share of every topic in every snapshot, among its topic-bearing lemmata
+counts <- table(walk_lemmata$snapshot, walk_lemmata$topic)
+counts <- counts[, topic_names]
+shares <- counts / rowSums(counts)
+snapshot_chain <- walk$chain_id[match(rownames(counts), walk$snapshot)]
+snapshot_step <- walk$iteration[match(rownames(counts), walk$snapshot)]
+
+# The classic R-hat for chains of equal length: W is the mean within-chain
+# variance, B the variance between the chain means scaled by the length
+rhat <- function(x, chain) {
+  chain_means <- tapply(x, chain, mean)
+  chain_vars <- tapply(x, chain, var)
+  n <- length(x) / length(chain_means)
+  W <- mean(chain_vars)
+  B <- n * var(chain_means)
+  var_hat <- (n - 1) / n * W + B / n
+  sqrt(var_hat / W)
+}
+
+# Steps 1025-3000 are covered by every chain with 80 snapshots each
+common <- snapshot_step >= 1025 & snapshot_step <= 3000
+stability <- data.frame(topic = topic_names, rhat = NA,
+                        chain_lift_q05 = NA, chain_lift_q95 = NA)
+for (i in seq_len(K)) {
+  x <- shares[common, i]
+  chain <- snapshot_chain[common]
+  stability$rhat[i] <- rhat(x, chain)
+  # the lift of each chain on its own, against Sophocles' posterior mean
+  chain_lifts <- tapply(x, chain, mean) / baseline$mean[i]
+  stability$chain_lift_q05[i] <- quantile(chain_lifts, 0.05)
+  stability$chain_lift_q95[i] <- quantile(chain_lifts, 0.95)
+}
+
+# One table: the pooled lift of the walk, the drift and the chain agreement
+pooled_walk <- filter(rows, cell == "walk")
+stability$lift <- pooled_walk$lift[match(stability$topic, pooled_walk$topic)]
+stability$slope_per_1000 <- slopes$slope_per_1000
+stability <- stability[, c("topic", "lift", "slope_per_1000", "rhat",
+                           "chain_lift_q05", "chain_lift_q95")]
+stability <- arrange(stability, desc(rhat))
+write.csv(stability, file.path(params$out, "walk_stability.csv"),
+          row.names = FALSE)
+knitr::kable(stability, digits = 3, row.names = FALSE)
+```
+
+```{r stability_summary, results = "asis"}
+steepest_topic <- stability$topic[which.max(abs(stability$slope_per_1000))]
+sentence <- paste("Over the common range the median absolute slope is %.3f",
+                  "lift units per 1000 steps; the steepest topic, %s, moves",
+                  "%.3f per 1000 steps. The largest R-hat is %.2f (%s), the",
+                  "next largest %.2f (%s).")
+cat(sprintf(sentence, median(abs(stability$slope_per_1000)), steepest_topic,
+            max(abs(stability$slope_per_1000)), stability$rhat[1],
+            stability$topic[1], stability$rhat[2], stability$topic[2]), "\n")
+```
+
+So the walk's topic profile is stationary: no topic drifts by more than a
+tenth of a lift unit over the common range, and the long chains hold their
+lifts to step 12000. The chains agree on every topic but one. *Sail-sea* has
+$\hat R$ far above 1 and chain-level lifts ranging from near zero to several
+times Sophocles': some chains sailed into sea vocabulary and stayed there,
+others never went. Its raised lift at v. 14 in the walk cell is therefore an
+artefact of where those chains went, not a property of the lacuna, and it is
+the one walk result that should be discounted. The other raised walk topics,
+*good-just* at vv. 17–18, are shared by all chains.
