@@ -53,7 +53,7 @@ real documents. Each cell reports $P(\theta_h \text{ is the largest seeded topic
 pooled over the cell's documents and draws, and, as in the analytic model, $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws with the lift of
 the posterior means. Results: `results/amortized_mixed/` (hypotheses) and `results/amortized_mixed_clusters/` (clusters).
 
-## The analytic model: hard topics, exact posterior (`scripts/analytic_model.py`)
+## The analytic model: hard topics, exact posterior (`analytic_model.Rmd`)
 
 The supervised topics are biased towards existing readings. The analytic model replaces them with hard clusters of the vocabulary: lemmata are embedded
 by word2vec (skip-gram over the whole lemmatised Greek corpus, Spearman 0.53 with the AGREE relatedness benchmark), the vocabulary is clustered
@@ -74,8 +74,7 @@ $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws and 
 ## Run
 
 ```sh
-python scripts/analytic_model.py --data data --out results/analytic        # seconds on a laptop
-Rscript -e 'rmarkdown::render("analytic_model.Rmd")'                                  # the same model as a PDF report (xelatex); knit from the repo root
+Rscript -e 'rmarkdown::render("analytic_model.Rmd")'                                  # the whole analytic model, seconds on a laptop; knit from the repo root
 Rscript -e 'rmarkdown::render("amortized_mixed_model.Rmd")'                           # the GPU job's output as a PDF report
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --data data --out results/amortized_mixed   # a GPU hour; CPU dry run with --sims 3000 --epochs 2
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --topics clusters --out results/amortized_mixed_clusters
@@ -87,10 +86,9 @@ sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortiz
 ```
 bsda/data.py        the data loader (bags -> streams -> documents)
 analytic_model.Rmd, amortized_mixed_model.Rmd   one PDF report per model (xelatex, a font with polytonic Greek)
-scripts/            one Python script per model
+scripts/            the GPU script of the amortized mixed model; topics_table.py writes the LaTeX table of the topics
 slurm/              the GPU job for the amortized mixed model
 results/amortized_mixed/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv (five supervised topics)
 results/amortized_mixed_clusters/  the same with the 35 clusters as seeded topics
-results/analytic/     topics_K40.json (the clusters and their labels), posterior.{md,csv}
-results/analytic_r/   the R Markdown report's posterior.csv (the PDF is compiled locally)
+results/analytic/     topics_K40.json (the clusters and their labels), topics_table.tex, posterior.csv from the Rmd
 ```

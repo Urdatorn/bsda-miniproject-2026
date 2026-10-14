@@ -12,7 +12,7 @@ fontsize: 10pt
 geometry: margin=2cm
 params:
   data: "data"
-  out: "results/analytic_r"
+  out: "results/analytic"
   n: 64
   alpha: 1
   draws: 100
@@ -177,6 +177,8 @@ summarise_cell <- function(documents, baseline = NULL) {
   }
   result <- list(n_docs = length(documents),
                  mean = colMeans(all_draws),
+                 q05 = apply(all_draws, 2, quantile, probs = 0.05),
+                 q95 = apply(all_draws, 2, quantile, probs = 0.95),
                  draws = all_draws)
   if (!is.null(baseline)) {
     pick <- sample(nrow(baseline), nrow(all_draws), replace = TRUE)
@@ -238,9 +240,14 @@ for (cell_name in names(cells)) {
                           topic = topic_names,
                           n_docs = cell$n_docs,
                           mean = cell$mean,
+                          q05 = cell$q05,
+                          q95 = cell$q95,
                           p_above_sophocles = cell$p_above,
                           lift = cell$lift)
   rows <- rbind(rows, cell_rows)
+}
+for (column in c("mean", "q05", "q95", "p_above_sophocles", "lift")) {
+  rows[[column]] <- round(rows[[column]], 4)
 }
 write.csv(rows, file.path(params$out, "posterior.csv"), row.names = FALSE)
 ```
