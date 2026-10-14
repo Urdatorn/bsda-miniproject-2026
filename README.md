@@ -19,9 +19,12 @@ pip install -r requirements.txt
 hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir data
 ```
 
-- `vocab.json`: the $V = 4180$ content lemmata (nouns, verbs, adjectives, adverbs, proper names of three or more letters, three or more
+- `vocab.json`: the $V = 3504$ content lemmata (nouns, verbs, adjectives, adverbs, proper names of three or more letters, three or more
   occurrences in the three tragedians, minus particles, light verbs and lemmata present in more than 25 % of Sophocles' 17-line windows).
-  Each lemma carries its unsupervised topic label (`cluster_K40`, see Round 3).
+  The lemmata come from a neural tagger, which damages some (λήσομενανθάνω, γείγνομαι, παήρ), so a lemma is kept only if it is
+  well formed (Greek letters, exactly one accent, a breathing where Greek needs one, a final letter a Greek word can end in) and attested
+  (an LSJ headword, or a word form of the Greek corpus for proper names and for the common words the Perseus LSJ lacks). The 674 lemmata
+  that failed are listed with their reason in `vocab_dropped.json`. Each kept lemma carries its unsupervised topic label (`cluster_K40`, see Round 3).
 - `imputations.parquet`: 631,974 rows, one per restored verse. `verse` 13–29, `restorer` ∈ {stoicheia, candidates, walk}, the walk's
   `chain_set`, `chain`, `iteration` and `style_tilted` flag, the `text`, and the bag as `lemma_idx` + `count` over `vocab.json`.
 - `corpus.parquet`: one row per extant trimeter of Sophocles, Aeschylus and Euripides, plus the intact papyrus lines and Henry's text.
@@ -31,10 +34,12 @@ hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir data
 distributions), the untilted walk passages, and one stream per lacuna cell (verse × restorer). A **document** is 64 consecutive lemmata of a
 stream; a cell's documents are cut from its shuffled stream, at most 1000 per cell.
 
-## Round 2: supervised topics, amortized posterior (`scripts/round2_seeded_lda_bayesflow.py`)
+## Round 2: seeded topics, amortized posterior (`scripts/round2_seeded_lda_bayesflow.py`)
 
-Topics are the five philological hypotheses about the lost text (oath and disclosure, countryside and hunt, violence and death, women and
-marriage, kin and names), each seeded into a latent Dirichlet allocation with strong word priors, plus four free topics. The topic-word
+Topics are seeded into a latent Dirichlet allocation with strong word priors, plus four free topics. With `--topics hypotheses` the seeds are
+the five philological hypotheses about the lost text (oath and disclosure, countryside and hunt, violence and death, women and marriage,
+kin and names); with `--topics clusters` they are the 39 unsupervised clusters of Round 3, each seeded with all its lemmata, so that the
+same amortized workflow runs on unsupervised topics and the corpus decides how much a lemma leaks between clusters. The topic-word
 distributions $\phi$ ($K \times V$) are fitted once on the three tragedians with tomotopy.
 
 A document is then $n = 64$ lemmata drawn from the mixture $\sum_k \theta_k \phi_k$ with
@@ -43,14 +48,15 @@ likelihood only through its $K$ log-likelihoods $\log \phi_{\cdot w}$, a documen
 the natural compression; a coupling flow (BayesFlow) learns $\theta$ in additive log-ratio coordinates from 200,000 simulated documents. The
 network is checked on 1000 held-out simulations (recovery $R^2$, 90 % interval coverage, simulation-based calibration) before it reads the
 real documents. Each cell reports $P(\theta_h \text{ is the largest seeded topic})$ and the posterior mean of $\theta_h$ with a 90 % interval,
-pooled over the cell's documents and draws. Results: `results/round2/`.
+pooled over the cell's documents and draws, and, as in Round 3, $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws with the lift of
+the posterior means. Results: `results/round2/` (hypotheses) and `results/round2_clusters/` (clusters).
 
 ## Round 3: unsupervised topics, exact posterior (`scripts/round3_cluster_posterior.py`)
 
 The supervised topics are biased towards existing readings. Round 3 replaces them with hard clusters of the vocabulary: lemmata are embedded
 by word2vec (skip-gram over the whole lemmatised Greek corpus, Spearman 0.53 with the AGREE relatedness benchmark), the vocabulary is clustered
 by Ward's method, and the cut $K = 40$ is chosen where AGREE's related pairs still co-cluster while random pairs no longer do. One cluster of
-tagger noise is dropped, leaving 39 topics, each labelled by the two non-cognate lemmata nearest its centroid (ἀπόλλυμι-ἀναιρέω,
+rare lemmata with unreliable vectors is dropped, leaving 39 topics, each labelled by the two non-cognate lemmata nearest its centroid (ἀπόλλυμι-ἀναιρέω,
 γάμος-λέχος, ἀνόσιος-μίασμα, κτύπος-γόος, ὄρνις-θήρ, ...). That construction lives upstream; here the labels arrive in `vocab.json`.
 
 With hard clusters a document is a bag of topic labels, $\mathbf n \sim \mathrm{Multinomial}(N, \theta)$, and with
@@ -66,6 +72,8 @@ $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws and 
 ```sh
 python scripts/round3_cluster_posterior.py --data data --out results/round3        # seconds on a laptop
 KERAS_BACKEND=torch python scripts/round2_seeded_lda_bayesflow.py --data data --out results/round2   # a GPU hour; CPU dry run with --sims 3000 --epochs 2
+KERAS_BACKEND=torch python scripts/round2_seeded_lda_bayesflow.py --topics clusters --out results/round2_clusters
+sbatch slurm/round2.slurm --topics clusters --out results/round2_clusters                                # the same on a GH200 (Arrhenius)
 ```
 
 ## Layout
@@ -73,6 +81,8 @@ KERAS_BACKEND=torch python scripts/round2_seeded_lda_bayesflow.py --data data --
 ```
 bsda/data.py        the data loader (bags -> streams -> documents)
 scripts/            one script per round
-results/round2/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv
+slurm/              the GPU job for Round 2
+results/round2/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv (five supervised topics)
+results/round2_clusters/  the same with the 39 clusters as seeded topics
 results/round3/     topics_K40.json (the clusters and their labels), posterior.{md,csv,json}
 ```

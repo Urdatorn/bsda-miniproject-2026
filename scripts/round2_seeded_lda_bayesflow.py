@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Round 2: supervised topics, amortized posterior.
+"""Round 2: seeded topics, amortized posterior.
 
 Generative model (a seeded LDA, BDA3 §22.3 as a Dirichlet-multinomial mixture):
 the topic-word distributions phi (K x V) are fitted once with tomotopy on the
-three tragedians, with one topic seeded per hypothesis in hypotheses.json plus
---free unseeded topics.  A document is then n content lemmata drawn from the
+three tragedians, with one topic seeded per hypothesis in hypotheses.json
+(--topics hypotheses, the five supervised topics) or per unsupervised cluster of
+the vocabulary (--topics clusters, the 39 Round 3 clusters, each seeded with
+all its lemmata), plus --free unseeded topics.  A document is then n content lemmata drawn from the
 mixture sum_k theta_k phi_k with theta ~ Dirichlet(1) on the simplex.  The
 quantity of interest is p(theta | document) for every lacuna cell; the
 hypothesis "the lost text of v. 21 is about the oath" is the posterior
@@ -17,13 +19,17 @@ additive log-ratio coordinates from --sims simulated documents and is checked
 on 1000 held-out simulations: recovery R², 90 % interval coverage and
 simulation-based calibration (rank histograms).  The trained network then
 reads the real documents: Sophocles' extant trimeters, the fills of every
-lacuna per restorer, the walk passages and Henry's text.
+lacuna per restorer, the walk passages and Henry's text.  Every cell is also
+compared with Sophocles by P(theta_k^cell > theta_k^Sophocles) over paired
+posterior draws and by the lift of the posterior means, as in Round 3.
 
 Usage (GPU recommended; KERAS_BACKEND=torch):
   python scripts/round2_seeded_lda_bayesflow.py --data data --out results/round2
+  python scripts/round2_seeded_lda_bayesflow.py --topics clusters --out results/round2_clusters
 Writes phi.json (topics), sbc.csv, recovery.csv, hypotheses.{json,md,csv}.
 """
 import argparse, json, os, sys, time, unicodedata
+from collections import Counter
 import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from bsda.data import load, documents, FIRST, LAST, RESTORERS
@@ -39,7 +45,8 @@ def alr_inv(z):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/round2")
-    ap.add_argument("--free", type=int, default=4, help="unseeded topics beside the hypothesis topics")
+    ap.add_argument("--topics", choices=("hypotheses", "clusters"), default="hypotheses", help="seed the five supervised hypotheses, or the unsupervised clusters of vocab.json")
+    ap.add_argument("--free", type=int, default=4, help="unseeded topics beside the seeded topics")
     ap.add_argument("--seed-strength", type=float, default=200.0, help="prior weight of a seed word on its topic")
     ap.add_argument("--n", type=int, default=64, help="lemmata per document")
     ap.add_argument("--iters", type=int, default=1000, help="Gibbs iterations for phi")
@@ -56,7 +63,12 @@ def main():
 
     # ---- seeded LDA for phi, fitted on real tragedy only; the restorations are test documents
     import tomotopy as tp
-    hyps = D.hypotheses; H = len(hyps); K = H + a.free; names = list(hyps) + [f"free {j}" for j in range(a.free)]
+    if a.topics == "clusters":                                                   # one seeded topic per cluster, in order of tragic mass
+        mass = Counter(D.cluster[w] for w in D.streams["tragic"] if D.cluster[w])
+        hyps = {c: [D.vocab[i] for i in range(V) if D.cluster[i] == c] for c, _ in mass.most_common()}
+    else: hyps = D.hypotheses
+    H = len(hyps); K = H + a.free; names = list(hyps) + [f"free {j}" for j in range(a.free)]
+    print(f"{H} seeded topics ({a.topics}) + {a.free} free", flush=True)
     lda = tp.LDAModel(tw=tp.TermWeight.ONE, k=K, alpha=0.1, eta=0.01, seed=a.seed)
     for d in documents(D.streams["tragic"], a.n): lda.add_doc([D.vocab[i] for i in d])
     found = {}
@@ -65,7 +77,7 @@ def main():
         for w in (unicodedata.normalize("NFC", w.lower()) for w in words):
             if w in wid:
                 prior = [0.01] * K; prior[j] = a.seed_strength; lda.set_word_prior(w, prior); found[name].append(w)
-    print("seed lemmata in the vocabulary: " + "; ".join(f"{n}: {len(v)}/{len(hyps[n])}" for n, v in found.items()), flush=True)
+    print("seed lemmata in the vocabulary: " + "; ".join(f"{n}: {len(v)}/{len(hyps[n])}" for n, v in list(found.items())[:12]) + (" ..." if H > 12 else ""), flush=True)
     lda.train(a.iters, workers=8)
     order = {w: i for i, w in enumerate(lda.used_vocabs)}
     phi = np.full((K, V), 1e-8)
@@ -124,30 +136,42 @@ def main():
     print("SBC uniformity p-values: " + " ".join(f"{names[k]} {sbc_p[k]:.2f}" for k in range(K)), flush=True)
 
     # ---- real documents
-    def summarise(docs, label):
-        if not docs: return None
+    def summarise(docs, label, base=None):
+        if not docs: return None, None
         X = logphi[np.array(docs)]; P3 = posterior(X); P = P3.reshape(-1, K)          # pooled over documents: a mixture over samples of fills
         seeded = P[:, :H]; dom = np.bincount(seeded.argmax(1), minlength=H) / len(P)
-        return {"label": label, "n_docs": len(docs), "mean": P.mean(0).tolist(), "q05": np.quantile(P, 0.05, 0).tolist(), "q95": np.quantile(P, 0.95, 0).tolist(),
-                "p_dominant_seeded": dom.tolist(), "p_above_025": (seeded > 0.25).mean(0).tolist(), "free_mass": float(P[:, H:].sum(1).mean())}
-    res = {"names": names, "n": a.n, "real": summarise(documents(D.streams["real"], a.n, a.max_docs * 4, rng=rng), "Sophocles, extant trimeters"),
-           "walk": summarise(documents(D.streams["walk"], a.n, a.max_docs * 2, rng=rng), "walk passages"),
-           "henry": summarise([D.henry[:a.n]], "intact vv. 1-12 + Henry's vv. 13-29") if len(D.henry) >= a.n else None, "lacunae": {}}
+        s = {"label": label, "n_docs": len(docs), "mean": P.mean(0).tolist(), "q05": np.quantile(P, 0.05, 0).tolist(), "q95": np.quantile(P, 0.95, 0).tolist(),
+             "p_dominant_seeded": dom.tolist(), "p_above_025": (seeded > 0.25).mean(0).tolist(), "free_mass": float(P[:, H:].sum(1).mean())}
+        if base is not None:                                                            # paired draws against the Sophocles mixture, as in Round 3
+            B = base[rng.integers(0, len(base), len(P))]; s["p_above_sophocles"] = (P > B).mean(0).tolist(); s["lift"] = (P.mean(0) / B.mean(0)).tolist()
+        return s, P
+    real, P_real = summarise(documents(D.streams["real"], a.n, a.max_docs * 4, rng=rng), "Sophocles, extant trimeters")
+    res = {"names": names, "n": a.n, "topics": a.topics, "real": real,
+           "walk": summarise(documents(D.streams["walk"], a.n, a.max_docs * 2, rng=rng), "walk passages", P_real)[0],
+           "henry": summarise([D.henry[:a.n]], "intact vv. 1-12 + Henry's vv. 13-29", P_real)[0] if len(D.henry) >= a.n else None, "lacunae": {}}
     for v in range(FIRST, LAST + 1):
-        res["lacunae"][v] = {r: summarise(documents(D.streams[(v, r)], a.n, a.max_docs, shuffle=True, rng=rng), f"v. {v}, {r}") for r in RESTORERS}
+        res["lacunae"][v] = {r: summarise(documents(D.streams[(v, r)], a.n, a.max_docs, shuffle=True, rng=rng), f"v. {v}, {r}", P_real)[0] for r in RESTORERS}
+        print(f"  v. {v} read", flush=True)
     res["checks"] = {"recovery_r2": r2, "coverage90": cover, "sbc_p": sbc_p}
     json.dump(res, open(f"{a.out}/hypotheses.json", "w"), indent=1)
     cells = [(str(v), r, res["lacunae"][v][r]) for v in range(FIRST, LAST + 1) for r in RESTORERS] + [("walk", "", res["walk"]), ("henry", "", res["henry"]), ("sophocles", "", res["real"])]
     with open(f"{a.out}/hypotheses.csv", "w") as f:
-        f.write("cell,restorer,topic,n_docs,mean,q05,q95,p_dominant,p_above_025\n")
+        f.write("cell,restorer,topic,n_docs,mean,q05,q95,p_dominant,p_above_025,p_above_sophocles,lift\n")
         for v, r, s in cells:
             if s:
-                for j in range(H): f.write(f"{v},{r},{names[j]},{s['n_docs']},{s['mean'][j]:.4f},{s['q05'][j]:.4f},{s['q95'][j]:.4f},{s['p_dominant_seeded'][j]:.4f},{s['p_above_025'][j]:.4f}\n")
-    md = ["# Round 2: seeded LDA, amortized posterior (BayesFlow)\n",
-          f"Seeded LDA with {H} hypothesis topics and {a.free} free topics on a vocabulary of {V} content lemmata; documents of {a.n} lemmata; prior theta ~ Dirichlet(1). "
+                for j in range(H): f.write(f"{v},{r},{names[j]},{s['n_docs']},{s['mean'][j]:.4f},{s['q05'][j]:.4f},{s['q95'][j]:.4f},{s['p_dominant_seeded'][j]:.4f},{s['p_above_025'][j]:.4f},"
+                                           + (f"{s['p_above_sophocles'][j]:.4f},{s['lift'][j]:.3f}" if "lift" in s else ",") + "\n")
+    md = [f"# Round 2 ({a.topics}): seeded LDA, amortized posterior (BayesFlow)\n",
+          f"Seeded LDA with {H} seeded topics ({a.topics}) and {a.free} free topics on a vocabulary of {V} content lemmata; documents of {a.n} lemmata; prior theta ~ Dirichlet(1). "
           f"Posterior from a coupling flow trained on {a.sims} simulated documents; on 1000 held-out simulations: recovery R² "
           + ", ".join(f"{names[k]} {r2[k]:.2f}" for k in range(H)) + "; 90 % coverage " + ", ".join(f"{cover[k]:.2f}" for k in range(H)) + "; SBC p " + ", ".join(f"{sbc_p[k]:.2f}" for k in range(H)) + ".\n",
-          "Each cell: P(this hypothesis topic is the largest of the seeded topics) over the cell's documents and posterior draws; last column the mean mass on the free topics.\n",
+          "## Topics above the Sophocles baseline\n", "Seeded topics with P(theta_k > theta_k of Sophocles) >= 0.9 over paired posterior draws, by lift of the posterior mean (lift, posterior mean).\n",
+          "| cell | restorer | docs | topics raised |", "|---|---|---|---|"]
+    for v, r, s in cells:
+        if s and "lift" in s:
+            up = sorted((k for k in range(H) if s["p_above_sophocles"][k] >= 0.9), key=lambda k: -s["lift"][k])
+            md.append(f"| {v} | {r} | {s['n_docs']} | " + ", ".join(f"**{names[k]}** ({s['lift'][k]:.1f}×, {s['mean'][k]:.2f})" for k in up) + " |")
+    md += ["\n## Dominant seeded topic\n", "Each cell: P(this seeded topic is the largest of the seeded topics) over the cell's documents and posterior draws; last column the mean mass on the free topics.\n",
           "| cell | restorer | " + " | ".join(names[:H]) + " | free |", "|---|---|" + "---|" * (H + 1)]
     for v, r, s in cells:
         if s: md.append(f"| {v} | {r} | " + " | ".join(f"{p:.2f}" for p in s["p_dominant_seeded"]) + f" | {s['free_mass']:.2f} |")
@@ -155,7 +179,7 @@ def main():
     for v, r, s in cells:
         if s: md.append(f"| {v} | {r} | " + " | ".join(f"{m:.2f} [{lo:.2f}, {hi:.2f}]" for m, lo, hi in zip(s["mean"][:H], s["q05"][:H], s["q95"][:H])) + " |")
     md += ["\nTopics (top lemmata):\n"] + [f"- **{k}**: " + ", ".join(w) for k, w in top.items()]
-    open(f"{a.out}/hypotheses.md", "w", encoding="utf-8").write("\n".join(md) + "\n"); print("\n".join(md[:8]), flush=True)
+    open(f"{a.out}/hypotheses.md", "w", encoding="utf-8").write("\n".join(md) + "\n"); print("\n".join(md[:60]), flush=True)
     print(f"wrote {a.out}", flush=True)
 
 
