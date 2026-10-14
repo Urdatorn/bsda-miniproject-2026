@@ -45,8 +45,9 @@ differ from what Sophocles writes elsewhere?
 # The model
 
 Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters
-(word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$, one
-rare-lemma cluster dropped). Each cluster is named by the English glosses of
+(word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; one
+rare-lemma cluster and four function-word clusters dropped, leaving 35). Each
+cluster is named by the English glosses of
 the two lemmata nearest its centre, for example *wretched-miserable* or
 *marriage-bed*. A **document** is $N$ consecutive topic-bearing lemmata of a
 stream, and its topic counts are

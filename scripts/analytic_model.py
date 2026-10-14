@@ -4,7 +4,7 @@
 Topics.  Each vocabulary lemma carries a cluster label in vocab.json: the K = 40
 Ward cut of a word2vec space of Ancient Greek lemmata (skip-gram on the
 lemmatised OGA corpus, validated against the AGREE benchmark), minus one
-cluster of tagger noise.  A topic is a hard cluster; its label is the two
+cluster of rare lemmata and four clusters of function words.  A topic is a hard cluster; its label is the two
 non-cognate lemmata nearest its centroid.  The clustering is upstream of this
 repository (Urdatorn/tereus-imputation, scripts/semantic_clusters.py and
 scripts/cluster_topics.py); here the labels are data.

@@ -36,7 +36,7 @@ probability under several topics, so every word is a mixture and the posterior
 $p(\theta \mid \text{document})$ has no closed form. $\phi$ is fitted once on
 the three tragedians by a seeded latent Dirichlet allocation (tomotopy), each
 seeded topic given a strong word prior on its seed lemmata, the five
-philological hypotheses or the 39 unsupervised clusters, plus a few free
+philological hypotheses or the 35 unsupervised clusters, plus a few free
 topics.
 
 **Amortization.** A word enters the likelihood only through its $K$

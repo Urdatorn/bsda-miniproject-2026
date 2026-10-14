@@ -5,7 +5,7 @@ Generative model (a seeded LDA, BDA3 §22.3 as a Dirichlet-multinomial mixture):
 the topic-word distributions phi (K x V) are fitted once with tomotopy on the
 three tragedians, with one topic seeded per hypothesis in hypotheses.json
 (--topics hypotheses, the five supervised topics) or per unsupervised cluster of
-the vocabulary (--topics clusters, the 39 clusters of the analytic model, each seeded with
+the vocabulary (--topics clusters, the 35 clusters of the analytic model, each seeded with
 all its lemmata), plus --free unseeded topics.  A document is then n content lemmata drawn from the
 mixture sum_k theta_k phi_k with theta ~ Dirichlet(1) on the simplex.  The
 quantity of interest is p(theta | document) for every lacuna cell; the

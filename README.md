@@ -90,7 +90,7 @@ analytic_model.Rmd, amortized_mixed_model.Rmd   one PDF report per model (xelate
 scripts/            one Python script per model
 slurm/              the GPU job for the amortized mixed model
 results/amortized_mixed/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv (five supervised topics)
-results/amortized_mixed_clusters/  the same with the 39 clusters as seeded topics
+results/amortized_mixed_clusters/  the same with the 35 clusters as seeded topics
 results/analytic/     topics_K40.json (the clusters and their labels), posterior.{md,csv}
 results/analytic_r/   the R Markdown report's posterior.csv (the PDF is compiled locally)
 ```
