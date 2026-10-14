@@ -26,7 +26,7 @@ def transliterate(word):
         if c == "γ" and nxt in "γκξχ": out.append("n"); j += 1; continue
         if c == "ρ" and j in rough: out.append("rh"); j += 1; continue
         if c in "αεηιουω":
-            diphthong = c in "αεηου" and nxt in "ιυ" and nxt != c
+            diphthong = c in "αεηου" and nxt in ("ι", "υ") and nxt != c
             h = "h" if j in rough or (diphthong and j + 1 in rough) else ""
             if diphthong: out.append(h + LETTER[c] + ("u" if nxt == "υ" else "i")); j += 2
             else: out.append(h + LETTER[c] + ("i" if j in subscript else "")); j += 1
