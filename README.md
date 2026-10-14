@@ -32,7 +32,7 @@ The R Markdown reports download these files themselves if `data/` is missing.
 - `corpus.parquet`: one row per extant trimeter of Sophocles, Aeschylus and Euripides, plus the intact papyrus lines and Henry's text.
 - `hypotheses.json`: five seed lists for the supervised topics of the amortized mixed model.
 
-`bsda/data.py` reads these into streams of lemma indices: Sophocles (the baseline), the three tragedians (training text for the topic-word
+`scripts/amortized_mixed_model.py` reads these into streams of lemma indices: Sophocles (the baseline), the three tragedians (training text for the topic-word
 distributions), the untilted walk passages, and one stream per lacuna cell (verse × restorer). A **document** is 64 consecutive lemmata of a
 stream; a cell's documents are cut from its shuffled stream, at most 1000 per cell.
 
@@ -84,7 +84,6 @@ sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortiz
 ## Layout
 
 ```
-bsda/data.py        the data loader (bags -> streams -> documents)
 analytic_model.Rmd, amortized_mixed_model.Rmd   one PDF report per model (xelatex, a font with polytonic Greek)
 scripts/            the GPU script of the amortized mixed model; topics_table.py writes the LaTeX table of the topics
 slurm/              the GPU job for the amortized mixed model
