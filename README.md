@@ -71,7 +71,8 @@ $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws and 
 
 ```sh
 python scripts/analytic_model.py --data data --out results/analytic        # seconds on a laptop
-Rscript scripts/analytic_model.R data results/analytic_r                                    # the same model in 40 lines of R (arrow, dplyr)
+Rscript -e 'rmarkdown::render("scripts/analytic_model.Rmd", output_dir = "results/analytic_r", knit_root_dir = getwd())'   # the same model as an R Markdown report
+Rscript -e 'rmarkdown::render("scripts/amortized_mixed_model.Rmd", output_dir = "results/amortized_mixed_clusters", knit_root_dir = getwd())'   # reads the GPU job's output
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --data data --out results/amortized_mixed   # a GPU hour; CPU dry run with --sims 3000 --epochs 2
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --topics clusters --out results/amortized_mixed_clusters
 sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortized_mixed_clusters                                # the same on a GH200 (Arrhenius)
@@ -81,10 +82,10 @@ sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortiz
 
 ```
 bsda/data.py        the data loader (bags -> streams -> documents)
-scripts/            one script per round
+scripts/            one Python script and one R Markdown report per model
 slurm/              the GPU job for the amortized mixed model
 results/amortized_mixed/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv (five supervised topics)
 results/amortized_mixed_clusters/  the same with the 39 clusters as seeded topics
-results/analytic/     topics_K40.json (the clusters and their labels), posterior.{md,csv,json}
-results/analytic_r/   the R script's posterior.{md,csv}
+results/analytic/     topics_K40.json (the clusters and their labels), posterior.{md,csv}
+results/analytic_r/   the R Markdown report (analytic_model.html) and its posterior.csv
 ```

@@ -1,0 +1,94 @@
+---
+title: "The amortized mixed model: soft topics, amortized posterior"
+author: "Albin Thörn Cleland"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    df_print: paged
+params:
+  results: "results/amortized_mixed_clusters"
+  show_topics: 12
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, dev = "ragg_png")   # draw PNGs without an X11 display
+suppressMessages({library(dplyr); library(tidyr); library(jsonlite); library(ggplot2)})
+R <- params$results
+```
+
+## The model
+
+A document is $N$ content lemmata drawn from the mixture $\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\mathbf 1)$. The topic-word
+distributions $\phi$ ($K \times V$) are **soft**: a lemma has probability under several topics, so every word is a mixture and the posterior
+$p(\theta \mid \text{document})$ has no closed form. $\phi$ is fitted once on the three tragedians by a seeded latent Dirichlet allocation
+(tomotopy), each seeded topic given a strong word prior on its seed lemmata, the five philological hypotheses or the 39 unsupervised clusters,
+plus a few free topics.
+
+**Amortization.** A word enters the likelihood only through its $K$ log-likelihoods $\log \phi_{\cdot w}$, so a document is a set of
+$K$-vectors and a DeepSet summary network is the natural compression; a coupling flow (BayesFlow) learns $\theta$ in additive log-ratio coordinates
+from 200,000 simulated documents. Before it reads the real documents it is checked on 1000 held-out simulations: recovery $R^2$, 90 % interval
+coverage, and simulation-based calibration (SBC), whose rank histograms must be uniform if the posterior is calibrated.
+
+The GPU work is done by `scripts/amortized_mixed_model.py` (`slurm/amortized_mixed_model.slurm`); this document reads its output in
+`` `r R` ``.
+
+```{r load}
+phi  <- fromJSON(file.path(R, "phi.json"))
+res  <- fromJSON(file.path(R, "hypotheses.json"))
+cells <- read.csv(file.path(R, "hypotheses.csv"), encoding = "UTF-8")
+sbc  <- read.csv(file.path(R, "sbc.csv"), encoding = "UTF-8")
+rec  <- read.csv(file.path(R, "recovery.csv"), encoding = "UTF-8")
+names_ <- phi$names; H <- length(res$real$p_dominant_seeded); K <- length(names_)
+cat(H, "seeded topics (", res$topics, ") +", K - H, "free; vocabulary of", phi$vocab_size, "lemmata; LDA log-likelihood per word", round(phi$ll_per_word, 3), "\n")
+```
+
+## The topics
+
+Top lemmata of every topic as the seeded LDA fitted them on the tragedians; the number of seed lemmata found in the vocabulary is given per seeded topic.
+
+```{r topics}
+tibble(topic = names_, seeds = c(sapply(phi$seeds_found, length), rep(NA, K - H)),
+       top = sapply(phi$top_words[names_], function(w) paste(head(w, 10), collapse = " "))) |> knitr::kable()
+```
+
+## Calibration of the amortized posterior
+
+```{r checks}
+tibble(topic = names_, recovery_r2 = res$checks$recovery_r2, coverage90 = res$checks$coverage90, sbc_p = res$checks$sbc_p) |> knitr::kable(digits = 2)
+```
+
+```{r sbc, fig.height = 6, fig.width = 9}
+show <- head(names_, params$show_topics)
+sbc |> filter(topic %in% show) |> mutate(topic = factor(topic, show)) |>
+  ggplot(aes(rank)) + geom_histogram(bins = 20, fill = "grey60") + facet_wrap(~topic, ncol = 4) +
+  labs(title = "SBC rank histograms (uniform if calibrated)", x = "rank of the true theta among posterior draws", y = NULL) + theme_minimal(9)
+```
+
+```{r recovery, fig.height = 6, fig.width = 9}
+rec |> filter(topic %in% show) |> mutate(topic = factor(topic, show)) |>
+  ggplot(aes(true, post_mean)) + geom_abline(colour = "grey50") + geom_linerange(aes(ymin = q05, ymax = q95), colour = "grey80") + geom_point(size = 0.6) +
+  facet_wrap(~topic, ncol = 4) + labs(title = "Recovery on held-out simulations (posterior mean and 90 % interval against the truth)", x = "true theta", y = "posterior") + theme_minimal(9)
+```
+
+## The lacunae
+
+```{r cells}
+cells <- cells |> mutate(cell = ifelse(restorer == "" | is.na(restorer), as.character(cell), paste(cell, restorer)))
+if ("lift" %in% names(cells)) {
+  raised <- cells |> filter(!is.na(p_above_sophocles), p_above_sophocles >= 0.9) |> arrange(cell, desc(lift)) |> group_by(cell, n_docs) |>
+    summarise(raised = paste0(topic, " (", sprintf("%.1f", lift), "×, ", sprintf("%.2f", mean), ")", collapse = ", "), .groups = "drop")
+  knitr::kable(raised, col.names = c("cell", "documents", "topics raised above Sophocles (P >= 0.9; lift, posterior mean)"))
+}
+```
+
+```{r dominant, fig.height = 8, fig.width = 9}
+cells |> mutate(topic = factor(topic, names_)) |>
+  ggplot(aes(cell, topic, fill = p_dominant)) + geom_tile() + scale_fill_gradient(low = "white", high = "firebrick", name = "P(largest\nseeded topic)") +
+  labs(x = NULL, y = NULL, title = "Which seeded topic dominates each cell") + theme_minimal(8) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r mass}
+cells |> filter(cell %in% c("sophocles", "walk", "henry")) |> group_by(cell) |> arrange(desc(mean), .by_group = TRUE) |> slice_head(n = 5) |>
+  select(cell, topic, mean, q05, q95, p_dominant) |> knitr::kable(digits = 2, caption = "Largest posterior means in the pooled cells")
+```

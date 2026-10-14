@@ -1,0 +1,122 @@
+---
+title: "The analytic model: hard topics, exact posterior"
+author: "Albin Thörn Cleland"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    df_print: paged
+params:
+  data: "data"
+  out: "results/analytic_r"
+  n: 64
+  alpha: 1
+  draws: 100
+  max_docs: 1000
+  seed: 917
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, dev = "ragg_png")   # draw PNGs without an X11 display
+suppressMessages({library(arrow); library(dplyr); library(tidyr); library(jsonlite); library(ggplot2)})
+set.seed(params$seed); dir.create(params$out, showWarnings = FALSE, recursive = TRUE)
+```
+
+## The question
+
+P.Oxy. 5292 preserves twelve intact trimeters of Sophocles' *Tereus* and seventeen damaged ones (vv. 13–29). Several restorers have filled the
+damaged verses: W. B. Henry, the Stoicheia fill-in model, and judge-steered Markov walks. Which topics does each restorer put into each lost
+verse, and does that differ from what Sophocles writes elsewhere?
+
+## The model
+
+Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters (word2vec on the lemmatised Greek corpus, Ward's method, cut at
+$K = 40$, one rare-lemma cluster dropped). A **document** is $N$ consecutive topic-bearing lemmata of a stream, and its topic counts are
+
+$$\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta), \qquad \theta \sim \mathrm{Dirichlet}(\alpha \mathbf 1).$$
+
+The Dirichlet is conjugate to the multinomial, so the posterior is exact,
+
+$$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\alpha \mathbf 1 + \mathbf n),$$
+
+and needs no sampler beyond `rgamma`. A **cell** (one lacuna, one restorer) is the equal mixture of its documents' posteriors: its spread is the
+spread between restorations plus the Dirichlet uncertainty of each. Sophocles' extant trimeters are treated the same way, and a cell is compared
+with them by $P(\theta_k^{\text{cell}} > \theta_k^{\text{Soph}})$ over paired draws and by the lift of the posterior means.
+
+## Data
+
+The dataset [Urdatorn/bsda-miniproject-2026](https://huggingface.co/datasets/Urdatorn/bsda-miniproject-2026): one bag of content lemmata per
+restored verse, the vocabulary with its cluster labels, and the corpus of the three tragedians.
+
+```{r data}
+vocab  <- fromJSON(file.path(params$data, "vocab.json"))              # index, lemma, tragic_count, cluster_K40 (NA = no topic)
+corpus <- read_parquet(file.path(params$data, "corpus.parquet"))
+imp    <- read_parquet(file.path(params$data, "imputations.parquet"))
+stream <- function(tab) rep(unlist(tab$lemma_idx), unlist(tab$count))  # bags -> lemma indices (0-based), counts expanded
+topics <- function(s) { t <- vocab$cluster_K40[s + 1]; t[!is.na(t)] }  # lemma indices -> topic labels, dropping topicless lemmata
+tragic <- filter(corpus, source %in% c("sophocles", "aeschylus", "euripides"))
+names_ <- names(sort(table(topics(stream(tragic))), decreasing = TRUE)); K <- length(names_)
+cat(K, "topics;", nrow(vocab), "lemmata,", sum(!is.na(vocab$cluster_K40)), "with a topic;", nrow(imp), "restored verses\n")
+```
+
+## Documents and the exact posterior
+
+```{r model}
+n <- params$n; alpha <- params$alpha; draws <- params$draws; max_docs <- params$max_docs
+docs <- function(s, limit, shuffle = FALSE) {                        # cut a topic stream into documents of exactly n labels
+  x <- topics(s); if (shuffle) x <- sample(x); m <- length(x) %/% n; if (m == 0) return(list())
+  d <- split(x[seq_len(m * n)], rep(seq_len(m), each = n)); if (m > limit) d <- d[sort(sample(m, limit))]; d }
+rdirichlet <- function(S, par) { g <- matrix(rgamma(S * length(par), par), S, byrow = TRUE); g / rowSums(g) }
+posterior <- function(d) do.call(rbind, lapply(d, function(x) rdirichlet(draws, alpha + tabulate(match(x, names_), K))))
+cell <- function(d, base = NULL) {
+  if (!length(d)) return(NULL); P <- posterior(d); s <- list(n_docs = length(d), mean = colMeans(P), P = P)
+  if (!is.null(base)) { B <- base[sample(nrow(base), nrow(P), replace = TRUE), ]; s$p_above <- colMeans(P > B); s$lift <- colMeans(P) / colMeans(base) }
+  s }
+untilted <- function(tab) filter(tab, !coalesce(style_tilted, FALSE))  # the tilt flag is null for Stoicheia and the candidates
+```
+
+```{r cells}
+soph  <- cell(docs(stream(filter(corpus, source == "sophocles")), 4 * max_docs))
+cells <- list(walk  = cell(docs(stream(untilted(filter(imp, restorer == "walk"))), 2 * max_docs), soph$P),
+              henry = cell(list(topics(stream(arrange(filter(corpus, source %in% c("intact", "henry")), line)))), soph$P))
+for (v in 13:29) for (r in c("stoicheia", "candidates", "walk"))
+  cells[[paste(v, r)]] <- cell(docs(stream(untilted(filter(imp, verse == v, restorer == r))), max_docs, shuffle = TRUE), soph$P)
+rows <- bind_rows(lapply(names(cells), function(cl) { s <- cells[[cl]]; if (is.null(s)) return(NULL)
+  tibble(cell = cl, topic = names_, n_docs = s$n_docs, mean = s$mean, p_above_sophocles = s$p_above, lift = s$lift) }))
+write.csv(rows, file.path(params$out, "posterior.csv"), row.names = FALSE)
+```
+
+## Sophocles' baseline
+
+```{r baseline, fig.height = 4}
+tibble(topic = factor(names_, names_), mean = soph$mean) |>
+  ggplot(aes(topic, mean)) + geom_col() + coord_flip() + labs(x = NULL, y = "posterior mean of theta", title = sprintf("Sophocles, %d documents", soph$n_docs)) + theme_minimal(9)
+```
+
+## Topics raised above Sophocles
+
+Topics with $P(\theta_k^{\text{cell}} > \theta_k^{\text{Soph}}) \ge 0.9$, with the lift of the posterior mean and the mean itself.
+
+```{r raised}
+raised <- rows |> filter(p_above_sophocles >= 0.9) |> arrange(cell, desc(lift)) |> group_by(cell, n_docs) |>
+  summarise(raised = paste0(topic, " (", sprintf("%.1f", lift), "×, ", sprintf("%.2f", mean), ")", collapse = ", "), .groups = "drop")
+knitr::kable(raised, col.names = c("cell", "documents", "topics raised"))
+```
+
+## Lift of every topic in every cell
+
+```{r heatmap, fig.height = 9, fig.width = 9}
+rows |> separate(cell, c("verse", "restorer"), sep = " ", fill = "right") |>
+  mutate(restorer = coalesce(restorer, verse), verse = ifelse(verse %in% c("walk", "henry"), "all", verse),
+         topic = factor(topic, names_), label = paste(verse, restorer)) |>
+  ggplot(aes(label, topic, fill = pmin(lift, 4))) + geom_tile() +
+  scale_fill_gradient2(midpoint = 1, low = "steelblue", high = "firebrick", name = "lift (capped at 4)") +
+  labs(x = NULL, y = NULL, title = "Posterior mean relative to Sophocles") + theme_minimal(8) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## Where the walk and Henry stand
+
+```{r pooled}
+rows |> filter(cell %in% c("walk", "henry")) |> arrange(cell, desc(lift)) |> group_by(cell) |> slice_head(n = 5) |>
+  select(cell, topic, mean, p_above_sophocles, lift) |> knitr::kable(digits = 2)
+```

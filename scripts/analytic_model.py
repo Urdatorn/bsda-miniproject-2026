@@ -19,7 +19,7 @@ treated the same way: P(theta_k^cell > theta_k^Sophocles) over paired draws,
 and the lift of the posterior means.
 
 Usage: python scripts/analytic_model.py --data data --out results/analytic
-Writes posterior.json, posterior.csv (cell x topic) and posterior.md.
+Writes posterior.csv (cell x topic) and posterior.md.
 """
 import argparse, json, os, sys
 from collections import Counter
@@ -67,7 +67,6 @@ def main():
            "henry": summarise([to_topics(D.henry)], "intact vv. 1-12 + Henry's vv. 13-29", P_real)[0], "lacunae": {}}
     for v in range(FIRST, LAST + 1):
         res["lacunae"][v] = {r: summarise(documents(to_topics(D.streams[(v, r)]), a.n, a.max_docs, shuffle=True, rng=rng), f"v. {v}, {r}", P_real)[0] for r in RESTORERS}
-    json.dump(res, open(f"{a.out}/posterior.json", "w"), indent=1)
 
     cells = [(str(v), r, res["lacunae"][v][r]) for v in range(FIRST, LAST + 1) for r in RESTORERS] + [("walk", "", res["walk"]), ("henry", "", res["henry"]), ("sophocles", "", res["real"])]
     rows = ["cell,restorer,topic,n_docs,n_tokens,count,mean,q05,q95,p_largest,p_above_sophocles,lift"]
@@ -90,7 +89,7 @@ def main():
     for v, r, s in cells:
         if s: md.append(f"| {v} {r} | " + " | ".join(f"{m:.2f}" for m in s["mean"]) + " |")
     open(f"{a.out}/posterior.md", "w", encoding="utf-8").write("\n".join(md) + "\n")
-    print("\n".join(md[4:4 + 56])); print(f"wrote {a.out}/posterior.{{json,csv,md}}", flush=True)
+    print("\n".join(md[4:4 + 56])); print(f"wrote {a.out}/posterior.{{csv,md}}", flush=True)
 
 
 if __name__ == "__main__":
