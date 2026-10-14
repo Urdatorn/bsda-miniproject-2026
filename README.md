@@ -71,6 +71,7 @@ $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws and 
 
 ```sh
 python scripts/round3_cluster_posterior.py --data data --out results/round3        # seconds on a laptop
+Rscript scripts/round3.R data results/round3_r                                    # the same model in 40 lines of R (arrow, dplyr)
 KERAS_BACKEND=torch python scripts/round2_seeded_lda_bayesflow.py --data data --out results/round2   # a GPU hour; CPU dry run with --sims 3000 --epochs 2
 KERAS_BACKEND=torch python scripts/round2_seeded_lda_bayesflow.py --topics clusters --out results/round2_clusters
 sbatch slurm/round2.slurm --topics clusters --out results/round2_clusters                                # the same on a GH200 (Arrhenius)
@@ -85,4 +86,5 @@ slurm/              the GPU job for Round 2
 results/round2/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv (five supervised topics)
 results/round2_clusters/  the same with the 39 clusters as seeded topics
 results/round3/     topics_K40.json (the clusters and their labels), posterior.{md,csv,json}
+results/round3_r/   the R script's posterior.{md,csv}
 ```
