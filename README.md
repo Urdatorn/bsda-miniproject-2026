@@ -58,8 +58,9 @@ the posterior means. Results: `results/amortized_mixed/` (hypotheses) and `resul
 The supervised topics are biased towards existing readings. The analytic model replaces them with hard clusters of the vocabulary: lemmata are embedded
 by word2vec (skip-gram over the whole lemmatised Greek corpus, Spearman 0.53 with the AGREE relatedness benchmark), the vocabulary is clustered
 by Ward's method, and the cut $K = 40$ is chosen where AGREE's related pairs still co-cluster while random pairs no longer do. One cluster of
-rare lemmata with unreliable vectors is dropped, leaving 39 topics, each labelled by the two non-cognate lemmata nearest its centroid (ἀπόλλυμι-ἀναιρέω,
-γάμος-λέχος, ἀνόσιος-μίασμα, κτύπος-γόος, ὄρνις-θήρ, ...). That construction lives upstream; here the labels arrive in `vocab.json`.
+rare lemmata with unreliable vectors is dropped, leaving 39 topics, each labelled by the English glosses of the two non-cognate lemmata nearest its centroid
+(kill-destroy, marriage-bed, unholy-pollution, crash-wail, bird-beast, ...). That construction lives upstream; here the labels arrive in
+`vocab.json` as `cluster_K40`, with the Greek pair beside them as `cluster_K40_lemmata` (wretched-miserable = δύστηνος-τλήμων).
 
 With hard clusters a document is a bag of topic labels, $\mathbf n \sim \mathrm{Multinomial}(N, \theta)$, and with
 $\theta \sim \mathrm{Dirichlet}(\alpha \mathbf 1)$ the posterior is conjugate and exact:

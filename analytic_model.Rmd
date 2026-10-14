@@ -7,8 +7,7 @@ output:
     latex_engine: xelatex
     toc: true
     number_sections: true
-mainfont: Times New Roman   # any font with the Greek Extended block
-monofont: Menlo
+mainfont: Times New Roman
 fontsize: 10pt
 geometry: margin=2cm
 params:
@@ -27,10 +26,10 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 7)
 if (requireNamespace("ragg", quietly = TRUE)) {
   knitr::opts_chunk$set(dev = "ragg_png")
 }
-suppressMessages({
-  library(arrow); library(dplyr); library(tidyr); library(jsonlite)
-  library(ggplot2)
-})
+library(arrow)      # reads the parquet files
+library(dplyr)      # filter(), arrange()
+library(jsonlite)   # reads vocab.json
+library(ggplot2)
 set.seed(params$seed)
 dir.create(params$out, showWarnings = FALSE, recursive = TRUE)
 ```
@@ -47,8 +46,10 @@ differ from what Sophocles writes elsewhere?
 
 Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters
 (word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$, one
-rare-lemma cluster dropped). A **document** is $N$ consecutive topic-bearing
-lemmata of a stream, and its topic counts are
+rare-lemma cluster dropped). Each cluster is named by the English glosses of
+the two lemmata nearest its centre, for example *wretched-miserable* or
+*marriage-bed*. A **document** is $N$ consecutive topic-bearing lemmata of a
+stream, and its topic counts are
 
 $$\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta), \qquad
   \theta \sim \mathrm{Dirichlet}(\alpha \mathbf 1).$$
@@ -72,96 +73,187 @@ and the corpus of the three tragedians. The chunk below downloads the three
 files (20 MB) into `data/` the first time the report is knitted.
 
 ```{r download}
-# the data directory is not in the repository: fetch the dataset if needed
 hub <- "https://huggingface.co/datasets/Urdatorn/bsda-miniproject-2026"
 dir.create(params$data, showWarnings = FALSE, recursive = TRUE)
-for (f in c("vocab.json", "corpus.parquet", "imputations.parquet")) {
-  if (!file.exists(file.path(params$data, f))) {
-    download.file(paste(hub, "resolve/main", f, sep = "/"),
-                  file.path(params$data, f), mode = "wb", quiet = TRUE)
+for (file_name in c("vocab.json", "corpus.parquet", "imputations.parquet")) {
+  local_path <- file.path(params$data, file_name)
+  if (!file.exists(local_path)) {
+    url <- paste(hub, "resolve/main", file_name, sep = "/")
+    download.file(url, local_path, mode = "wb", quiet = TRUE)
   }
 }
 ```
 
 ```{r data}
-vocab  <- fromJSON(file.path(params$data, "vocab.json"))
+vocab <- fromJSON(file.path(params$data, "vocab.json"))
 corpus <- read_parquet(file.path(params$data, "corpus.parquet"))
-imp    <- read_parquet(file.path(params$data, "imputations.parquet"))
-# a bag -> its lemma indices (0-based), counts expanded
-stream <- function(tab) rep(unlist(tab$lemma_idx), unlist(tab$count))
-# lemma indices -> topic labels; lemmata without a topic are not observations
-topics <- function(s) { t <- vocab$cluster_K40[s + 1]; t[!is.na(t)] }
-tragic <- filter(corpus, source %in% c("sophocles", "aeschylus", "euripides"))
-# topics in order of their mass in the tragic corpus
-names_ <- names(sort(table(topics(stream(tragic))), decreasing = TRUE))
-K <- length(names_)
-cat(K, "topics;", nrow(vocab), "lemmata,", sum(!is.na(vocab$cluster_K40)),
-    "with a topic;", nrow(imp), "restored verses\n")
+imputations <- read_parquet(file.path(params$data, "imputations.parquet"))
+
+# Every row of corpus and imputations is one bag of lemmata: the lemma
+# indices (lemma_idx, counted from 0) and how often each occurs (count).
+# This function turns a table of bags into one long vector of lemma indices,
+# repeating each index as often as it was counted.
+lemma_stream <- function(table) {
+  indices <- unlist(table$lemma_idx)
+  counts <- unlist(table$count)
+  rep(indices, counts)
+}
+
+# A lemma index becomes the label of its topic. Lemmata without a topic (NA)
+# are dropped: they are not observations of any topic.
+topic_stream <- function(lemma_indices) {
+  labels <- vocab$cluster_K40[lemma_indices + 1]   # R counts from 1
+  labels[!is.na(labels)]
+}
+
+# The topics, ordered by how much of the tragic corpus they cover
+tragedians <- c("sophocles", "aeschylus", "euripides")
+tragic <- filter(corpus, source %in% tragedians)
+tragic_topics <- topic_stream(lemma_stream(tragic))
+topic_mass <- sort(table(tragic_topics), decreasing = TRUE)
+topic_names <- names(topic_mass)
+K <- length(topic_names)
+
+cat(K, "topics;", nrow(vocab), "lemmata in the vocabulary,",
+    sum(!is.na(vocab$cluster_K40)), "with a topic;",
+    nrow(imputations), "restored verses\n")
 ```
 
 # Documents and the exact posterior
 
 ```{r model}
-n <- params$n; alpha <- params$alpha; draws <- params$draws
+n <- params$n
+alpha <- params$alpha
+draws <- params$draws
 max_docs <- params$max_docs
 
-# cut a topic stream into documents of exactly n labels, at most `limit`
-docs <- function(s, limit, shuffle = FALSE) {
-  x <- topics(s); if (shuffle) x <- sample(x)
-  m <- length(x) %/% n; if (m == 0) return(list())
-  d <- split(x[seq_len(m * n)], rep(seq_len(m), each = n))
-  if (m > limit) d <- d[sort(sample(m, limit))]
-  d
-}
-rdirichlet <- function(S, par) {
-  g <- matrix(rgamma(S * length(par), par), S, byrow = TRUE); g / rowSums(g)
-}
-# the exact posterior Dirichlet(alpha + n) of every document, stacked
-posterior <- function(d) {
-  do.call(rbind, lapply(d, function(x) {
-    rdirichlet(draws, alpha + tabulate(match(x, names_), K))
-  }))
-}
-# a cell: its mixture of posteriors, and paired draws against the baseline
-cell <- function(d, base = NULL) {
-  if (!length(d)) return(NULL)
-  P <- posterior(d); s <- list(n_docs = length(d), mean = colMeans(P), P = P)
-  if (!is.null(base)) {
-    B <- base[sample(nrow(base), nrow(P), replace = TRUE), ]
-    s$p_above <- colMeans(P > B); s$lift <- colMeans(P) / colMeans(base)
+# Cut a stream of topic labels into documents of exactly n labels each.
+# If that gives more than `limit` documents, keep a random sample of them.
+make_documents <- function(topic_labels, limit, shuffle = FALSE) {
+  if (shuffle) {
+    topic_labels <- sample(topic_labels)
   }
-  s
+  n_documents <- length(topic_labels) %/% n
+  documents <- list()
+  for (i in seq_len(n_documents)) {
+    first <- (i - 1) * n + 1
+    last <- i * n
+    documents[[i]] <- topic_labels[first:last]
+  }
+  if (n_documents > limit) {
+    keep <- sort(sample(n_documents, limit))
+    documents <- documents[keep]
+  }
+  documents
 }
-# the tilt flag is null for Stoicheia and the candidates
-untilted <- function(tab) filter(tab, !coalesce(style_tilted, FALSE))
+
+# S draws from a Dirichlet distribution: gamma variables, normalised to sum 1
+rdirichlet <- function(S, parameters) {
+  gammas <- matrix(rgamma(S * length(parameters), shape = parameters),
+                   nrow = S, byrow = TRUE)
+  gammas / rowSums(gammas)
+}
+
+# The exact posterior of one document: count its labels per topic, add the
+# prior, and draw from Dirichlet(alpha + counts).
+posterior_draws <- function(document) {
+  counts <- tabulate(match(document, topic_names), nbins = K)
+  rdirichlet(draws, alpha + counts)
+}
+
+# A cell's posterior is the mixture of its documents' posteriors: the draws
+# of all its documents, stacked. If a baseline (Sophocles' draws) is given,
+# the cell is compared with it draw by draw.
+summarise_cell <- function(documents, baseline = NULL) {
+  if (length(documents) == 0) {
+    return(NULL)
+  }
+  all_draws <- matrix(0, nrow = draws * length(documents), ncol = K)
+  for (i in seq_along(documents)) {
+    first <- (i - 1) * draws + 1
+    last <- i * draws
+    all_draws[first:last, ] <- posterior_draws(documents[[i]])
+  }
+  result <- list(n_docs = length(documents),
+                 mean = colMeans(all_draws),
+                 draws = all_draws)
+  if (!is.null(baseline)) {
+    pick <- sample(nrow(baseline), nrow(all_draws), replace = TRUE)
+    paired <- baseline[pick, ]
+    result$p_above <- colMeans(all_draws > paired)
+    result$lift <- colMeans(all_draws) / colMeans(baseline)
+  }
+  result
+}
 ```
 
 ```{r cells}
-soph <- cell(docs(stream(filter(corpus, source == "sophocles")), 4 * max_docs))
-walk <- untilted(filter(imp, restorer == "walk"))
-henry <- arrange(filter(corpus, source %in% c("intact", "henry")), line)
-cells <- list(walk = cell(docs(stream(walk), 2 * max_docs), soph$P),
-              henry = cell(list(topics(stream(henry))), soph$P))
-for (v in 13:29) for (r in c("stoicheia", "candidates", "walk")) {
-  fills <- untilted(filter(imp, verse == v, restorer == r))
-  cells[[paste(v, r)]] <- cell(docs(stream(fills), max_docs, shuffle = TRUE),
-                               soph$P)
+# Sophocles' extant trimeters are the baseline
+sophocles <- filter(corpus, source == "sophocles")
+sophocles_documents <- make_documents(topic_stream(lemma_stream(sophocles)),
+                                      limit = 4 * max_docs)
+baseline <- summarise_cell(sophocles_documents)
+
+# Only untilted restorations are used. The tilt flag is empty (NA) for
+# Stoicheia and the candidates, which were never tilted.
+untilted <- filter(imputations, !coalesce(style_tilted, FALSE))
+
+cells <- list()
+
+# The walk passages, pooled over all verses
+walk <- filter(untilted, restorer == "walk")
+walk_documents <- make_documents(topic_stream(lemma_stream(walk)),
+                                 limit = 2 * max_docs)
+cells[["walk"]] <- summarise_cell(walk_documents, baseline$draws)
+
+# The papyrus as Henry reads it: the intact verses and his restorations,
+# as one document
+henry <- filter(corpus, source %in% c("intact", "henry"))
+henry <- arrange(henry, line)
+henry_document <- list(topic_stream(lemma_stream(henry)))
+cells[["henry"]] <- summarise_cell(henry_document, baseline$draws)
+
+# One cell per lacuna and restorer; the fills are shuffled before cutting,
+# so that a document mixes restorations rather than following one chain
+for (verse_number in 13:29) {
+  for (restorer_name in c("stoicheia", "candidates", "walk")) {
+    fills <- filter(untilted, verse == verse_number,
+                    restorer == restorer_name)
+    fill_documents <- make_documents(topic_stream(lemma_stream(fills)),
+                                     limit = max_docs, shuffle = TRUE)
+    cell_name <- paste(verse_number, restorer_name)
+    cells[[cell_name]] <- summarise_cell(fill_documents, baseline$draws)
+  }
 }
-rows <- bind_rows(lapply(names(cells), function(cl) {
-  s <- cells[[cl]]; if (is.null(s)) return(NULL)
-  tibble(cell = cl, topic = names_, n_docs = s$n_docs, mean = s$mean,
-         p_above_sophocles = s$p_above, lift = s$lift)
-}))
+
+# One row per cell and topic, saved as the model's table
+rows <- NULL
+for (cell_name in names(cells)) {
+  cell <- cells[[cell_name]]
+  if (is.null(cell)) {
+    next
+  }
+  cell_rows <- data.frame(cell = cell_name,
+                          topic = topic_names,
+                          n_docs = cell$n_docs,
+                          mean = cell$mean,
+                          p_above_sophocles = cell$p_above,
+                          lift = cell$lift)
+  rows <- rbind(rows, cell_rows)
+}
 write.csv(rows, file.path(params$out, "posterior.csv"), row.names = FALSE)
 ```
 
 # Sophocles' baseline
 
 ```{r baseline, fig.height = 5}
-tibble(topic = factor(names_, rev(names_)), mean = soph$mean) |>
-  ggplot(aes(topic, mean)) + geom_col() + coord_flip() +
+baseline_table <- data.frame(topic = factor(topic_names, rev(topic_names)),
+                             mean = baseline$mean)
+ggplot(baseline_table, aes(x = topic, y = mean)) +
+  geom_col() +
+  coord_flip() +
   labs(x = NULL, y = "posterior mean of theta",
-       title = sprintf("Sophocles, %d documents", soph$n_docs)) +
+       title = paste("Sophocles,", baseline$n_docs, "documents")) +
   theme_minimal(9)
 ```
 
@@ -171,34 +263,43 @@ Topics with $P(\theta_k^{\text{cell}} > \theta_k^{\text{Soph}}) \ge 0.9$,
 with the lift of the posterior mean and the mean itself.
 
 ```{r raised, results = "asis"}
-raised <- rows |> filter(p_above_sophocles >= 0.9) |>
-  arrange(cell, desc(lift)) |> group_by(cell, n_docs) |>
-  summarise(raised = paste0(topic, " (", sprintf("%.1f", lift), "×, ",
-                            sprintf("%.2f", mean), ")", collapse = ", "),
-            .groups = "drop")
-cat(sprintf("- **%s** (%d documents): %s", raised$cell, raised$n_docs,
-            raised$raised), sep = "\n")
+raised <- filter(rows, p_above_sophocles >= 0.9)
+raised <- arrange(raised, cell, desc(lift))
+for (cell_name in unique(raised$cell)) {
+  cell_raised <- filter(raised, cell == cell_name)
+  items <- sprintf("%s (%.1f×, %.2f)", cell_raised$topic, cell_raised$lift,
+                   cell_raised$mean)
+  cat("- **", cell_name, "** (", cell_raised$n_docs[1], " documents): ",
+      paste(items, collapse = ", "), "\n", sep = "")
+}
 ```
 
 # Lift of every topic in every cell
 
 ```{r heatmap, fig.height = 9}
-rows |> separate(cell, c("verse", "restorer"), sep = " ", fill = "right") |>
-  mutate(restorer = coalesce(restorer, verse),
-         verse = ifelse(verse %in% c("walk", "henry"), "all", verse),
-         topic = factor(topic, names_), label = paste(verse, restorer)) |>
-  ggplot(aes(label, topic, fill = pmin(lift, 4))) + geom_tile() +
+heat <- rows
+heat$cell <- factor(heat$cell, levels = names(cells))
+heat$topic <- factor(heat$topic, levels = topic_names)
+heat$lift_capped <- pmin(heat$lift, 4)
+ggplot(heat, aes(x = cell, y = topic, fill = lift_capped)) +
+  geom_tile() +
   scale_fill_gradient2(midpoint = 1, low = "steelblue", high = "firebrick",
                        name = "lift\n(capped at 4)") +
   labs(x = NULL, y = NULL, title = "Posterior mean relative to Sophocles") +
-  theme_minimal(7) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme_minimal(7) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 # Where the walk and Henry stand
 
+The five topics with the largest lift in the two pooled cells.
+
 ```{r pooled}
-rows |> filter(cell %in% c("walk", "henry")) |> arrange(cell, desc(lift)) |>
-  group_by(cell) |> slice_head(n = 5) |>
-  select(cell, topic, mean, p_above_sophocles, lift) |>
-  knitr::kable(digits = 2)
+pooled <- filter(rows, cell %in% c("walk", "henry"))
+pooled <- arrange(pooled, cell, desc(lift))
+top_five <- NULL
+for (cell_name in c("walk", "henry")) {
+  top_five <- rbind(top_five, head(filter(pooled, cell == cell_name), 5))
+}
+knitr::kable(top_five, digits = 2, row.names = FALSE)
 ```

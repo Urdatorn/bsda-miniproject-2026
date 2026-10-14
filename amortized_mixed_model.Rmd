@@ -7,8 +7,7 @@ output:
     latex_engine: xelatex
     toc: true
     number_sections: true
-mainfont: Times New Roman   # any font with the Greek Extended block
-monofont: Menlo
+mainfont: Times New Roman
 fontsize: 10pt
 geometry: margin=2cm
 params:
@@ -22,10 +21,10 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 7)
 if (requireNamespace("ragg", quietly = TRUE)) {
   knitr::opts_chunk$set(dev = "ragg_png")
 }
-suppressMessages({
-  library(dplyr); library(tidyr); library(jsonlite); library(ggplot2)
-})
-R <- params$results
+library(dplyr)      # filter(), arrange()
+library(jsonlite)   # reads the json files
+library(ggplot2)
+results_dir <- params$results
 ```
 
 # The model
@@ -53,54 +52,72 @@ The GPU work is done by `scripts/amortized_mixed_model.py`
 (`slurm/amortized_mixed_model.slurm`); this document reads its output.
 
 ```{r load}
-phi   <- fromJSON(file.path(R, "phi.json"))
-res   <- fromJSON(file.path(R, "hypotheses.json"))
-cells <- read.csv(file.path(R, "hypotheses.csv"), encoding = "UTF-8")
-sbc   <- read.csv(file.path(R, "sbc.csv"), encoding = "UTF-8")
-rec   <- read.csv(file.path(R, "recovery.csv"), encoding = "UTF-8")
-names_ <- phi$names; K <- length(names_)
-H <- length(res$real$p_dominant_seeded)
-cat(H, "seeded topics (", res$topics, ") +", K - H, "free; vocabulary of",
-    phi$vocab_size, "lemmata; LDA log-likelihood per word",
-    round(phi$ll_per_word, 3), "\n")
+phi <- fromJSON(file.path(results_dir, "phi.json"))
+result <- fromJSON(file.path(results_dir, "hypotheses.json"))
+cells <- read.csv(file.path(results_dir, "hypotheses.csv"),
+                  encoding = "UTF-8")
+sbc <- read.csv(file.path(results_dir, "sbc.csv"), encoding = "UTF-8")
+recovery <- read.csv(file.path(results_dir, "recovery.csv"),
+                     encoding = "UTF-8")
+
+topic_names <- phi$names
+K <- length(topic_names)                          # seeded + free topics
+H <- length(result$real$p_dominant_seeded)        # seeded topics only
+
+cat(H, "seeded topics (", result$topics, ") and", K - H, "free topics;",
+    "vocabulary of", phi$vocab_size, "lemmata;",
+    "LDA log-likelihood per word", round(phi$ll_per_word, 3), "\n")
 ```
 
 # The topics
 
-Top lemmata of every topic as the seeded LDA fitted them on the tragedians,
-with the number of seed lemmata found in the vocabulary.
+The ten top lemmata of every topic as the seeded LDA fitted them on the
+tragedians, with the number of seed lemmata found in the vocabulary.
 
 ```{r topics, results = "asis"}
-seeds <- c(sapply(phi$seeds_found, length), rep(NA, K - H))
-top <- sapply(phi$top_words[names_],
-              function(w) paste(head(w, 10), collapse = " "))
-cat(sprintf("- **%s** (%s seeds): %s", names_,
-            ifelse(is.na(seeds), "no", seeds), top), sep = "\n")
+for (k in seq_len(K)) {
+  topic <- topic_names[k]
+  top_words <- paste(head(phi$top_words[[topic]], 10), collapse = " ")
+  if (k <= H) {
+    n_seeds <- length(phi$seeds_found[[topic]])
+    cat("- **", topic, "** (", n_seeds, " seeds): ", top_words, "\n",
+        sep = "")
+  } else {
+    cat("- **", topic, "** (free): ", top_words, "\n", sep = "")
+  }
+}
 ```
 
 # Calibration of the amortized posterior
 
 ```{r checks}
-tibble(topic = names_, recovery_r2 = res$checks$recovery_r2,
-       coverage90 = res$checks$coverage90, sbc_p = res$checks$sbc_p) |>
-  knitr::kable(digits = 2)
+checks <- data.frame(topic = topic_names,
+                     recovery_r2 = result$checks$recovery_r2,
+                     coverage90 = result$checks$coverage90,
+                     sbc_p = result$checks$sbc_p)
+knitr::kable(checks, digits = 2)
 ```
 
 ```{r sbc, fig.height = 6}
-show <- head(names_, params$show_topics)
-sbc |> filter(topic %in% show) |> mutate(topic = factor(topic, show)) |>
-  ggplot(aes(rank)) + geom_histogram(bins = 20, fill = "grey60") +
-  facet_wrap(~topic, ncol = 4) +
+shown <- head(topic_names, params$show_topics)
+sbc_shown <- filter(sbc, topic %in% shown)
+sbc_shown$topic <- factor(sbc_shown$topic, levels = shown)
+ggplot(sbc_shown, aes(x = rank)) +
+  geom_histogram(bins = 20, fill = "grey60") +
+  facet_wrap(~ topic, ncol = 4) +
   labs(title = "SBC rank histograms (uniform if calibrated)",
-       x = "rank of the true theta among posterior draws", y = NULL) +
+       x = "rank of the true theta among the posterior draws", y = NULL) +
   theme_minimal(8)
 ```
 
 ```{r recovery, fig.height = 6}
-rec |> filter(topic %in% show) |> mutate(topic = factor(topic, show)) |>
-  ggplot(aes(true, post_mean)) + geom_abline(colour = "grey50") +
+recovery_shown <- filter(recovery, topic %in% shown)
+recovery_shown$topic <- factor(recovery_shown$topic, levels = shown)
+ggplot(recovery_shown, aes(x = true, y = post_mean)) +
+  geom_abline(colour = "grey50") +
   geom_linerange(aes(ymin = q05, ymax = q95), colour = "grey80") +
-  geom_point(size = 0.6) + facet_wrap(~topic, ncol = 4) +
+  geom_point(size = 0.6) +
+  facet_wrap(~ topic, ncol = 4) +
   labs(title = "Recovery on held-out simulations (mean and 90 % interval)",
        x = "true theta", y = "posterior") +
   theme_minimal(8)
@@ -113,33 +130,45 @@ Seeded topics with $P(\theta_k^{\text{cell}} > \theta_k^{\text{Soph}}) \ge
 mean itself.
 
 ```{r cells, results = "asis"}
-cells <- cells |>
-  mutate(cell = ifelse(restorer == "" | is.na(restorer), as.character(cell),
-                       paste(cell, restorer)))
-if ("lift" %in% names(cells)) {
-  raised <- cells |>
-    filter(!is.na(p_above_sophocles), p_above_sophocles >= 0.9) |>
-    arrange(cell, desc(lift)) |> group_by(cell, n_docs) |>
-    summarise(raised = paste0(topic, " (", sprintf("%.1f", lift), "×, ",
-                              sprintf("%.2f", mean), ")", collapse = ", "),
-              .groups = "drop")
-  cat(sprintf("- **%s** (%d documents): %s", raised$cell, raised$n_docs,
-              raised$raised), sep = "\n")
+# The pooled cells (sophocles, walk, henry) have no restorer in the table
+cells$cell <- as.character(cells$cell)
+has_restorer <- !is.na(cells$restorer) & cells$restorer != ""
+cells$cell[has_restorer] <- paste(cells$cell[has_restorer],
+                                  cells$restorer[has_restorer])
+
+raised <- filter(cells, !is.na(p_above_sophocles), p_above_sophocles >= 0.9)
+raised <- arrange(raised, cell, desc(lift))
+for (cell_name in unique(raised$cell)) {
+  cell_raised <- filter(raised, cell == cell_name)
+  items <- sprintf("%s (%.1f×, %.2f)", cell_raised$topic, cell_raised$lift,
+                   cell_raised$mean)
+  cat("- **", cell_name, "** (", cell_raised$n_docs[1], " documents): ",
+      paste(items, collapse = ", "), "\n", sep = "")
 }
 ```
 
 ```{r dominant, fig.height = 8}
-cells |> mutate(topic = factor(topic, names_)) |>
-  ggplot(aes(cell, topic, fill = p_dominant)) + geom_tile() +
+heat <- cells
+heat$cell <- factor(heat$cell, levels = unique(cells$cell))
+heat$topic <- factor(heat$topic, levels = topic_names)
+ggplot(heat, aes(x = cell, y = topic, fill = p_dominant)) +
+  geom_tile() +
   scale_fill_gradient(low = "white", high = "firebrick",
                       name = "P(largest\nseeded topic)") +
   labs(x = NULL, y = NULL, title = "Which seeded topic dominates each cell") +
-  theme_minimal(7) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme_minimal(7) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
+The five largest posterior means in the pooled cells.
+
 ```{r mass}
-cells |> filter(cell %in% c("sophocles", "walk", "henry")) |>
-  group_by(cell) |> arrange(desc(mean), .by_group = TRUE) |>
-  slice_head(n = 5) |> select(cell, topic, mean, q05, q95, p_dominant) |>
-  knitr::kable(digits = 2, caption = "Largest posterior means, pooled cells")
+pooled <- filter(cells, cell %in% c("sophocles", "walk", "henry"))
+pooled <- arrange(pooled, cell, desc(mean))
+top_five <- NULL
+for (cell_name in c("sophocles", "walk", "henry")) {
+  top_five <- rbind(top_five, head(filter(pooled, cell == cell_name), 5))
+}
+top_five <- select(top_five, cell, topic, mean, q05, q95, p_dominant)
+knitr::kable(top_five, digits = 2, row.names = FALSE)
 ```

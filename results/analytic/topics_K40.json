@@ -682,7 +682,8 @@
  "topics": [
   {
    "cluster": 37,
-   "label": "ἀλλά-τοιοῦτος",
+   "label": "but-such",
+   "lemmata": "ἀλλά-τοιοῦτος",
    "size": 126,
    "tragic_tokens": 3420,
    "central": [
@@ -845,7 +846,8 @@
   },
   {
    "cluster": 26,
-   "label": "ἔτι-τότε",
+   "label": "still-then",
+   "lemmata": "ἔτι-τότε",
    "size": 146,
    "tragic_tokens": 3281,
    "central": [
@@ -1028,7 +1030,8 @@
   },
   {
    "cluster": 1,
-   "label": "δύστηνος-τλήμων",
+   "label": "wretched-miserable",
+   "lemmata": "δύστηνος-τλήμων",
    "size": 105,
    "tragic_tokens": 3066,
    "central": [
@@ -1170,7 +1173,8 @@
   },
   {
    "cluster": 38,
-   "label": "ἄνθρωπος-σῶμα",
+   "label": "man-body",
+   "lemmata": "ἄνθρωπος-σῶμα",
    "size": 123,
    "tragic_tokens": 2774,
    "central": [
@@ -1330,7 +1334,8 @@
   },
   {
    "cluster": 20,
-   "label": "δείδω-οἰκτείρω",
+   "label": "fear-pity",
+   "lemmata": "δείδω-οἰκτείρω",
    "size": 152,
    "tragic_tokens": 2678,
    "central": [
@@ -1519,7 +1524,8 @@
   },
   {
    "cluster": 35,
-   "label": "ἀγαθός-δίκαιος",
+   "label": "good-just",
+   "lemmata": "ἀγαθός-δίκαιος",
    "size": 110,
    "tragic_tokens": 2604,
    "central": [
@@ -1666,7 +1672,8 @@
   },
   {
    "cluster": 30,
-   "label": "ἀξιόω-πείθω",
+   "label": "deem-persuade",
+   "lemmata": "ἀξιόω-πείθω",
    "size": 111,
    "tragic_tokens": 2560,
    "central": [
@@ -1814,7 +1821,8 @@
   },
   {
    "cluster": 40,
-   "label": "ἅπας-ἕτερος",
+   "label": "all-other",
+   "lemmata": "ἅπας-ἕτερος",
    "size": 115,
    "tragic_tokens": 2378,
    "central": [
@@ -1966,7 +1974,8 @@
   },
   {
    "cluster": 7,
-   "label": "κεῖνος-τέκος",
+   "label": "that-child",
+   "lemmata": "κεῖνος-τέκος",
    "size": 140,
    "tragic_tokens": 2364,
    "central": [
@@ -2143,7 +2152,8 @@
   },
   {
    "cluster": 36,
-   "label": "ἐρῶ-γιγνώσκω",
+   "label": "speak-know",
+   "lemmata": "ἐρῶ-γιγνώσκω",
    "size": 124,
    "tragic_tokens": 2193,
    "central": [
@@ -2304,7 +2314,8 @@
   },
   {
    "cluster": 19,
-   "label": "ἀκούω-ἀνιάω",
+   "label": "hear-grieve",
+   "lemmata": "ἀκούω-ἀνιάω",
    "size": 117,
    "tragic_tokens": 2187,
    "central": [
@@ -2458,7 +2469,8 @@
   },
   {
    "cluster": 34,
-   "label": "πρᾶγμα-παρέχω",
+   "label": "matter-provide",
+   "lemmata": "πρᾶγμα-παρέχω",
    "size": 95,
    "tragic_tokens": 1867,
    "central": [
@@ -2590,7 +2602,8 @@
   },
   {
    "cluster": 31,
-   "label": "ἕλλην-βάρβαρος",
+   "label": "Greek-barbarian",
+   "lemmata": "ἕλλην-βάρβαρος",
    "size": 78,
    "tragic_tokens": 1852,
    "central": [
@@ -2705,7 +2718,8 @@
   },
   {
    "cluster": 33,
-   "label": "ὕβρις-ἐπαινέω",
+   "label": "hubris-praise",
+   "lemmata": "ὕβρις-ἐπαινέω",
    "size": 113,
    "tragic_tokens": 1828,
    "central": [
@@ -2855,7 +2869,8 @@
   },
   {
    "cluster": 27,
-   "label": "ἀναιρέω-ἀπόλλυμι",
+   "label": "kill-destroy",
+   "lemmata": "ἀναιρέω-ἀπόλλυμι",
    "size": 70,
    "tragic_tokens": 1812,
    "central": [
@@ -2962,7 +2977,8 @@
   },
   {
    "cluster": 22,
-   "label": "γάμος-λέχος",
+   "label": "marriage-bed",
+   "lemmata": "γάμος-λέχος",
    "size": 63,
    "tragic_tokens": 1699,
    "central": [
@@ -3062,7 +3078,8 @@
   },
   {
    "cluster": 17,
-   "label": "ἱερόν-τεῖχος",
+   "label": "temple-wall",
+   "lemmata": "ἱερόν-τεῖχος",
    "size": 78,
    "tragic_tokens": 1619,
    "central": [
@@ -3177,7 +3194,8 @@
   },
   {
    "cluster": 32,
-   "label": "ἀδικέω-ἐξαμαρτάνω",
+   "label": "wrong-err",
+   "lemmata": "ἀδικέω-ἐξαμαρτάνω",
    "size": 68,
    "tragic_tokens": 1504,
    "central": [
@@ -3282,7 +3300,8 @@
   },
   {
    "cluster": 4,
-   "label": "ζεύς-σεμέλη",
+   "label": "Zeus-Semele",
+   "lemmata": "ζεύς-σεμέλη",
    "size": 91,
    "tragic_tokens": 1480,
    "central": [
@@ -3410,7 +3429,8 @@
   },
   {
    "cluster": 10,
-   "label": "θερμός-πλεύμων",
+   "label": "hot-lung",
+   "lemmata": "θερμός-πλεύμων",
    "size": 119,
    "tragic_tokens": 1363,
    "central": [
@@ -3566,7 +3586,8 @@
   },
   {
    "cluster": 12,
-   "label": "αὐχήν-ἐρείδω",
+   "label": "neck-press",
+   "lemmata": "αὐχήν-ἐρείδω",
    "size": 105,
    "tragic_tokens": 1239,
    "central": [
@@ -3708,7 +3729,8 @@
   },
   {
    "cluster": 14,
-   "label": "δόρυ-λόγχη",
+   "label": "spear-lance",
+   "lemmata": "δόρυ-λόγχη",
    "size": 73,
    "tragic_tokens": 1229,
    "central": [
@@ -3818,7 +3840,8 @@
   },
   {
    "cluster": 5,
-   "label": "κρέων-πολυνείκης",
+   "label": "Creon-Polynices",
+   "lemmata": "κρέων-πολυνείκης",
    "size": 78,
    "tragic_tokens": 1221,
    "central": [
@@ -3933,7 +3956,8 @@
   },
   {
    "cluster": 3,
-   "label": "ἀγαμέμνων-τροία",
+   "label": "Agamemnon-Troy",
+   "lemmata": "ἀγαμέμνων-τροία",
    "size": 50,
    "tragic_tokens": 1210,
    "central": [
@@ -4020,7 +4044,8 @@
   },
   {
    "cluster": 9,
-   "label": "ὄρνις-θήρ",
+   "label": "bird-beast",
+   "lemmata": "ὄρνις-θήρ",
    "size": 90,
    "tragic_tokens": 1189,
    "central": [
@@ -4147,7 +4172,8 @@
   },
   {
    "cluster": 21,
-   "label": "ἀνόσιος-μίασμα",
+   "label": "unholy-pollution",
+   "lemmata": "ἀνόσιος-μίασμα",
    "size": 63,
    "tragic_tokens": 1130,
    "central": [
@@ -4247,7 +4273,8 @@
   },
   {
    "cluster": 28,
-   "label": "ἀπέρχομαι-πορεύω",
+   "label": "depart-travel",
+   "lemmata": "ἀπέρχομαι-πορεύω",
    "size": 66,
    "tragic_tokens": 1098,
    "central": [
@@ -4350,7 +4377,8 @@
   },
   {
    "cluster": 23,
-   "label": "σωτήρ-εὐσέβεια",
+   "label": "saviour-piety",
+   "lemmata": "σωτήρ-εὐσέβεια",
    "size": 68,
    "tragic_tokens": 1066,
    "central": [
@@ -4455,7 +4483,8 @@
   },
   {
    "cluster": 18,
-   "label": "κτύπος-γόος",
+   "label": "crash-wail",
+   "lemmata": "κτύπος-γόος",
    "size": 81,
    "tragic_tokens": 1066,
    "central": [
@@ -4573,7 +4602,8 @@
   },
   {
    "cluster": 6,
-   "label": "βαιός-πέδον",
+   "label": "small-ground",
+   "lemmata": "βαιός-πέδον",
    "size": 170,
    "tragic_tokens": 1051,
    "central": [
@@ -4780,7 +4810,8 @@
   },
   {
    "cluster": 24,
-   "label": "θυσία-θύω",
+   "label": "sacrifice-offer",
+   "lemmata": "θυσία-θύω",
    "size": 89,
    "tragic_tokens": 953,
    "central": [
@@ -4906,7 +4937,8 @@
   },
   {
    "cluster": 15,
-   "label": "σέλας-πῦρ",
+   "label": "flash-fire",
+   "lemmata": "σέλας-πῦρ",
    "size": 63,
    "tragic_tokens": 939,
    "central": [
@@ -5006,7 +5038,8 @@
   },
   {
    "cluster": 13,
-   "label": "πλέω-θάλασσα",
+   "label": "sail-sea",
+   "lemmata": "πλέω-θάλασσα",
    "size": 81,
    "tragic_tokens": 931,
    "central": [
@@ -5124,7 +5157,8 @@
   },
   {
    "cluster": 39,
-   "label": "ἄρα-ἴσος",
+   "label": "then-equal",
+   "lemmata": "ἄρα-ἴσος",
    "size": 30,
    "tragic_tokens": 800,
    "central": [
@@ -5191,7 +5225,8 @@
   },
   {
    "cluster": 11,
-   "label": "χαίτη-δειρή",
+   "label": "mane-neck",
+   "lemmata": "χαίτη-δειρή",
    "size": 48,
    "tragic_tokens": 636,
    "central": [
@@ -5276,7 +5311,8 @@
   },
   {
    "cluster": 25,
-   "label": "μαντεία-χρηστήριον",
+   "label": "prophecy-oracle",
+   "lemmata": "μαντεία-χρηστήριον",
    "size": 32,
    "tragic_tokens": 581,
    "central": [
@@ -5345,7 +5381,8 @@
   },
   {
    "cluster": 8,
-   "label": "βλαστάνω-ἐλαία",
+   "label": "sprout-olive",
+   "lemmata": "βλαστάνω-ἐλαία",
    "size": 42,
    "tragic_tokens": 480,
    "central": [
@@ -5424,7 +5461,8 @@
   },
   {
    "cluster": 16,
-   "label": "ποταμός-πεδίον",
+   "label": "river-plain",
+   "lemmata": "ποταμός-πεδίον",
    "size": 33,
    "tragic_tokens": 324,
    "central": [
@@ -5494,7 +5532,8 @@
   },
   {
    "cluster": 29,
-   "label": "τρίτος-πέμπτος",
+   "label": "third-fifth",
+   "lemmata": "τρίτος-πέμπτος",
    "size": 12,
    "tragic_tokens": 299,
    "central": [
@@ -5545,39 +5584,39 @@
    "in_topics": 21,
    "topics": [
     [
-     "ἐρῶ-γιγνώσκω",
+     "speak-know",
      6
     ],
     [
-     "κτύπος-γόος",
+     "crash-wail",
      4
     ],
     [
-     "σωτήρ-εὐσέβεια",
+     "saviour-piety",
      3
     ],
     [
-     "ἀξιόω-πείθω",
+     "deem-persuade",
      2
     ],
     [
-     "ὕβρις-ἐπαινέω",
+     "hubris-praise",
      2
     ],
     [
-     "δείδω-οἰκτείρω",
+     "fear-pity",
      1
     ],
     [
-     "ἀκούω-ἀνιάω",
+     "hear-grieve",
      1
     ],
     [
-     "δύστηνος-τλήμων",
+     "wretched-miserable",
      1
     ],
     [
-     "μαντεία-χρηστήριον",
+     "prophecy-oracle",
      1
     ]
    ]
@@ -5587,39 +5626,39 @@
    "in_topics": 17,
    "topics": [
     [
-     "ὄρνις-θήρ",
+     "bird-beast",
      8
     ],
     [
-     "δύστηνος-τλήμων",
+     "wretched-miserable",
      2
     ],
     [
-     "βλαστάνω-ἐλαία",
+     "sprout-olive",
      1
     ],
     [
-     "ποταμός-πεδίον",
+     "river-plain",
      1
     ],
     [
-     "ἄνθρωπος-σῶμα",
+     "man-body",
      1
     ],
     [
-     "δείδω-οἰκτείρω",
+     "fear-pity",
      1
     ],
     [
-     "ἀπέρχομαι-πορεύω",
+     "depart-travel",
      1
     ],
     [
-     "βαιός-πέδον",
+     "small-ground",
      1
     ],
     [
-     "δόρυ-λόγχη",
+     "spear-lance",
      1
     ]
    ]
@@ -5629,51 +5668,51 @@
    "in_topics": 22,
    "topics": [
     [
-     "ἀναιρέω-ἀπόλλυμι",
+     "kill-destroy",
      5
     ],
     [
-     "ἀδικέω-ἐξαμαρτάνω",
+     "wrong-err",
      4
     ],
     [
-     "βαιός-πέδον",
+     "small-ground",
      2
     ],
     [
-     "αὐχήν-ἐρείδω",
+     "neck-press",
      2
     ],
     [
-     "ὕβρις-ἐπαινέω",
+     "hubris-praise",
      2
     ],
     [
-     "κεῖνος-τέκος",
+     "that-child",
      1
     ],
     [
-     "ἀνόσιος-μίασμα",
+     "unholy-pollution",
      1
     ],
     [
-     "δόρυ-λόγχη",
+     "spear-lance",
      1
     ],
     [
-     "δύστηνος-τλήμων",
+     "wretched-miserable",
      1
     ],
     [
-     "ἄρα-ἴσος",
+     "then-equal",
      1
     ],
     [
-     "κτύπος-γόος",
+     "crash-wail",
      1
     ],
     [
-     "δείδω-οἰκτείρω",
+     "fear-pity",
      1
     ]
    ]
@@ -5683,35 +5722,35 @@
    "in_topics": 17,
    "topics": [
     [
-     "γάμος-λέχος",
+     "marriage-bed",
      6
     ],
     [
-     "δύστηνος-τλήμων",
+     "wretched-miserable",
      3
     ],
     [
-     "ἀκούω-ἀνιάω",
+     "hear-grieve",
      3
     ],
     [
-     "ἱερόν-τεῖχος",
+     "temple-wall",
      1
     ],
     [
-     "ἀξιόω-πείθω",
+     "deem-persuade",
      1
     ],
     [
-     "ὄρνις-θήρ",
+     "bird-beast",
      1
     ],
     [
-     "κεῖνος-τέκος",
+     "that-child",
      1
     ],
     [
-     "ἀνόσιος-μίασμα",
+     "unholy-pollution",
      1
     ]
    ]
@@ -5721,27 +5760,27 @@
    "in_topics": 13,
    "topics": [
     [
-     "γάμος-λέχος",
+     "marriage-bed",
      6
     ],
     [
-     "ἕλλην-βάρβαρος",
+     "Greek-barbarian",
      3
     ],
     [
-     "κεῖνος-τέκος",
+     "that-child",
      1
     ],
     [
-     "ἄνθρωπος-σῶμα",
+     "man-body",
      1
     ],
     [
-     "ζεύς-σεμέλη",
+     "Zeus-Semele",
      1
     ],
     [
-     "ἀξιόω-πείθω",
+     "deem-persuade",
      1
     ]
    ]

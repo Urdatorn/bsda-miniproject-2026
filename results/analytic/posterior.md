@@ -8,63 +8,63 @@ Topics with P(theta_k > theta_k of Sophocles) >= 0.9, by lift of the posterior m
 
 | cell | restorer | docs | topics raised |
 |---|---|---|---|
-| 13 | stoicheia | 45 | **ἀλλά-τοιοῦτος** (2.8×, 0.14) |
-| 13 | candidates | 32 | **δύστηνος-τλήμων** (3.3×, 0.14) |
+| 13 | stoicheia | 45 | **but-such** (2.8×, 0.14) |
+| 13 | candidates | 32 | **wretched-miserable** (3.3×, 0.14) |
 | 13 | walk | 439 |  |
-| 14 | stoicheia | 44 | **ἄνθρωπος-σῶμα** (4.0×, 0.15) |
-| 14 | candidates | 35 | **ἀκούω-ἀνιάω** (2.7×, 0.10), **δύστηνος-τλήμων** (2.4×, 0.10) |
-| 14 | walk | 403 | **πλέω-θάλασσα** (4.5×, 0.07) |
+| 14 | stoicheia | 44 | **man-body** (4.0×, 0.15) |
+| 14 | candidates | 35 | **hear-grieve** (2.7×, 0.10), **wretched-miserable** (2.4×, 0.10) |
+| 14 | walk | 403 | **sail-sea** (4.5×, 0.07) |
 | 15 | stoicheia | 38 |  |
-| 15 | candidates | 31 | **δύστηνος-τλήμων** (2.4×, 0.11) |
+| 15 | candidates | 31 | **wretched-miserable** (2.4×, 0.11) |
 | 15 | walk | 414 |  |
-| 16 | stoicheia | 52 | **κεῖνος-τέκος** (3.6×, 0.12), **ἀκούω-ἀνιάω** (2.9×, 0.11) |
-| 16 | candidates | 35 | **ἄνθρωπος-σῶμα** (3.6×, 0.13) |
+| 16 | stoicheia | 52 | **that-child** (3.6×, 0.12), **hear-grieve** (2.9×, 0.11) |
+| 16 | candidates | 35 | **man-body** (3.6×, 0.13) |
 | 16 | walk | 463 |  |
-| 17 | stoicheia | 36 | **ἀγαθός-δίκαιος** (3.2×, 0.10) |
-| 17 | candidates | 27 | **ἄνθρωπος-σῶμα** (3.3×, 0.12), **δύστηνος-τλήμων** (2.8×, 0.12) |
+| 17 | stoicheia | 36 | **good-just** (3.2×, 0.10) |
+| 17 | candidates | 27 | **man-body** (3.3×, 0.12), **wretched-miserable** (2.8×, 0.12) |
 | 17 | walk | 380 |  |
-| 18 | stoicheia | 48 | **ἀδικέω-ἐξαμαρτάνω** (5.6×, 0.15) |
-| 18 | candidates | 31 | **ἀγαθός-δίκαιος** (6.5×, 0.20) |
-| 18 | walk | 399 | **ἀγαθός-δίκαιος** (3.0×, 0.09) |
+| 18 | stoicheia | 48 | **wrong-err** (5.6×, 0.15) |
+| 18 | candidates | 31 | **good-just** (6.5×, 0.20) |
+| 18 | walk | 399 | **good-just** (3.0×, 0.09) |
 | 19 | stoicheia | 47 |  |
-| 19 | candidates | 42 | **ἀξιόω-πείθω** (6.2×, 0.21), **τρίτος-πέμπτος** (4.3×, 0.05) |
+| 19 | candidates | 42 | **deem-persuade** (6.2×, 0.21), **third-fifth** (4.3×, 0.05) |
 | 19 | walk | 441 |  |
-| 20 | stoicheia | 37 | **ἀδικέω-ἐξαμαρτάνω** (3.1×, 0.08) |
-| 20 | candidates | 36 | **δύστηνος-τλήμων** (3.2×, 0.14) |
+| 20 | stoicheia | 37 | **wrong-err** (3.1×, 0.08) |
+| 20 | candidates | 36 | **wretched-miserable** (3.2×, 0.14) |
 | 20 | walk | 448 |  |
 | 21 | stoicheia | 39 |  |
-| 21 | candidates | 15 | **ἀκούω-ἀνιάω** (3.1×, 0.11), **δύστηνος-τλήμων** (2.9×, 0.13) |
+| 21 | candidates | 15 | **hear-grieve** (3.1×, 0.11), **wretched-miserable** (2.9×, 0.13) |
 | 21 | walk | 361 |  |
-| 22 | stoicheia | 46 | **ἀξιόω-πείθω** (2.8×, 0.10) |
-| 22 | candidates | 27 | **δύστηνος-τλήμων** (5.3×, 0.24) |
+| 22 | stoicheia | 46 | **deem-persuade** (2.8×, 0.10) |
+| 22 | candidates | 27 | **wretched-miserable** (5.3×, 0.24) |
 | 22 | walk | 457 |  |
 | 23 | stoicheia | 48 |  |
-| 23 | candidates | 30 | **ἀξιόω-πείθω** (4.8×, 0.16), **δύστηνος-τλήμων** (2.8×, 0.13) |
+| 23 | candidates | 30 | **deem-persuade** (4.8×, 0.16), **wretched-miserable** (2.8×, 0.13) |
 | 23 | walk | 426 |  |
 | 24 | stoicheia | 38 |  |
-| 24 | candidates | 26 | **δύστηνος-τλήμων** (4.2×, 0.19), **ἀγαθός-δίκαιος** (3.7×, 0.11) |
+| 24 | candidates | 26 | **wretched-miserable** (4.2×, 0.19), **good-just** (3.7×, 0.11) |
 | 24 | walk | 391 |  |
 | 25 | stoicheia | 40 |  |
 | 25 | candidates | 25 |  |
 | 25 | walk | 413 |  |
-| 26 | stoicheia | 60 | **ἀνόσιος-μίασμα** (3.3×, 0.07), **ἀξιόω-πείθω** (2.9×, 0.10) |
+| 26 | stoicheia | 60 | **unholy-pollution** (3.3×, 0.07), **deem-persuade** (2.9×, 0.10) |
 | 26 | candidates | 45 |  |
 | 26 | walk | 537 |  |
 | 27 | stoicheia | 45 |  |
-| 27 | candidates | 37 | **δύστηνος-τλήμων** (2.7×, 0.12) |
+| 27 | candidates | 37 | **wretched-miserable** (2.7×, 0.12) |
 | 27 | walk | 446 |  |
-| 28 | stoicheia | 42 | **ἀπέρχομαι-πορεύω** (3.1×, 0.07) |
-| 28 | candidates | 23 | **ὄρνις-θήρ** (3.9×, 0.08) |
+| 28 | stoicheia | 42 | **depart-travel** (3.1×, 0.07) |
+| 28 | candidates | 23 | **bird-beast** (3.9×, 0.08) |
 | 28 | walk | 427 |  |
 | 29 | stoicheia | 49 |  |
-| 29 | candidates | 20 | **δύστηνος-τλήμων** (2.5×, 0.11) |
+| 29 | candidates | 20 | **wretched-miserable** (2.5×, 0.11) |
 | 29 | walk | 401 |  |
 | walk |  | 2000 |  |
-| henry |  | 1 | **ἄνθρωπος-σῶμα** (2.8×, 0.10) |
+| henry |  | 1 | **man-body** (2.8×, 0.10) |
 
 ## Posterior mean per topic
 
-| cell | ἀλλά-τοιοῦτος | ἔτι-τότε | δύστηνος-τλήμων | ἄνθρωπος-σῶμα | δείδω-οἰκτείρω | ἀγαθός-δίκαιος | ἀξιόω-πείθω | ἅπας-ἕτερος | κεῖνος-τέκος | ἐρῶ-γιγνώσκω | ἀκούω-ἀνιάω | πρᾶγμα-παρέχω | ἕλλην-βάρβαρος | ὕβρις-ἐπαινέω | ἀναιρέω-ἀπόλλυμι | γάμος-λέχος | ἱερόν-τεῖχος | ἀδικέω-ἐξαμαρτάνω | ζεύς-σεμέλη | θερμός-πλεύμων | αὐχήν-ἐρείδω | δόρυ-λόγχη | κρέων-πολυνείκης | ἀγαμέμνων-τροία | ὄρνις-θήρ | ἀνόσιος-μίασμα | ἀπέρχομαι-πορεύω | σωτήρ-εὐσέβεια | κτύπος-γόος | βαιός-πέδον | θυσία-θύω | σέλας-πῦρ | πλέω-θάλασσα | ἄρα-ἴσος | χαίτη-δειρή | μαντεία-χρηστήριον | βλαστάνω-ἐλαία | ποταμός-πεδίον | τρίτος-πέμπτος |
+| cell | but-such | still-then | wretched-miserable | man-body | fear-pity | good-just | deem-persuade | all-other | that-child | speak-know | hear-grieve | matter-provide | Greek-barbarian | hubris-praise | kill-destroy | marriage-bed | temple-wall | wrong-err | Zeus-Semele | hot-lung | neck-press | spear-lance | Creon-Polynices | Agamemnon-Troy | bird-beast | unholy-pollution | depart-travel | saviour-piety | crash-wail | small-ground | sacrifice-offer | flash-fire | sail-sea | then-equal | mane-neck | prophecy-oracle | sprout-olive | river-plain | third-fifth |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 13 stoicheia | 0.14 | 0.03 | 0.02 | 0.04 | 0.03 | 0.04 | 0.08 | 0.02 | 0.05 | 0.05 | 0.03 | 0.04 | 0.03 | 0.02 | 0.02 | 0.02 | 0.01 | 0.03 | 0.01 | 0.01 | 0.02 | 0.01 | 0.02 | 0.01 | 0.01 | 0.03 | 0.02 | 0.03 | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 | 0.02 | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 |
 | 13 candidates | 0.06 | 0.03 | 0.14 | 0.09 | 0.02 | 0.06 | 0.04 | 0.02 | 0.03 | 0.02 | 0.02 | 0.02 | 0.05 | 0.03 | 0.03 | 0.02 | 0.01 | 0.03 | 0.01 | 0.01 | 0.01 | 0.01 | 0.02 | 0.01 | 0.01 | 0.02 | 0.01 | 0.02 | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 | 0.04 | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 |
