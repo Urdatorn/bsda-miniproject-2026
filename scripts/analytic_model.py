@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Round 3: unsupervised topics, exact posterior.
+"""The analytic model: unsupervised topics (hard clusters), exact conjugate posterior.
 
 Topics.  Each vocabulary lemma carries a cluster label in vocab.json: the K = 40
 Ward cut of a word2vec space of Ancient Greek lemmata (skip-gram on the
@@ -18,7 +18,7 @@ uncertainty of each.  Each cell is compared with Sophocles' extant trimeters
 treated the same way: P(theta_k^cell > theta_k^Sophocles) over paired draws,
 and the lift of the posterior means.
 
-Usage: python scripts/round3_cluster_posterior.py --data data --out results/round3
+Usage: python scripts/analytic_model.py --data data --out results/analytic
 Writes posterior.json, posterior.csv (cell x topic) and posterior.md.
 """
 import argparse, json, os, sys
@@ -30,7 +30,7 @@ from bsda.data import load, documents, FIRST, LAST, RESTORERS
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/round3")
+    ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/analytic")
     ap.add_argument("--n", type=int, default=64, help="lemmata per document")
     ap.add_argument("--alpha", type=float, default=1.0, help="symmetric Dirichlet prior")
     ap.add_argument("--max-docs", type=int, default=1000, help="documents per lacuna cell (Sophocles 4x, walk 2x)")
@@ -77,7 +77,7 @@ def main():
                 rows.append(f"{v},{r},{names[k]},{s['n_docs']},{s['n_tokens']},{s['counts'][k]},{s['mean'][k]:.4f},{s['q05'][k]:.4f},{s['q95'][k]:.4f},{s['p_largest'][k]:.4f},"
                             + (f"{s['p_above_sophocles'][k]:.4f},{s['lift'][k]:.3f}" if "lift" in s else ","))
     open(f"{a.out}/posterior.csv", "w", encoding="utf-8").write("\n".join(rows) + "\n")
-    md = ["# Round 3: unsupervised topics, closed-form posterior\n",
+    md = ["# Analytic model: unsupervised topics, closed-form posterior\n",
           f"{K} topics (hard clusters of the vocabulary, labels from vocab.json); documents of {a.n} topic-bearing lemmata; theta ~ Dirichlet({a.alpha:g}), "
           f"posterior Dirichlet({a.alpha:g} + n) per document with {a.draws} draws, mixed over the cell's documents; Sophocles baseline of {real['n_docs']} documents.\n",
           "## Topics above the Sophocles baseline\n", "Topics with P(theta_k > theta_k of Sophocles) >= 0.9, by lift of the posterior mean (lift, posterior mean).\n",

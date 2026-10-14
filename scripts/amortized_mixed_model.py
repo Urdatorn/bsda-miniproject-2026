@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Round 2: seeded topics, amortized posterior.
+"""The amortized mixed model: seeded topics with soft topic-word distributions, amortized posterior.
 
 Generative model (a seeded LDA, BDA3 §22.3 as a Dirichlet-multinomial mixture):
 the topic-word distributions phi (K x V) are fitted once with tomotopy on the
 three tragedians, with one topic seeded per hypothesis in hypotheses.json
 (--topics hypotheses, the five supervised topics) or per unsupervised cluster of
-the vocabulary (--topics clusters, the 39 Round 3 clusters, each seeded with
+the vocabulary (--topics clusters, the 39 clusters of the analytic model, each seeded with
 all its lemmata), plus --free unseeded topics.  A document is then n content lemmata drawn from the
 mixture sum_k theta_k phi_k with theta ~ Dirichlet(1) on the simplex.  The
 quantity of interest is p(theta | document) for every lacuna cell; the
@@ -21,11 +21,11 @@ simulation-based calibration (rank histograms).  The trained network then
 reads the real documents: Sophocles' extant trimeters, the fills of every
 lacuna per restorer, the walk passages and Henry's text.  Every cell is also
 compared with Sophocles by P(theta_k^cell > theta_k^Sophocles) over paired
-posterior draws and by the lift of the posterior means, as in Round 3.
+posterior draws and by the lift of the posterior means, as in the analytic model.
 
 Usage (GPU recommended; KERAS_BACKEND=torch):
-  python scripts/round2_seeded_lda_bayesflow.py --data data --out results/round2
-  python scripts/round2_seeded_lda_bayesflow.py --topics clusters --out results/round2_clusters
+  python scripts/amortized_mixed_model.py --data data --out results/amortized_mixed
+  python scripts/amortized_mixed_model.py --topics clusters --out results/amortized_mixed_clusters
 Writes phi.json (topics), sbc.csv, recovery.csv, hypotheses.{json,md,csv}.
 """
 import argparse, json, os, sys, time, unicodedata
@@ -44,7 +44,7 @@ def alr_inv(z):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/round2")
+    ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/amortized_mixed")
     ap.add_argument("--topics", choices=("hypotheses", "clusters"), default="hypotheses", help="seed the five supervised hypotheses, or the unsupervised clusters of vocab.json")
     ap.add_argument("--free", type=int, default=4, help="unseeded topics beside the seeded topics")
     ap.add_argument("--seed-strength", type=float, default=200.0, help="prior weight of a seed word on its topic")
@@ -142,7 +142,7 @@ def main():
         seeded = P[:, :H]; dom = np.bincount(seeded.argmax(1), minlength=H) / len(P)
         s = {"label": label, "n_docs": len(docs), "mean": P.mean(0).tolist(), "q05": np.quantile(P, 0.05, 0).tolist(), "q95": np.quantile(P, 0.95, 0).tolist(),
              "p_dominant_seeded": dom.tolist(), "p_above_025": (seeded > 0.25).mean(0).tolist(), "free_mass": float(P[:, H:].sum(1).mean())}
-        if base is not None:                                                            # paired draws against the Sophocles mixture, as in Round 3
+        if base is not None:                                                            # paired draws against the Sophocles mixture, as in the analytic model
             B = base[rng.integers(0, len(base), len(P))]; s["p_above_sophocles"] = (P > B).mean(0).tolist(); s["lift"] = (P.mean(0) / B.mean(0)).tolist()
         return s, P
     real, P_real = summarise(documents(D.streams["real"], a.n, a.max_docs * 4, rng=rng), "Sophocles, extant trimeters")
@@ -161,7 +161,7 @@ def main():
             if s:
                 for j in range(H): f.write(f"{v},{r},{names[j]},{s['n_docs']},{s['mean'][j]:.4f},{s['q05'][j]:.4f},{s['q95'][j]:.4f},{s['p_dominant_seeded'][j]:.4f},{s['p_above_025'][j]:.4f},"
                                            + (f"{s['p_above_sophocles'][j]:.4f},{s['lift'][j]:.3f}" if "lift" in s else ",") + "\n")
-    md = [f"# Round 2 ({a.topics}): seeded LDA, amortized posterior (BayesFlow)\n",
+    md = [f"# Amortized mixed model ({a.topics}): seeded LDA, amortized posterior (BayesFlow)\n",
           f"Seeded LDA with {H} seeded topics ({a.topics}) and {a.free} free topics on a vocabulary of {V} content lemmata; documents of {a.n} lemmata; prior theta ~ Dirichlet(1). "
           f"Posterior from a coupling flow trained on {a.sims} simulated documents; on 1000 held-out simulations: recovery R² "
           + ", ".join(f"{names[k]} {r2[k]:.2f}" for k in range(H)) + "; 90 % coverage " + ", ".join(f"{cover[k]:.2f}" for k in range(H)) + "; SBC p " + ", ".join(f"{sbc_p[k]:.2f}" for k in range(H)) + ".\n",

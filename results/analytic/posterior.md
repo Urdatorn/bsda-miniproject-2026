@@ -1,4 +1,4 @@
-# Round 3: unsupervised topics, closed-form posterior
+# Analytic model: unsupervised topics, closed-form posterior
 
 39 topics (hard clusters of the vocabulary, labels from vocab.json); documents of 64 topic-bearing lemmata; theta ~ Dirichlet(1), posterior Dirichlet(1 + n) per document with 100 draws, mixed over the cell's documents; Sophocles baseline of 258 documents.
 

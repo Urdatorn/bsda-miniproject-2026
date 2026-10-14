@@ -1,4 +1,4 @@
-# Round 3 (R): unsupervised topics, closed-form posterior
+# Analytic model (R): unsupervised topics, closed-form posterior
 
 39 topics; documents of 64 lemmata; theta ~ Dirichlet(1); 100 draws per document; Sophocles baseline of 258 documents.
 

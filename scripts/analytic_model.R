@@ -1,10 +1,10 @@
-# Round 3 in R: unsupervised topics (hard clusters of the vocabulary), exact conjugate posterior.
+# The analytic model in R: unsupervised topics (hard clusters of the vocabulary), exact conjugate posterior.
 # A document is n = 64 topic-bearing lemmata; counts n ~ Multinomial(N, theta), theta ~ Dirichlet(alpha 1),
 # so theta | n ~ Dirichlet(alpha 1 + n) exactly.  A cell (lacuna x restorer) is the equal mixture of its
 # documents' posteriors and is compared with Sophocles by P(theta_k^cell > theta_k^Soph) over paired draws.
-#   Rscript scripts/round3.R data results/round3_r
+#   Rscript scripts/analytic_model.R data results/analytic_r
 suppressMessages({library(arrow); library(dplyr); library(jsonlite)})
-a <- commandArgs(TRUE); data <- if (length(a) >= 1) a[1] else "data"; out <- if (length(a) >= 2) a[2] else "results/round3_r"
+a <- commandArgs(TRUE); data <- if (length(a) >= 1) a[1] else "data"; out <- if (length(a) >= 2) a[2] else "results/analytic_r"
 n <- 64; alpha <- 1; draws <- 100; max_docs <- 1000; set.seed(917); dir.create(out, showWarnings = FALSE, recursive = TRUE)
 
 vocab  <- fromJSON(file.path(data, "vocab.json"))                       # index, lemma, tragic_count, cluster_K40 (NA = no topic)
@@ -35,6 +35,6 @@ rows <- bind_rows(lapply(names(cells), function(cl) { s <- cells[[cl]]; if (is.n
 write.csv(rows, file.path(out, "posterior.csv"), row.names = FALSE)
 raised <- rows %>% filter(p_above_sophocles >= 0.9) %>% arrange(cell, desc(lift)) %>% group_by(cell, n_docs) %>%
   summarise(raised = paste0("**", topic, "** (", sprintf("%.1f", lift), "×, ", sprintf("%.2f", mean), ")", collapse = ", "), .groups = "drop")
-md <- c("# Round 3 (R): unsupervised topics, closed-form posterior", "", sprintf("%d topics; documents of %d lemmata; theta ~ Dirichlet(%g); %d draws per document; Sophocles baseline of %d documents.", K, n, alpha, draws, soph$n_docs), "",
+md <- c("# Analytic model (R): unsupervised topics, closed-form posterior", "", sprintf("%d topics; documents of %d lemmata; theta ~ Dirichlet(%g); %d draws per document; Sophocles baseline of %d documents.", K, n, alpha, draws, soph$n_docs), "",
         "| cell | docs | topics raised (P >= 0.9 above Sophocles; lift, posterior mean) |", "|---|---|---|", sprintf("| %s | %d | %s |", raised$cell, raised$n_docs, raised$raised))
 writeLines(md, file.path(out, "posterior.md")); cat(md, sep = "\n")
