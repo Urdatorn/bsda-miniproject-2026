@@ -73,8 +73,8 @@ $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws and 
 
 ```sh
 python scripts/analytic_model.py --data data --out results/analytic        # seconds on a laptop
-Rscript -e 'rmarkdown::render("scripts/analytic_model.Rmd", output_dir = "results/analytic_r", knit_root_dir = getwd())'   # the same model as a PDF report (xelatex)
-Rscript -e 'rmarkdown::render("scripts/amortized_mixed_model.Rmd", output_dir = "results/amortized_mixed_clusters", knit_root_dir = getwd())'   # the GPU job's output as a PDF report
+Rscript -e 'rmarkdown::render("analytic_model.Rmd")'                                  # the same model as a PDF report (xelatex); knit from the repo root
+Rscript -e 'rmarkdown::render("amortized_mixed_model.Rmd")'                           # the GPU job's output as a PDF report
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --data data --out results/amortized_mixed   # a GPU hour; CPU dry run with --sims 3000 --epochs 2
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --topics clusters --out results/amortized_mixed_clusters
 sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortized_mixed_clusters                                # the same on a GH200 (Arrhenius)
@@ -84,7 +84,8 @@ sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortiz
 
 ```
 bsda/data.py        the data loader (bags -> streams -> documents)
-scripts/            one Python script and one R Markdown report (PDF, xelatex, a font with polytonic Greek) per model
+analytic_model.Rmd, amortized_mixed_model.Rmd   one PDF report per model (xelatex, a font with polytonic Greek)
+scripts/            one Python script per model
 slurm/              the GPU job for the amortized mixed model
 results/amortized_mixed/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv (five supervised topics)
 results/amortized_mixed_clusters/  the same with the 39 clusters as seeded topics
