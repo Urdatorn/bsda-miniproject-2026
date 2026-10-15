@@ -22,13 +22,16 @@ hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir data
 
 The R Markdown reports download these files themselves if `data/` is missing.
 
-- `vocab.json`: the $V = 3518$ content lemmata (nouns, verbs, adjectives, adverbs, proper names of three or more letters, three or more
+- `vocab.json`: the $V = 3228$ content lemmata (nouns, verbs, adjectives and adverbs of three or more letters, three or more
   occurrences in the three tragedians, minus a stop list of particles, pronouns and light verbs). There is no frequency cut: a word in
-  half of all scenes is still informative through its rate, and function words belong on the stop list.
+  half of all scenes is still informative through its rate, and function words belong on the stop list. Proper names (a lemma
+  capitalised in most of its tragic tokens: gods, heroes, places, ethnics) are dropped, since a name is a topic only in the sense that
+  Frodo is the topic of a novel, and names cluster by play, not by theme; the one exception is Ἕλλην with its cognates, which in Greek
+  means "not barbarian" rather than naming anyone.
   The lemmata come from a neural tagger, which damages some (λήσομενανθάνω, γείγνομαι, παήρ), so a lemma is kept only if it is
   well formed (Greek letters, exactly one accent, a breathing where Greek needs one, a final letter a Greek word can end in) and attested
-  (an LSJ headword, or a word form of the Greek corpus for proper names and for the common words the Perseus LSJ lacks). The 674 lemmata
-  that failed are listed with their reason in `vocab_dropped.json`. Each kept lemma carries its unsupervised topic label (`cluster_K40`, see the analytic model).
+  (an LSJ headword, or a word form of the Greek corpus for the common words the Perseus LSJ lacks). The 963 lemmata that failed
+  one of the tests (227 malformed, 306 names, 430 unattested) are listed with their reason in `vocab_dropped.json`. Each kept lemma carries its unsupervised topic label (`cluster_K40`, see the analytic model).
 - `imputations.parquet`: 631,974 rows, one per restored verse. `verse` 13–29, `restorer` ∈ {stoicheia, candidates, walk}, the walk's
   `chain_set`, `chain`, `iteration` and `style_tilted` flag, the `text`, and the bag as `lemma_idx` + `count` over `vocab.json`.
 - `corpus.parquet`: one row per extant trimeter of Sophocles, Aeschylus and Euripides, plus the intact papyrus lines and Henry's text.
@@ -71,7 +74,7 @@ by word2vec (skip-gram over the whole lemmatised Greek corpus, Spearman 0.53 wit
 by Ward's method, and the cut $K = 40$ is chosen where AGREE's related pairs still co-cluster while random pairs no longer do. Two clusters of
 rare lemmata with unreliable vectors (median count in the whole Greek corpus below 20) and four clusters of function words (particles,
 adverbs of time, position words, ordinals) are dropped, leaving 34 topics, each labelled by the English glosses of the three non-cognate
-lemmata nearest its centroid (miserable-wretched-hapless, mother-Electra-bed, altar-temple-precinct, sail-ship-sea, ...). That construction lives upstream; here the labels arrive in
+lemmata nearest its centroid (lament-pitiable-groan, marriage-couch-bed, temple-offer-precinct, ship-sail-hull, Greek-sea-barbarian, ...). That construction lives upstream; here the labels arrive in
 `vocab.json` as `cluster_K40`, with the Greek triple beside them as `cluster_K40_lemmata` (man-friend-citizen = ἀνήρ-φίλος-πολίτης).
 
 With hard clusters a document is a bag of topic labels, $\mathbf n \sim \mathrm{Multinomial}(N, \theta)$, and with
@@ -85,8 +88,8 @@ towards the uniform profile, which fabricates lift for topics that are simply ab
 
 Is the walk's topic profile an artefact of where the walk went? The report checks it two ways: the lift of every topic in windows of steps
 (all 120 chains over steps 525–3000, the 24 long chains to 12000) with its slope per 1000 steps, and the Gelman–Rubin $\hat R$ of each topic's
-share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *sail-ship-sea* has
-$\hat R \le 1.05$; *sail-ship-sea* ($\hat R = 1.61$) lives in some chains only.
+share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *ship-sail-hull* has
+$\hat R \le 1.04$; *ship-sail-hull* ($\hat R = 1.61$) lives in some chains only.
 
 ## Run
 
