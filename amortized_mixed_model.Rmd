@@ -35,7 +35,7 @@ The topic-word distributions $\phi$ ($K \times V$) are **soft**: a lemma has
 probability under several topics, so every word is a mixture and the posterior
 $p(\theta \mid \text{document})$ has no closed form. $\phi$ is fitted once on
 the three tragedians by a seeded latent Dirichlet allocation (tomotopy), each
-of the 35 unsupervised clusters of the analytic model seeding one topic with
+of the 36 unsupervised clusters of the analytic model seeding one topic with
 a strong word prior on all its lemmata, plus a few free topics.
 
 **Amortization.** A word enters the likelihood only through its $K$

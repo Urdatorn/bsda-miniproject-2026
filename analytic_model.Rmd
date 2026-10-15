@@ -45,11 +45,11 @@ differ from what Sophocles writes elsewhere?
 # The model
 
 Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters
-(word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; one
-rare-lemma cluster and four function-word clusters dropped, leaving 35). Each
+(word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; two
+rare-lemma clusters and two function-word clusters dropped, leaving 36). Each
 cluster is named by the English glosses of
-the two lemmata nearest its centre, for example *wretched-miserable* or
-*marriage-bed*. A **document** is $N$ consecutive topic-bearing lemmata of a
+the two lemmata nearest its centre, for example *mother-Electra* or
+*offer-sacrifice*. A **document** is $N$ consecutive topic-bearing lemmata of a
 stream, and its topic counts are
 
 $$\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta), \qquad
@@ -464,10 +464,10 @@ cat(sprintf(sentence, median(abs(stability$slope_per_1000)), steepest_topic,
 
 So the walk's topic profile is stationary: no topic drifts by more than a
 tenth of a lift unit over the common range, and the long chains hold their
-lifts to step 12000. The chains agree on every topic but one. *Sail-sea* has
+lifts to step 12000. The chains agree on every topic but one. *Sail-ship* has
 $\hat R$ far above 1 and chain-level lifts ranging from near zero to several
 times Sophocles': some chains sailed into sea vocabulary and stayed there,
-others never went. Its raised lift at v. 14 in the walk cell is therefore an
-artefact of where those chains went, not a property of the lacuna, and it is
-the one walk result that should be discounted. The other raised walk topics,
-*good-just* at vv. 17–18, are shared by all chains.
+others never went. Any raised lift of that topic in a walk cell would be an
+artefact of where those chains went, not a property of the lacuna, and must
+be discounted. The topic the walk does raise, *fine-good* at vv. 17–18, is
+shared by all chains.

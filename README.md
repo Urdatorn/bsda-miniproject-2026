@@ -21,8 +21,9 @@ hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir data
 
 The R Markdown reports download these files themselves if `data/` is missing.
 
-- `vocab.json`: the $V = 3504$ content lemmata (nouns, verbs, adjectives, adverbs, proper names of three or more letters, three or more
-  occurrences in the three tragedians, minus particles, light verbs and lemmata present in more than 25 % of Sophocles' 17-line windows).
+- `vocab.json`: the $V = 3508$ content lemmata (nouns, verbs, adjectives, adverbs, proper names of three or more letters, three or more
+  occurrences in the three tragedians, minus particles, light verbs and lemmata present in more than 25 % of Sophocles' 17-line windows
+  or more than 25 % of all 64-lemma documents of the three tragedians).
   The lemmata come from a neural tagger, which damages some (λήσομενανθάνω, γείγνομαι, παήρ), so a lemma is kept only if it is
   well formed (Greek letters, exactly one accent, a breathing where Greek needs one, a final letter a Greek word can end in) and attested
   (an LSJ headword, or a word form of the Greek corpus for proper names and for the common words the Perseus LSJ lacks). The 674 lemmata
@@ -37,7 +38,7 @@ stream; a cell's documents are cut from its shuffled stream, at most 1000 per ce
 
 ## The amortized mixed model: soft topics, amortized posterior (`scripts/amortized_mixed_model.py`)
 
-The 35 unsupervised clusters of the analytic model are seeded into a latent Dirichlet allocation with strong word priors, each cluster
+The 36 unsupervised clusters of the analytic model are seeded into a latent Dirichlet allocation with strong word priors, each cluster
 seeding one topic with all its lemmata, plus four free topics, so that the corpus decides how much a lemma leaks between clusters. The topic-word
 distributions $\phi$ ($K \times V$) are fitted once on the three tragedians with tomotopy.
 
@@ -54,11 +55,11 @@ the posterior means. Results: `results/amortized_mixed/`.
 
 The topics are hard clusters of the vocabulary: lemmata are embedded
 by word2vec (skip-gram over the whole lemmatised Greek corpus, Spearman 0.53 with the AGREE relatedness benchmark), the vocabulary is clustered
-by Ward's method, and the cut $K = 40$ is chosen where AGREE's related pairs still co-cluster while random pairs no longer do. One cluster of
-rare lemmata with unreliable vectors and four clusters of function words (particles, quantifiers, adverbs of time) are dropped, leaving
-35 topics, each labelled by the English glosses of the two non-cognate lemmata nearest its centroid
-(kill-destroy, marriage-bed, unholy-pollution, crash-wail, bird-beast, ...). That construction lives upstream; here the labels arrive in
-`vocab.json` as `cluster_K40`, with the Greek pair beside them as `cluster_K40_lemmata` (wretched-miserable = δύστηνος-τλήμων).
+by Ward's method, and the cut $K = 40$ is chosen where AGREE's related pairs still co-cluster while random pairs no longer do. Two clusters of
+rare lemmata with unreliable vectors (median count in the whole Greek corpus below 20) and two clusters of function words (particles,
+quantifiers, adverbs) are dropped, leaving 36 topics, each labelled by the English glosses of the two non-cognate lemmata nearest its centroid
+(slayer-murderer, mother-Electra, offer-sacrifice, crash-echo, beast-bird, ...). That construction lives upstream; here the labels arrive in
+`vocab.json` as `cluster_K40`, with the Greek pair beside them as `cluster_K40_lemmata` (king-woman = βασιλεύς-γυνή).
 
 With hard clusters a document is a bag of topic labels, $\mathbf n \sim \mathrm{Multinomial}(N, \theta)$, and with
 $\theta \sim \mathrm{Dirichlet}(\alpha \mathbf 1)$ the posterior is conjugate and exact:
@@ -70,8 +71,8 @@ $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws and 
 
 Is the walk's topic profile an artefact of where the walk went? The report checks it two ways: the lift of every topic in windows of steps
 (all 120 chains over steps 525–3000, the 24 long chains to 12000) with its slope per 1000 steps, and the Gelman–Rubin $\hat R$ of each topic's
-share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *sail-sea* has
-$\hat R \le 1.04$; *sail-sea* ($\hat R = 1.5$) lives in some chains only, so its raised lift at v. 14 is a chain artefact.
+share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *sail-ship* has
+$\hat R \le 1.06$; *sail-ship* ($\hat R = 1.6$) lives in some chains only.
 
 ## Run
 
