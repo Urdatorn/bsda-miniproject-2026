@@ -30,7 +30,6 @@ The R Markdown reports download these files themselves if `data/` is missing.
 - `imputations.parquet`: 631,974 rows, one per restored verse. `verse` 13–29, `restorer` ∈ {stoicheia, candidates, walk}, the walk's
   `chain_set`, `chain`, `iteration` and `style_tilted` flag, the `text`, and the bag as `lemma_idx` + `count` over `vocab.json`.
 - `corpus.parquet`: one row per extant trimeter of Sophocles, Aeschylus and Euripides, plus the intact papyrus lines and Henry's text.
-- `hypotheses.json`: five seed lists for the supervised topics of the amortized mixed model.
 
 `scripts/amortized_mixed_model.py` reads these into streams of lemma indices: Sophocles (the baseline), the three tragedians (training text for the topic-word
 distributions), the untilted walk passages, and one stream per lacuna cell (verse × restorer). A **document** is 64 consecutive lemmata of a
@@ -38,10 +37,8 @@ stream; a cell's documents are cut from its shuffled stream, at most 1000 per ce
 
 ## The amortized mixed model: soft topics, amortized posterior (`scripts/amortized_mixed_model.py`)
 
-Topics are seeded into a latent Dirichlet allocation with strong word priors, plus four free topics. With `--topics hypotheses` the seeds are
-the five philological hypotheses about the lost text (oath and disclosure, countryside and hunt, violence and death, women and marriage,
-kin and names); with `--topics clusters` they are the 35 unsupervised clusters of the analytic model, each seeded with all its lemmata, so that the
-same amortized workflow runs on unsupervised topics and the corpus decides how much a lemma leaks between clusters. The topic-word
+The 35 unsupervised clusters of the analytic model are seeded into a latent Dirichlet allocation with strong word priors, each cluster
+seeding one topic with all its lemmata, plus four free topics, so that the corpus decides how much a lemma leaks between clusters. The topic-word
 distributions $\phi$ ($K \times V$) are fitted once on the three tragedians with tomotopy.
 
 A document is then $n = 64$ lemmata drawn from the mixture $\sum_k \theta_k \phi_k$ with
@@ -51,11 +48,11 @@ the natural compression; a coupling flow (BayesFlow) learns $\theta$ in additive
 network is checked on 1000 held-out simulations (recovery $R^2$, 90 % interval coverage, simulation-based calibration) before it reads the
 real documents. Each cell reports $P(\theta_h \text{ is the largest seeded topic})$ and the posterior mean of $\theta_h$ with a 90 % interval,
 pooled over the cell's documents and draws, and, as in the analytic model, $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws with the lift of
-the posterior means. Results: `results/amortized_mixed/` (hypotheses) and `results/amortized_mixed_clusters/` (clusters).
+the posterior means. Results: `results/amortized_mixed/`.
 
 ## The analytic model: hard topics, exact posterior (`analytic_model.Rmd`)
 
-The supervised topics are biased towards existing readings. The analytic model replaces them with hard clusters of the vocabulary: lemmata are embedded
+The topics are hard clusters of the vocabulary: lemmata are embedded
 by word2vec (skip-gram over the whole lemmatised Greek corpus, Spearman 0.53 with the AGREE relatedness benchmark), the vocabulary is clustered
 by Ward's method, and the cut $K = 40$ is chosen where AGREE's related pairs still co-cluster while random pairs no longer do. One cluster of
 rare lemmata with unreliable vectors and four clusters of function words (particles, quantifiers, adverbs of time) are dropped, leaving
@@ -82,8 +79,7 @@ $\hat R \le 1.04$; *sail-sea* ($\hat R = 1.5$) lives in some chains only, so its
 Rscript -e 'rmarkdown::render("analytic_model.Rmd")'                                  # the whole analytic model, seconds on a laptop; knit from the repo root
 Rscript -e 'rmarkdown::render("amortized_mixed_model.Rmd")'                           # the GPU job's output as a PDF report
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --data data --out results/amortized_mixed   # a GPU hour; CPU dry run with --sims 3000 --epochs 2
-KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --topics clusters --out results/amortized_mixed_clusters
-sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortized_mixed_clusters                                # the same on a GH200 (Arrhenius)
+sbatch slurm/amortized_mixed_model.slurm                                                        # the same on a GH200 (Arrhenius)
 ```
 
 ## Layout
@@ -92,7 +88,6 @@ sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortiz
 analytic_model.Rmd, amortized_mixed_model.Rmd   one PDF report per model (xelatex, a font with polytonic Greek)
 scripts/            the GPU script of the amortized mixed model; topics_table.py writes the LaTeX table of the topics
 slurm/              the GPU job for the amortized mixed model
-results/amortized_mixed/     phi.json (topics), hypotheses.{md,csv,json}, sbc.csv, recovery.csv (five supervised topics)
-results/amortized_mixed_clusters/  the same with the 35 clusters as seeded topics
+results/amortized_mixed/     phi.json (topics), cells.{md,csv,json}, sbc.csv, recovery.csv
 results/analytic/     topics_K40.json (the clusters and their labels), topics_table.tex, posterior.csv and walk_stability.csv from the Rmd
 ```

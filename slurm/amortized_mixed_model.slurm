@@ -13,7 +13,7 @@
 
 # The amortized mixed model (seeded LDA + BayesFlow) on a GH200.  Compute nodes have no network: run
 # `hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir data` first.
-#   sbatch slurm/amortized_mixed_model.slurm --topics clusters --out results/amortized_mixed_clusters
+#   sbatch slurm/amortized_mixed_model.slurm
 set -Eeuo pipefail
 trap 'status=$?; echo "[$(date --iso-8601=seconds)] FATAL line=${LINENO} command=${BASH_COMMAND} status=${status}" >&2; exit "$status"' ERR
 repo=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026

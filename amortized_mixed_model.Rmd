@@ -11,7 +11,7 @@ mainfont: Times New Roman
 fontsize: 10pt
 geometry: margin=2cm
 params:
-  results: "results/amortized_mixed_clusters"
+  results: "results/amortized_mixed"
   show_topics: 12
 ---
 
@@ -35,9 +35,8 @@ The topic-word distributions $\phi$ ($K \times V$) are **soft**: a lemma has
 probability under several topics, so every word is a mixture and the posterior
 $p(\theta \mid \text{document})$ has no closed form. $\phi$ is fitted once on
 the three tragedians by a seeded latent Dirichlet allocation (tomotopy), each
-seeded topic given a strong word prior on its seed lemmata, the five
-philological hypotheses or the 35 unsupervised clusters, plus a few free
-topics.
+of the 35 unsupervised clusters of the analytic model seeding one topic with
+a strong word prior on all its lemmata, plus a few free topics.
 
 **Amortization.** A word enters the likelihood only through its $K$
 log-likelihoods $\log \phi_{\cdot w}$, so a document is a set of $K$-vectors
@@ -53,8 +52,8 @@ The GPU work is done by `scripts/amortized_mixed_model.py`
 
 ```{r load}
 phi <- fromJSON(file.path(results_dir, "phi.json"))
-result <- fromJSON(file.path(results_dir, "hypotheses.json"))
-cells <- read.csv(file.path(results_dir, "hypotheses.csv"),
+result <- fromJSON(file.path(results_dir, "cells.json"))
+cells <- read.csv(file.path(results_dir, "cells.csv"),
                   encoding = "UTF-8")
 sbc <- read.csv(file.path(results_dir, "sbc.csv"), encoding = "UTF-8")
 recovery <- read.csv(file.path(results_dir, "recovery.csv"),
@@ -64,7 +63,7 @@ topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
 H <- length(result$real$p_dominant_seeded)        # seeded topics only
 
-cat(H, "seeded topics (", result$topics, ") and", K - H, "free topics;",
+cat(H, "seeded topics and", K - H, "free topics;",
     "vocabulary of", phi$vocab_size, "lemmata;",
     "LDA log-likelihood per word", round(phi$ll_per_word, 3), "\n")
 ```
