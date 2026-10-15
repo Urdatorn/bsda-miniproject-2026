@@ -37,11 +37,9 @@ dir.create(params$out, showWarnings = FALSE, recursive = TRUE)
 
 P.Oxy. 5292 preserves twelve intact trimeters of Sophocles' *Tereus* and
 seventeen damaged ones (vv. 13–29). The judge-steered Markov walk restores
-the seventeen verses together, as one passage, and so does W. B. Henry. Two
-older generators, the Stoicheia fill-in model and the candidate generator,
-restore one verse at a time. Which topics does the walk put into the lost
-passage, does that differ from what Sophocles writes elsewhere, and how do
-the baselines compare?
+the seventeen verses together, as one passage, and so does W. B. Henry.
+Which topics does the walk put into the lost passage, does that differ from
+what Sophocles writes elsewhere, and how does Henry compare?
 
 # The model
 
@@ -79,10 +77,6 @@ it is sharp. The cells are
 
 - **walk**: every untilted snapshot of the walk, one document each;
 - **henry**: Henry's seventeen verses, one document;
-- **stoicheia** and **candidates**: composite restorations, each a random
-  fill for every one of the seventeen verses, one document each. The
-  generators never saw the verses together, so a composite is what their
-  independence per verse amounts to;
 - **sophocles**, the baseline: every window of seventeen consecutive extant
   trimeters of Sophocles, one document each, the same shape as the lacuna.
 
@@ -95,7 +89,7 @@ populations overlap. A topic counts as **raised** when the mean-profile
 probability is at least 0.9 and the lift at least 1.5. Only the restored
 text enters a document:
 the surviving letters of a damaged verse are never counted, for Henry as for
-the generators.
+the walk.
 
 # Data
 
@@ -247,8 +241,8 @@ window <- (seq_len(nrow(sophocles)) - 1) %/% 17
 sophocles_documents <- make_documents(sophocles, window)
 baseline <- summarise_cell(sophocles_documents)
 
-# Only untilted restorations are used. The tilt flag is empty (NA) for
-# Stoicheia and the candidates, which were never tilted.
+# Only untilted snapshots are used (the tilt flag is empty, NA, for the
+# restorers that were never tilted)
 untilted <- filter(imputations, !coalesce(style_tilted, FALSE))
 
 # The walk: one document per snapshot (one chain at one step, all seventeen
@@ -264,30 +258,10 @@ walk_documents <- make_documents(walk, walk$snapshot)
 henry <- filter(corpus, source == "henry")
 henry_documents <- make_documents(henry, rep("henry", nrow(henry)))
 
-# A composite restoration of a one-verse generator: one random fill for
-# each of the seventeen verses, `n_composites` times
-composite_documents <- function(fills, n_composites) {
-  parts <- NULL
-  for (verse_number in 13:29) {
-    pool <- filter(fills, verse == verse_number)
-    pick <- sample(nrow(pool), n_composites, replace = TRUE)
-    part <- pool[pick, ]
-    part$composite <- seq_len(n_composites)
-    parts <- bind_rows(parts, part)
-  }
-  make_documents(parts, parts$composite)
-}
-stoicheia <- filter(untilted, restorer == "stoicheia")
-candidates <- filter(untilted, restorer == "candidates")
-
 cells <- list()
 cells[["walk"]] <- summarise_cell(at_most(walk_documents, max_docs),
                                   baseline)
 cells[["henry"]] <- summarise_cell(henry_documents, baseline)
-cells[["stoicheia"]] <- summarise_cell(composite_documents(stoicheia, 1000),
-                                       baseline)
-cells[["candidates"]] <- summarise_cell(composite_documents(candidates, 1000),
-                                        baseline)
 
 # One row per cell and topic, saved as the model's table
 rows <- NULL
@@ -370,7 +344,7 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   geom_col() +
   geom_hline(yintercept = 1, linetype = "dashed") +
   coord_flip() +
-  facet_wrap(~ cell, ncol = 4) +
+  facet_wrap(~ cell, ncol = 2) +
   scale_fill_manual(values = c("grey70", "firebrick"),
                     name = "raised: P >= 0.9\nand lift >= 1.5") +
   labs(x = NULL, y = "lift of the posterior mean against Sophocles") +

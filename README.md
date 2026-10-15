@@ -3,9 +3,10 @@
 Albin Thörn Cleland, Lund University. Bayesian Statistics and Data Analysis, mini-project.
 
 P.Oxy. 5292 preserves twelve intact iambic trimeters of Sophocles' *Tereus* and seventeen damaged ones (vv. 13–29), each with a few letters
-surviving at the start of the line. Many restorations of the damaged verses exist: a philologist's (W. B. Henry), the Stoicheia fill-in model's
-candidates, and the states of judge-steered Markov walks over metrically valid Greek. This repository asks one question of all of them: **which
-topics does each restorer put into each lost verse, and does that differ from what Sophocles writes elsewhere?**
+surviving at the start of the line. Two restorations of the whole passage exist: a philologist's (W. B. Henry) and the
+states of judge-steered Markov walks over metrically valid Greek. This repository asks one question of them: **which topics does the walk put
+into the lost passage, and does that differ from what Sophocles writes elsewhere and from what Henry wrote?** (The dataset also holds the
+one-verse fills of two older generators, Stoicheia and the candidates; they are not modelled here.)
 
 The generation of the restorations is a black box here. Its output, one bag of content lemmata per restored verse, is the dataset
 [Urdatorn/bsda-miniproject-2026](https://huggingface.co/datasets/Urdatorn/bsda-miniproject-2026) (see `Data` below). The generation itself,
@@ -39,8 +40,6 @@ verses, all its lemmata, however many there are and nothing cut off. The cells a
 
 - **walk**: one document per untilted snapshot (one chain at one step, all seventeen verses), 19,922 of them;
 - **henry**: Henry's seventeen restored verses, one document;
-- **stoicheia** and **candidates**: composite restorations, one random fill for each of the seventeen verses, 1000 of them per generator. The
-  generators never saw the verses together, so a composite is what their independence per verse amounts to;
 - **sophocles**, the reference: every window of seventeen consecutive extant trimeters of Sophocles, 444 of them, the same shape as the lacuna.
 
 Only restored text enters a document: the surviving letters of a damaged verse are never counted, for Henry as for the generators. Every cell is
@@ -86,8 +85,8 @@ towards the uniform profile, which fabricates lift for topics that are simply ab
 
 Is the walk's topic profile an artefact of where the walk went? The report checks it two ways: the lift of every topic in windows of steps
 (all 120 chains over steps 525–3000, the 24 long chains to 12000) with its slope per 1000 steps, and the Gelman–Rubin $\hat R$ of each topic's
-share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *sail-ship* has
-$\hat R \le 1.06$; *sail-ship* ($\hat R = 1.6$) lives in some chains only.
+share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *sail-ship-sea* has
+$\hat R \le 1.05$; *sail-ship-sea* ($\hat R = 1.61$) lives in some chains only.
 
 ## Run
 

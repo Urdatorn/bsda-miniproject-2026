@@ -40,9 +40,8 @@ of the unsupervised clusters of the analytic model seeding one topic with
 a strong word prior on all its lemmata, plus a few free topics.
 
 The cells are those of the analytic model: the walk, one document per
-untilted snapshot; Henry's seventeen verses, one document; Stoicheia and the
-candidates as composite restorations, one random fill per verse; and
-Sophocles' extant trimeters in windows of seventeen, the reference. Every
+untilted snapshot; Henry's seventeen verses, one document; and Sophocles'
+extant trimeters in windows of seventeen, the reference. Every
 cell is read on two levels: its **mean profile**, the documents' posteriors
 averaged draw by draw, compared with Sophocles' by
 $P(\bar\theta_k^{\text{cell}} > \bar\theta_k^{\text{Soph}})$ and the lift of
@@ -75,7 +74,8 @@ recovery <- read.csv(file.path(results_dir, "recovery.csv"),
 topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
 H <- length(result$cells$sophocles$p_dominant_seeded)   # seeded topics only
-cell_names <- c("walk", "henry", "stoicheia", "candidates")
+cell_names <- c("walk", "henry")
+cells <- filter(cells, cell %in% c("sophocles", cell_names))
 cells$cell <- factor(cells$cell, levels = c("sophocles", cell_names))
 
 cat(H, "seeded topics and", K - H, "free topics;",
@@ -177,7 +177,7 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   geom_col() +
   geom_hline(yintercept = 1, linetype = "dashed") +
   coord_flip() +
-  facet_wrap(~ cell, ncol = 4) +
+  facet_wrap(~ cell, ncol = 2) +
   scale_fill_manual(values = c("grey70", "firebrick"),
                     name = "raised: P >= 0.9\nand lift >= 1.5") +
   labs(x = NULL, y = "lift of the mean profile against Sophocles") +

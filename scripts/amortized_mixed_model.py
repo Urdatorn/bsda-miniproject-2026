@@ -12,10 +12,8 @@ The quantity of interest is p(theta | document) for every cell.
 
 The cells.  The walk is the object: one document per untilted snapshot (one
 chain at one step, all seventeen verses).  Henry's seventeen verses are one
-document.  The one-verse generators, Stoicheia and the candidates, are
-baselines: a document is a composite restoration, one random fill for each of
-the seventeen verses.  Sophocles' extant trimeters in windows of seventeen
-are the reference, the same shape as the lacuna.  Only restored text enters a
+document.  Sophocles' extant trimeters in windows of seventeen are the
+reference, the same shape as the lacuna.  Only restored text enters a
 document; the surviving letters of a damaged verse are never counted.
 
 Amortization (BayesFlow).  A word enters the likelihood only through its K
@@ -62,10 +60,9 @@ def windows(rows, size=WINDOW):
     return [sum(rows[i:i + size], []) for i in range(0, len(rows) - size + 1, size)]
 
 
-def load(data_dir, rng, n_composites):
+def load(data_dir):
     """vocab (the lemmata, index = column of a bag), cluster (the topic of each lemma or None),
-    docs: {"sophocles": windows, "walk": snapshots, "henry": [one document],
-           "stoicheia": composites, "candidates": composites}, and the tragic windows for the LDA"""
+    docs: {"sophocles": windows, "walk": snapshots, "henry": [one document]}, and the tragic windows for the LDA"""
     vocab = json.load(open(os.path.join(data_dir, "vocab.json"), encoding="utf-8"))
     corpus = pq.read_table(os.path.join(data_dir, "corpus.parquet"))
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet"))
@@ -76,17 +73,13 @@ def load(data_dir, rng, n_composites):
         tragic += author_windows
         if author == "sophocles": docs["sophocles"] = author_windows
     docs["henry"] = [sum(row_lemmata(in_line_order(corpus.filter(src == "henry"))), [])]
-    restorer = np.array(imp["restorer"].to_pylist()); verse = np.array(imp["verse"].to_pylist())
+    restorer = np.array(imp["restorer"].to_pylist())
     tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
     walk = imp.filter((restorer == "walk") & ~tilted)
     snapshot = defaultdict(list)
     for key_set, key_chain, key_step, lemmata in zip(walk["chain_set"].to_pylist(), walk["chain"].to_pylist(), walk["iteration"].to_pylist(), row_lemmata(walk)):
         snapshot[(key_set, key_chain, key_step)] += lemmata
     docs["walk"] = [snapshot[k] for k in sorted(snapshot, key=str)]
-    for r in ("stoicheia", "candidates"):
-        fills = imp.filter((restorer == r) & ~tilted); fill_verse = np.array(fills["verse"].to_pylist()); rows = row_lemmata(fills)
-        pools = {v: [rows[i] for i in np.flatnonzero(fill_verse == v)] for v in range(FIRST, LAST + 1)}
-        docs[r] = [sum((pools[v][rng.integers(len(pools[v]))] for v in range(FIRST, LAST + 1)), []) for _ in range(n_composites)]
     docs = {name: [d for d in ds if d] for name, ds in docs.items()}                  # a document needs at least one lemma
     return [r["lemma"] for r in vocab], [r["cluster_K40"] for r in vocab], docs, tragic
 
@@ -110,11 +103,10 @@ def main():
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--post-draws", type=int, default=300)
     ap.add_argument("--max-docs", type=int, default=4000, help="walk snapshots read (sampled)")
-    ap.add_argument("--composites", type=int, default=1000, help="composite restorations per one-verse generator")
     ap.add_argument("--seed", type=int, default=917)
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     os.environ.setdefault("KERAS_BACKEND", "torch"); rng = np.random.default_rng(a.seed)
-    vocab, cluster, docs, tragic = load(a.data, rng, a.composites); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
+    vocab, cluster, docs, tragic = load(a.data); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
     if len(docs["walk"]) > a.max_docs: docs["walk"] = [docs["walk"][i] for i in sorted(rng.choice(len(docs["walk"]), a.max_docs, replace=False))]
     lengths = {name: np.array([len(d) for d in ds]) for name, ds in docs.items()}
     print(f"vocabulary {V} lemmata; documents: " + "; ".join(f"{name} {len(ds)} (mean {lengths[name].mean():.1f} lemmata, max {lengths[name].max()})" for name, ds in docs.items())
@@ -234,7 +226,7 @@ def main():
             s["p_document"] = (P > B).mean(0).tolist()
         return s
     cells = {"sophocles": summarise(docs["sophocles"])}
-    for name in ("walk", "henry", "stoicheia", "candidates"):
+    for name in ("walk", "henry"):
         cells[name] = summarise(docs[name], cells["sophocles"]); print(f"  {name} read: {cells[name]['n_docs']} documents", flush=True)
     res = {"names": names, "cells": {name: {k: v for k, v in s.items() if not k.startswith("_")} for name, s in cells.items()},
            "checks": {"recovery_r2": r2, "coverage90": cover, "sbc_p": sbc_p}}
