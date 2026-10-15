@@ -32,9 +32,22 @@ The R Markdown reports download these files themselves if `data/` is missing.
   `chain_set`, `chain`, `iteration` and `style_tilted` flag, the `text`, and the bag as `lemma_idx` + `count` over `vocab.json`.
 - `corpus.parquet`: one row per extant trimeter of Sophocles, Aeschylus and Euripides, plus the intact papyrus lines and Henry's text.
 
-`scripts/amortized_mixed_model.py` reads these into streams of lemma indices: Sophocles (the baseline), the three tragedians (training text for the topic-word
-distributions), the untilted walk passages, and one stream per lacuna cell (verse × restorer). A **document** is 64 consecutive lemmata of a
-stream; a cell's documents are cut from its shuffled stream, at most 1000 per cell.
+## Documents and cells
+
+The walk is the object of study; the two one-verse generators are baselines. A **document** is one whole restoration of the seventeen lost
+verses, all its lemmata, however many there are and nothing cut off. The cells are
+
+- **walk**: one document per untilted snapshot (one chain at one step, all seventeen verses), 19,922 of them;
+- **henry**: Henry's seventeen restored verses, one document;
+- **stoicheia** and **candidates**: composite restorations, one random fill for each of the seventeen verses, 1000 of them per generator. The
+  generators never saw the verses together, so a composite is what their independence per verse amounts to;
+- **sophocles**, the reference: every window of seventeen consecutive extant trimeters of Sophocles, 444 of them, the same shape as the lacuna.
+
+Only restored text enters a document: the surviving letters of a damaged verse are never counted, for Henry as for the generators. Every cell is
+read on two levels. Its **mean profile** is the documents' posteriors averaged draw by draw, compared with Sophocles' by
+$P(\bar\theta_k^{\text{cell}} > \bar\theta_k^{\text{Soph}})$ and by the lift of the means; with thousands of restorations it is sharp, so the lift
+is the effect size. A **random document** against a random window, $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$, says how much the two
+populations overlap. A topic counts as raised when the mean-profile probability is at least 0.9 and the lift at least 1.5.
 
 ## The amortized mixed model: soft topics, amortized posterior (`scripts/amortized_mixed_model.py`)
 
@@ -42,14 +55,15 @@ The 36 unsupervised clusters of the analytic model are seeded into a latent Diri
 seeding one topic with all its lemmata, plus four free topics, so that the corpus decides how much a lemma leaks between clusters. The topic-word
 distributions $\phi$ ($K \times V$) are fitted once on the three tragedians with tomotopy.
 
-A document is then $n = 64$ lemmata drawn from the mixture $\sum_k \theta_k \phi_k$ with
+A document's $N$ lemmata are drawn from the mixture $\sum_k \theta_k \phi_k$ with
 $\theta \sim \mathrm{Dirichlet}(\mathbf 1)$, and the quantity of interest is $p(\theta \mid \text{document})$. Because a word enters the
 likelihood only through its $K$ log-likelihoods $\log \phi_{\cdot w}$, a document is a set of $K$-vectors and a DeepSet summary network is
-the natural compression; a coupling flow (BayesFlow) learns $\theta$ in additive log-ratio coordinates from 200,000 simulated documents. The
-network is checked on 1000 held-out simulations (recovery $R^2$, 90 % interval coverage, simulation-based calibration) before it reads the
-real documents. Each cell reports $P(\theta_h \text{ is the largest seeded topic})$ and the posterior mean of $\theta_h$ with a 90 % interval,
-pooled over the cell's documents and draws, and, as in the analytic model, $P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws with the lift of
-the posterior means. Results: `results/amortized_mixed/`.
+the natural compression; documents differ in length, so the set is padded and the network pools over the real elements only, with $\log N$ as
+an extra summary. A coupling flow (BayesFlow) learns $\theta$ in additive log-ratio coordinates from 200,000 simulated documents whose lengths
+are drawn from the real documents' lengths. The network is checked on 1000 held-out simulations (recovery $R^2$, 90 % interval coverage,
+simulation-based calibration) before it reads the real documents. Each cell reports the mean profile with a 90 % interval, the comparison with
+Sophocles on both levels, $P(\theta_h \text{ is the largest seeded topic})$ for a random document, and the mass on the free topics.
+Results: `results/amortized_mixed/`.
 
 ## The analytic model: hard topics, exact posterior (`analytic_model.Rmd`)
 
@@ -62,12 +76,13 @@ quantifiers, adverbs) are dropped, leaving 36 topics, each labelled by the Engli
 `vocab.json` as `cluster_K40`, with the Greek pair beside them as `cluster_K40_lemmata` (king-woman = βασιλεύς-γυνή).
 
 With hard clusters a document is a bag of topic labels, $\mathbf n \sim \mathrm{Multinomial}(N, \theta)$, and with
-$\theta \sim \mathrm{Dirichlet}(\alpha \mathbf 1)$ the posterior is conjugate and exact:
+$\theta \sim \mathrm{Dirichlet}(\kappa \mathbf m)$, $\mathbf m$ Sophocles' own topic profile and $\kappa = 1$ one lemma's worth of it, the
+posterior is conjugate and exact:
 
-$$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\alpha \mathbf 1 + \mathbf n).$$
+$$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\kappa \mathbf m + \mathbf n).$$
 
-A cell's posterior is the equal mixture of its documents' posteriors; it is compared with Sophocles' extant trimeters by
-$P(\theta_k^{\text{cell}} > \theta_k^{\text{Sophocles}})$ over paired draws and by the lift of posterior means. Results: `results/analytic/`.
+The prior is centred on Sophocles rather than symmetric because documents differ in length, and a symmetric prior pulls short documents harder
+towards the uniform profile, which fabricates lift for topics that are simply absent. Results: `results/analytic/`.
 
 Is the walk's topic profile an artefact of where the walk went? The report checks it two ways: the lift of every topic in windows of steps
 (all 120 chains over steps 525–3000, the 24 long chains to 12000) with its slope per 1000 steps, and the Gelman–Rubin $\hat R$ of each topic's

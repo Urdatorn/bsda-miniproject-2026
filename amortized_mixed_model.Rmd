@@ -29,23 +29,37 @@ results_dir <- params$results
 
 # The model
 
-A document is $N$ content lemmata drawn from the mixture
+A document is one whole restoration of the seventeen lost verses: its $N$
+content lemmata, however many there are, drawn from the mixture
 $\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\mathbf 1)$.
 The topic-word distributions $\phi$ ($K \times V$) are **soft**: a lemma has
 probability under several topics, so every word is a mixture and the posterior
 $p(\theta \mid \text{document})$ has no closed form. $\phi$ is fitted once on
 the three tragedians by a seeded latent Dirichlet allocation (tomotopy), each
-of the 36 unsupervised clusters of the analytic model seeding one topic with
+of the unsupervised clusters of the analytic model seeding one topic with
 a strong word prior on all its lemmata, plus a few free topics.
+
+The cells are those of the analytic model: the walk, one document per
+untilted snapshot; Henry's seventeen verses, one document; Stoicheia and the
+candidates as composite restorations, one random fill per verse; and
+Sophocles' extant trimeters in windows of seventeen, the reference. Every
+cell is read on two levels: its **mean profile**, the documents' posteriors
+averaged draw by draw, compared with Sophocles' by
+$P(\bar\theta_k^{\text{cell}} > \bar\theta_k^{\text{Soph}})$ and the lift of
+the means, and a **random document** against a random window,
+$P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$. A topic is raised when
+the mean-profile probability is at least 0.9 and the lift at least 1.5.
 
 **Amortization.** A word enters the likelihood only through its $K$
 log-likelihoods $\log \phi_{\cdot w}$, so a document is a set of $K$-vectors
-and a DeepSet summary network is the natural compression; a coupling flow
-(BayesFlow) learns $\theta$ in additive log-ratio coordinates from 200,000
-simulated documents. Before it reads the real documents it is checked on 1000
-held-out simulations: recovery $R^2$, 90 % interval coverage, and
-simulation-based calibration (SBC), whose rank histograms must be uniform if
-the posterior is calibrated.
+and a DeepSet summary network is the natural compression. Documents differ
+in length, so the set is padded and the network pools over the real elements
+only, with $\log N$ as an extra summary. A coupling flow (BayesFlow) learns
+$\theta$ in additive log-ratio coordinates from 200,000 simulated documents
+whose lengths are drawn from the real documents' lengths. Before it reads
+the real documents it is checked on 1000 held-out simulations: recovery
+$R^2$, 90 % interval coverage, and simulation-based calibration (SBC), whose
+rank histograms must be uniform if the posterior is calibrated.
 
 The GPU work is done by `scripts/amortized_mixed_model.py`
 (`slurm/amortized_mixed_model.slurm`); this document reads its output.
@@ -53,15 +67,16 @@ The GPU work is done by `scripts/amortized_mixed_model.py`
 ```{r load}
 phi <- fromJSON(file.path(results_dir, "phi.json"))
 result <- fromJSON(file.path(results_dir, "cells.json"))
-cells <- read.csv(file.path(results_dir, "cells.csv"),
-                  encoding = "UTF-8")
+cells <- read.csv(file.path(results_dir, "cells.csv"), encoding = "UTF-8")
 sbc <- read.csv(file.path(results_dir, "sbc.csv"), encoding = "UTF-8")
 recovery <- read.csv(file.path(results_dir, "recovery.csv"),
                      encoding = "UTF-8")
 
 topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
-H <- length(result$real$p_dominant_seeded)        # seeded topics only
+H <- length(result$cells$sophocles$p_dominant_seeded)   # seeded topics only
+cell_names <- c("walk", "henry", "stoicheia", "candidates")
+cells$cell <- factor(cells$cell, levels = c("sophocles", cell_names))
 
 cat(H, "seeded topics and", K - H, "free topics;",
     "vocabulary of", phi$vocab_size, "lemmata;",
@@ -122,52 +137,77 @@ ggplot(recovery_shown, aes(x = true, y = post_mean)) +
   theme_minimal(8)
 ```
 
-# The lacunae
+# The cells
 
-Seeded topics with $P(\theta_k^{\text{cell}} > \theta_k^{\text{Soph}}) \ge
-0.9$ over paired posterior draws, with the lift of the posterior mean and the
-mean itself.
+```{r sizes}
+sizes <- unique(cells[, c("cell", "n_docs", "n_lemmata")])
+knitr::kable(sizes, row.names = FALSE,
+             caption = "The cells: documents and content lemmata each")
+```
 
-```{r cells, results = "asis"}
-# The pooled cells (sophocles, walk, henry) have no restorer in the table
-cells$cell <- as.character(cells$cell)
-has_restorer <- !is.na(cells$restorer) & cells$restorer != ""
-cells$cell[has_restorer] <- paste(cells$cell[has_restorer],
-                                  cells$restorer[has_restorer])
+# Topics raised above Sophocles
 
-raised <- filter(cells, !is.na(p_above_sophocles), p_above_sophocles >= 0.9)
-raised <- arrange(raised, cell, desc(lift))
-for (cell_name in unique(raised$cell)) {
+Seeded topics whose mean profile is above Sophocles' with $P \ge 0.9$ and a
+lift of at least 1.5, with the lift, the posterior mean and, in brackets,
+the document-level probability.
+
+```{r raised, results = "asis"}
+cells$raised <- !is.na(cells$lift) & cells$p_above_sophocles >= 0.9 &
+  cells$lift >= 1.5
+raised <- arrange(filter(cells, raised), cell, desc(lift))
+for (cell_name in cell_names) {
   cell_raised <- filter(raised, cell == cell_name)
-  items <- sprintf("%s (%.1f×, %.2f)", cell_raised$topic, cell_raised$lift,
-                   cell_raised$mean)
+  if (nrow(cell_raised) == 0) {
+    cat("- **", cell_name, "**: none\n", sep = "")
+    next
+  }
+  items <- sprintf("%s (%.1f×, %.2f [%.2f])", cell_raised$topic,
+                   cell_raised$lift, cell_raised$mean, cell_raised$p_document)
   cat("- **", cell_name, "** (", cell_raised$n_docs[1], " documents): ",
       paste(items, collapse = ", "), "\n", sep = "")
 }
 ```
 
-```{r dominant, fig.height = 8}
+# Lift of every seeded topic in every cell
+
+```{r lifts, fig.height = 7}
+lifts <- filter(cells, cell != "sophocles")
+lifts$topic <- factor(lifts$topic, levels = rev(topic_names[1:H]))
+ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
+  geom_col() +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  coord_flip() +
+  facet_wrap(~ cell, ncol = 4) +
+  scale_fill_manual(values = c("grey70", "firebrick"),
+                    name = "raised: P >= 0.9\nand lift >= 1.5") +
+  labs(x = NULL, y = "lift of the mean profile against Sophocles") +
+  theme_minimal(8) +
+  theme(legend.position = "bottom")
+```
+
+# Which seeded topic dominates
+
+```{r dominant, fig.height = 7}
 heat <- cells
-heat$cell <- factor(heat$cell, levels = unique(cells$cell))
-heat$topic <- factor(heat$topic, levels = topic_names)
+heat$topic <- factor(heat$topic, levels = rev(topic_names[1:H]))
 ggplot(heat, aes(x = cell, y = topic, fill = p_dominant)) +
   geom_tile() +
   scale_fill_gradient(low = "white", high = "firebrick",
                       name = "P(largest\nseeded topic)") +
-  labs(x = NULL, y = NULL, title = "Which seeded topic dominates each cell") +
-  theme_minimal(7) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  labs(x = NULL, y = NULL,
+       title = "Which seeded topic dominates a random document of the cell") +
+  theme_minimal(8)
 ```
 
-The five largest posterior means in the pooled cells.
+The five largest mean profiles in every cell.
 
 ```{r mass}
-pooled <- filter(cells, cell %in% c("sophocles", "walk", "henry"))
-pooled <- arrange(pooled, cell, desc(mean))
 top_five <- NULL
-for (cell_name in c("sophocles", "walk", "henry")) {
-  top_five <- rbind(top_five, head(filter(pooled, cell == cell_name), 5))
+for (cell_name in c("sophocles", cell_names)) {
+  cell_rows <- arrange(filter(cells, cell == cell_name), desc(mean))
+  top_five <- rbind(top_five, head(cell_rows, 5))
 }
-top_five <- select(top_five, cell, topic, mean, q05, q95, p_dominant)
-knitr::kable(top_five, digits = 2, row.names = FALSE)
+top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95", "lift",
+                         "p_above_sophocles", "p_document")]
+knitr::kable(top_five, digits = 3, row.names = FALSE)
 ```
