@@ -21,9 +21,9 @@ hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir data
 
 The R Markdown reports download these files themselves if `data/` is missing.
 
-- `vocab.json`: the $V = 3508$ content lemmata (nouns, verbs, adjectives, adverbs, proper names of three or more letters, three or more
-  occurrences in the three tragedians, minus particles, light verbs and lemmata present in more than 25 % of Sophocles' 17-line windows
-  or more than 25 % of all 64-lemma documents of the three tragedians).
+- `vocab.json`: the $V = 3518$ content lemmata (nouns, verbs, adjectives, adverbs, proper names of three or more letters, three or more
+  occurrences in the three tragedians, minus a stop list of particles, pronouns and light verbs). There is no frequency cut: a word in
+  half of all scenes is still informative through its rate, and function words belong on the stop list.
   The lemmata come from a neural tagger, which damages some (λήσομενανθάνω, γείγνομαι, παήρ), so a lemma is kept only if it is
   well formed (Greek letters, exactly one accent, a breathing where Greek needs one, a final letter a Greek word can end in) and attested
   (an LSJ headword, or a word form of the Greek corpus for proper names and for the common words the Perseus LSJ lacks). The 674 lemmata
@@ -51,7 +51,7 @@ populations overlap. A topic counts as raised when the mean-profile probability 
 
 ## The amortized mixed model: soft topics, amortized posterior (`scripts/amortized_mixed_model.py`)
 
-The 36 unsupervised clusters of the analytic model are seeded into a latent Dirichlet allocation with strong word priors, each cluster
+The 34 unsupervised clusters of the analytic model are seeded into a latent Dirichlet allocation with strong word priors, each cluster
 seeding one topic with all its lemmata, plus four free topics, so that the corpus decides how much a lemma leaks between clusters. The topic-word
 distributions $\phi$ ($K \times V$) are fitted once on the three tragedians with tomotopy.
 
@@ -70,10 +70,10 @@ Results: `results/amortized_mixed/`.
 The topics are hard clusters of the vocabulary: lemmata are embedded
 by word2vec (skip-gram over the whole lemmatised Greek corpus, Spearman 0.53 with the AGREE relatedness benchmark), the vocabulary is clustered
 by Ward's method, and the cut $K = 40$ is chosen where AGREE's related pairs still co-cluster while random pairs no longer do. Two clusters of
-rare lemmata with unreliable vectors (median count in the whole Greek corpus below 20) and two clusters of function words (particles,
-quantifiers, adverbs) are dropped, leaving 36 topics, each labelled by the English glosses of the two non-cognate lemmata nearest its centroid
-(slayer-murderer, mother-Electra, offer-sacrifice, crash-echo, beast-bird, ...). That construction lives upstream; here the labels arrive in
-`vocab.json` as `cluster_K40`, with the Greek pair beside them as `cluster_K40_lemmata` (king-woman = βασιλεύς-γυνή).
+rare lemmata with unreliable vectors (median count in the whole Greek corpus below 20) and four clusters of function words (particles,
+adverbs of time, position words, ordinals) are dropped, leaving 34 topics, each labelled by the English glosses of the three non-cognate
+lemmata nearest its centroid (miserable-wretched-hapless, mother-Electra-bed, altar-temple-precinct, sail-ship-sea, ...). That construction lives upstream; here the labels arrive in
+`vocab.json` as `cluster_K40`, with the Greek triple beside them as `cluster_K40_lemmata` (man-friend-citizen = ἀνήρ-φίλος-πολίτης).
 
 With hard clusters a document is a bag of topic labels, $\mathbf n \sim \mathrm{Multinomial}(N, \theta)$, and with
 $\theta \sim \mathrm{Dirichlet}(\kappa \mathbf m)$, $\mathbf m$ Sophocles' own topic profile and $\kappa = 1$ one lemma's worth of it, the

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The topics as a LaTeX table: English gloss, the two label lemmata, their
+"""The topics as a LaTeX table: English gloss, the three label lemmata, their
 transliteration, and the cluster's share of the topic-bearing lemmata and of
 their tokens in the three tragedians.
 
@@ -38,15 +38,15 @@ def transliterate(word):
 def main(topics_path, out_path):
     topics = json.load(open(topics_path, encoding="utf-8"))["topics"]
     n_lemmata, n_tokens = sum(t["size"] for t in topics), sum(t["tragic_tokens"] for t in topics)
-    lines = ["% The topics of the analytic model: English gloss, the two label lemmata, their transliteration.",
-             "% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \\usepackage{booktabs}.",
-             "\\begin{table}[htbp]", "\\centering", "\\small", "\\begin{tabular}{lllrr}", "\\toprule",
+    lines = ["% The topics of the analytic model: English gloss, the three label lemmata, their transliteration.",
+             "% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \\usepackage{booktabs} and \\usepackage{tabularx}.",
+             "\\begin{table}[htbp]", "\\centering", "\\footnotesize", "\\begin{tabularx}{\\textwidth}{XXXrr}", "\\toprule",
              "Topic & Label lemmata & Transliteration & Lemmata (\\%) & Tragic tokens (\\%) \\\\", "\\midrule"]
     for t in topics:
         transliteration = "-".join(transliterate(w) for w in t["lemmata"].split("-"))
         lines.append(f"{t['label']} & {t['lemmata']} & {transliteration} & {100 * t['size'] / n_lemmata:.1f} & {100 * t['tragic_tokens'] / n_tokens:.1f} \\\\")
-    lines += ["\\bottomrule", "\\end{tabular}",
-              f"\\caption{{The {len(topics)} unsupervised topics, in order of their mass in the three tragedians. A topic is named by the two",
+    lines += ["\\bottomrule", "\\end{tabularx}",
+              f"\\caption{{The {len(topics)} unsupervised topics, in order of their mass in the three tragedians. A topic is named by the three",
               "non-cognate lemmata nearest its centroid in the word2vec space; the English glosses are the labels used in the",
               f"analysis. The last columns give the cluster's share of the {n_lemmata} topic-bearing lemmata of the vocabulary and of their {n_tokens}",
               "tokens in the three tragedians; each column sums to 100.}", "\\label{tab:topics}", "\\end{table}"]

@@ -47,11 +47,11 @@ the baselines compare?
 
 Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters
 (word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; two
-rare-lemma clusters and two function-word clusters dropped, leaving 36). Each
-cluster is named by the English glosses of
-the two lemmata nearest its centre, for example *mother-Electra* or
-*offer-sacrifice*. A **document** is one whole restoration of the seventeen
-verses: all its topic-bearing lemmata, however many there are, with nothing
+rare-lemma clusters and four function-word clusters dropped, leaving 34).
+Each cluster is named by the English glosses of the three lemmata nearest
+its centre, for example *mother-Electra-bed* or *sail-ship-sea*. A
+**document** is one whole restoration of the seventeen verses: all its
+topic-bearing lemmata, however many there are, with nothing
 cut off. Its topic counts are
 
 $$\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta), \qquad
@@ -391,6 +391,89 @@ for (cell_name in names(cells)) {
 top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95",
                          "p_above_sophocles", "lift", "p_document")]
 knitr::kable(top_five, digits = 2, row.names = FALSE)
+```
+
+# How variable are the topics?
+
+How much does a topic's share move from one document to the next, and does
+that variability itself differ between topics? For every topic, the share
+of a document's lemmata it takes is computed in every document, and its
+standard deviation across documents is compared with the standard deviation
+a multinomial of the same mean share and the cell's mean length would
+produce by sampling alone, $\sqrt{p(1-p)/N}$. Their ratio is the excess
+variability: 1 means a topic varies no more than coin-tossing would, 2
+means its real spread is twice that. The spread of these numbers across
+topics is the "variance of the variances".
+
+```{r variability}
+# The share of every topic in every document, as a matrix
+share_table <- function(documents) {
+  shares <- matrix(0, nrow = length(documents), ncol = K)
+  for (i in seq_along(documents)) {
+    counts <- tabulate(match(documents[[i]], topic_names), nbins = K)
+    shares[i, ] <- counts / length(documents[[i]])
+  }
+  shares
+}
+
+# Per topic: the mean share, its standard deviation across documents, the
+# standard deviation sampling alone would give, and their ratio
+topic_variability <- function(documents, label) {
+  shares <- share_table(documents)
+  mean_length <- mean(lengths(documents))
+  share_mean <- colMeans(shares)
+  share_sd <- apply(shares, 2, sd)
+  sampling_sd <- sqrt(share_mean * (1 - share_mean) / mean_length)
+  data.frame(cell = label, topic = topic_names, mean = share_mean,
+             sd = share_sd, sampling_sd = sampling_sd,
+             excess = share_sd / sampling_sd)
+}
+walk_sample <- at_most(walk_documents, max_docs)
+variability <- rbind(topic_variability(sophocles_documents, "sophocles"),
+                     topic_variability(walk_sample, "walk"))
+for (column in c("mean", "sd", "sampling_sd", "excess")) {
+  variability[[column]] <- round(variability[[column]], 4)
+}
+write.csv(variability, file.path(params$out, "topic_variability.csv"),
+          row.names = FALSE)
+
+# One row per topic: Sophocles and the walk side by side
+sophocles_var <- filter(variability, cell == "sophocles")
+walk_var <- filter(variability, cell == "walk")
+side_by_side <- data.frame(topic = topic_names,
+                           sophocles_mean = sophocles_var$mean,
+                           sophocles_sd = sophocles_var$sd,
+                           sophocles_excess = sophocles_var$excess,
+                           walk_mean = walk_var$mean,
+                           walk_sd = walk_var$sd,
+                           walk_excess = walk_var$excess)
+side_by_side <- arrange(side_by_side, desc(sophocles_excess))
+knitr::kable(side_by_side, digits = 3, row.names = FALSE)
+```
+
+```{r variability_summary, results = "asis"}
+# The spread of the variability across topics, for each cell
+for (cell_name in c("sophocles", "walk")) {
+  cell_var <- filter(variability, cell == cell_name)
+  cat(sprintf(paste("- **%s**: the between-document sd of a topic's share",
+                    "ranges from %.3f to %.3f (median %.3f); its coefficient",
+                    "of variation across topics is %.2f. The excess over",
+                    "sampling ranges from %.2f to %.2f (median %.2f).\n"),
+              cell_name, min(cell_var$sd), max(cell_var$sd),
+              median(cell_var$sd), sd(cell_var$sd) / mean(cell_var$sd),
+              min(cell_var$excess), max(cell_var$excess),
+              median(cell_var$excess)))
+}
+```
+
+```{r variability_plot, fig.height = 4}
+ggplot(variability, aes(x = mean, y = sd, colour = cell)) +
+  geom_point() +
+  geom_line(aes(y = sampling_sd), linetype = "dashed") +
+  labs(x = "mean share of the topic", y = "sd of the share across documents",
+       title = "Topic variability against its mean; dashed: sampling alone",
+       colour = NULL) +
+  theme_minimal(9)
 ```
 
 # Is the walk's topic profile an artefact of where the walk went?
