@@ -104,6 +104,7 @@ def main():
     ap.add_argument("--post-draws", type=int, default=300)
     ap.add_argument("--max-docs", type=int, default=4000, help="walk snapshots read (sampled)")
     ap.add_argument("--seed", type=int, default=917)
+    ap.add_argument("--theta-samples", type=int, default=5000, help="document-level posterior draws saved per cell for the simplex plots")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     os.environ.setdefault("KERAS_BACKEND", "torch"); rng = np.random.default_rng(a.seed)
     vocab, cluster, docs, tragic = load(a.data); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
@@ -237,6 +238,20 @@ def main():
             for j in range(H):
                 f.write(f"{name},{names[j]},{s['n_docs']},{s['n_lemmata']:.1f},{s['mean'][j]:.4f},{s['q05'][j]:.4f},{s['q95'][j]:.4f},{s['p_dominant_seeded'][j]:.4f},"
                         + (f"{s['p_above_sophocles'][j]:.4f},{s['lift'][j]:.3f},{s['p_document'][j]:.4f}" if "lift" in s else ",,") + "\n")
+    # posterior samples for the simplex plots: the mean profile's draws, and theta of a random document at a random draw
+    header = "cell,draw," + ",".join(names[:H]) + "\n"
+    with open(f"{a.out}/profile_draws.csv", "w") as f:
+        f.write(header)
+        for name, s in cells.items():
+            for d, row in enumerate(s["_mean_draws"][:, :H]):
+                f.write(f"{name},{d}," + ",".join(f"{v:.5f}" for v in row) + "\n")
+    with open(f"{a.out}/theta_samples.csv", "w") as f:
+        f.write(header)
+        for name, s in cells.items():
+            P = s["_document_draws"]; pick = np.sort(rng.choice(len(P), min(len(P), a.theta_samples), replace=False))
+            for d, i in enumerate(pick):
+                f.write(f"{name},{d}," + ",".join(f"{v:.5f}" for v in P[i, :H]) + "\n")
+    print(f"wrote profile_draws.csv and theta_samples.csv", flush=True)
     md = ["# Amortized mixed model: seeded LDA, amortized posterior (BayesFlow)\n",
           f"Seeded LDA with {H} seeded topics (the clusters) and {a.free} free topics on a vocabulary of {V} content lemmata; a document is one whole restoration "
           f"of the seventeen verses ({length_pool.min()}-{n_max} lemmata); prior theta ~ Dirichlet(1). Posterior from a coupling flow trained on {a.sims} simulated documents; "

@@ -6,3 +6,5 @@ bayesflow>=2.0
 keras>=3
 torch
 huggingface_hub
+datamapplot
+umap-learn

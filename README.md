@@ -91,6 +91,22 @@ Is the walk's topic profile an artefact of where the walk went? The report check
 share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *ship-sail-hull* has
 $\hat R \le 1.04$; *ship-sail-hull* ($\hat R = 1.61$) lives in some chains only.
 
+Both reports also draw the posterior on the 2-simplex of the three topics the walk lifts most (the view of Blei, Ng and Jordan's
+figure 2): the density of a random document of the walk, of Henry and of Sophocles' windows restricted to that triangle, exact in the
+analytic model (a mixture of Dirichlet densities) and a kernel density of the saved posterior samples in the amortized one.
+
+## Maps
+
+Two interactive maps (`datamapplot`, self-contained HTML files in `results/analytic/`, a static PNG beside each):
+
+- `lemma_map.html` (`scripts/lemma_map.py`): the 2,531 topic lemmata placed by UMAP from their word2vec vectors, the space the topics
+  were clustered in, so the topics are the regions of the map; a point's size is the walk's use of the word, hovering gives its rate per
+  thousand topic lemmata in Sophocles and in the walk and whether Henry uses it, the search box finds a lemma, and the alternative
+  colourings show the walk's rate against Sophocles' (log2 ratio) and Henry's words.
+- `topic_map.html` (`scripts/topic_map.py`): 4,000 walk snapshots, Henry and the 443 Sophoclean windows placed by UMAP from their
+  profiles over the 34 topics (Hellinger distance), coloured by dominant topic, the Greek text on hover and searchable. Documents of
+  twenty lemmata are mixtures, so this map has no clear regions: it is kept for browsing the restorations, not as evidence.
+
 ## Run
 
 ```sh
@@ -98,14 +114,18 @@ Rscript -e 'rmarkdown::render("analytic_model.Rmd")'                            
 Rscript -e 'rmarkdown::render("amortized_mixed_model.Rmd")'                           # the GPU job's output as a PDF report
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --data data --out results/amortized_mixed   # a GPU hour; CPU dry run with --sims 3000 --epochs 2
 sbatch slurm/amortized_mixed_model.slurm                                                        # the same on a GH200 (Arrhenius)
+python scripts/lemma_map.py --data data --out results/analytic      # the interactive maps (datamapplot, umap-learn); topic_map.py likewise
 ```
 
 ## Layout
 
 ```
 analytic_model.Rmd, amortized_mixed_model.Rmd   one PDF report per model (xelatex, a font with polytonic Greek)
-scripts/            the GPU script of the amortized mixed model; topics_table.py writes the LaTeX table of the topics
+scripts/            the GPU script of the amortized mixed model; topics_table.py writes the LaTeX table of the topics;
+                    lemma_map.py and topic_map.py draw the interactive maps
 slurm/              the GPU job for the amortized mixed model
-results/amortized_mixed/     phi.json (topics), cells.{md,csv,json}, sbc.csv, recovery.csv
-results/analytic/     topics_K40.json (the clusters and their labels), topics_table.tex, posterior.csv and walk_stability.csv from the Rmd
+results/amortized_mixed/     phi.json (topics), cells.{md,csv,json}, sbc.csv, recovery.csv, profile_draws.csv and theta_samples.csv
+                             (posterior samples for the simplex plots)
+results/analytic/     topics_K40.json (the clusters and their labels), topics_table.tex, posterior.csv, walk_stability.csv and
+                      topic_variability.csv from the Rmd; lemma_map.{html,png,_coords.csv} and topic_map.{html,png,_coords.csv}
 ```

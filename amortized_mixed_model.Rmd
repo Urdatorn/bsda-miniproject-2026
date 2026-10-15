@@ -168,6 +168,75 @@ for (cell_name in cell_names) {
 }
 ```
 
+# The posterior on the simplex of the three most lifted topics
+
+The three topics the walk lifts most span a triangle, the 2-simplex: a
+point of it is a share of these three topics, renormalised to sum to one,
+its corners are the pure topics and its centre the even mix. The amortized
+posterior has no closed form, so the surface is a kernel density estimate
+of the saved posterior samples (a random document at a random draw),
+restricted to the triangle, for the walk, Henry and Sophocles' windows, in
+the view of Blei, Ng and Jordan's figure 2; the dot is the cell's mean
+profile. A document has few lemmata in three topics, so the density is
+broad and tends to the edge where the smallest topic is absent.
+
+```{r simplex, fig.height = 3.5}
+theta_samples <- read.csv(file.path(results_dir, "theta_samples.csv"),
+                          check.names = FALSE, encoding = "UTF-8")
+profile_draws <- read.csv(file.path(results_dir, "profile_draws.csv"),
+                          check.names = FALSE, encoding = "UTF-8")
+walk_rows <- arrange(filter(cells, cell == "walk"), desc(lift))
+triangle_topics <- walk_rows$topic[1:3]
+
+# The shares of three topics as a point of the triangle with corners
+# (0, 0), (1, 0) and (1/2, sqrt(3)/2)
+to_triangle <- function(samples) {
+  shares <- as.matrix(samples[, triangle_topics])
+  shares <- shares[rowSums(shares) > 0, , drop = FALSE]
+  shares <- shares / rowSums(shares)
+  data.frame(x = shares[, 2] + shares[, 3] / 2, y = shares[, 3] * sqrt(3) / 2)
+}
+
+# The kernel density of a cell's samples on a grid over the triangle;
+# grid points outside the triangle get NA and are not drawn
+grid_n <- 60
+simplex_surface <- function(cell_name) {
+  points <- to_triangle(filter(theta_samples, cell == cell_name))
+  density <- MASS::kde2d(points$x, points$y, n = grid_n, h = c(0.08, 0.08),
+                         lims = c(0, 1, 0, sqrt(3) / 2))
+  grid <- expand.grid(x = density$x, y = density$y)
+  share_3 <- grid$y / (sqrt(3) / 2)
+  share_2 <- grid$x - grid$y / sqrt(3)
+  share_1 <- 1 - share_2 - share_3
+  outside <- share_1 < 0 | share_2 < 0 | share_3 < 0
+  z <- density$z
+  z[matrix(outside, nrow = grid_n, ncol = grid_n)] <- NA
+  list(x = density$x, y = density$y, z = z)
+}
+
+surfaces <- list(walk = simplex_surface("walk"),
+                 henry = simplex_surface("henry"),
+                 sophocles = simplex_surface("sophocles"))
+z_max <- max(unlist(lapply(surfaces, function(s) s$z)), na.rm = TRUE)
+corners <- data.frame(x = c(0, 1, 0.5), y = c(0, 0, sqrt(3) / 2))
+par(mfrow = c(1, 3), mar = c(1, 1, 3, 1))
+for (cell_name in names(surfaces)) {
+  surface <- surfaces[[cell_name]]
+  view <- persp(surface$x, surface$y, surface$z,
+                theta = 35, phi = 30, expand = 0.6, zlim = c(0, z_max),
+                col = "lightsteelblue", border = "steelblue4", lwd = 0.3,
+                xlab = "", ylab = "", zlab = "", box = FALSE,
+                main = paste(cell_name, ": a random document", sep = ""))
+  cell_profile <- filter(profile_draws, cell == cell_name)
+  point <- to_triangle(cell_profile[, triangle_topics, drop = FALSE])
+  point <- colMeans(point)
+  points(trans3d(point["x"], point["y"], 0, view), pch = 19,
+         col = "firebrick")
+  text(trans3d(corners$x, corners$y, 0, view), labels = triangle_topics,
+       cex = 0.6, pos = c(1, 1, 3))
+}
+```
+
 # Lift of every seeded topic in every cell
 
 ```{r lifts, fig.height = 7}

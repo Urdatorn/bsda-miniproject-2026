@@ -259,8 +259,8 @@ henry <- filter(corpus, source == "henry")
 henry_documents <- make_documents(henry, rep("henry", nrow(henry)))
 
 cells <- list()
-cells[["walk"]] <- summarise_cell(at_most(walk_documents, max_docs),
-                                  baseline)
+walk_sample <- at_most(walk_documents, max_docs)
+cells[["walk"]] <- summarise_cell(walk_sample, baseline)
 cells[["henry"]] <- summarise_cell(henry_documents, baseline)
 
 # One row per cell and topic, saved as the model's table
@@ -365,6 +365,108 @@ for (cell_name in names(cells)) {
 top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95",
                          "p_above_sophocles", "lift", "p_document")]
 knitr::kable(top_five, digits = 2, row.names = FALSE)
+```
+
+# The posterior on the simplex of the three most lifted topics
+
+The three topics the walk lifts most span a triangle, the 2-simplex: a
+point of it is a share of these three topics, renormalised to sum to one,
+its corners are the pure topics and its centre the even mix. The marginal
+of a Dirichlet on three of its coordinates, renormalised, is again a
+Dirichlet with those three parameters. So the posterior of a random
+document of a cell, restricted to the triangle, is the average of one
+Dirichlet density per document, in closed form; Henry's is a single
+Dirichlet. The surfaces show that density for the walk, Henry and
+Sophocles' windows, in the view of Blei, Ng and Jordan's figure 2; the dot
+is the cell's mean profile. A document of twenty lemmata has few of them
+in three topics and usually none in the smallest, so the density is not a
+hill but a ridge along the edge where that topic is absent (a Dirichlet
+parameter below one diverges there); the surface is cut at its 99th
+percentile for display, and stops 0.02 short of the edges.
+
+```{r simplex, fig.height = 3.5}
+# The three topics the walk lifts most, from the table of results
+walk_rows <- filter(rows, cell == "walk")
+walk_rows <- arrange(walk_rows, desc(lift))
+triangle_topics <- walk_rows$topic[1:3]
+triangle_index <- match(triangle_topics, topic_names)
+
+# The Dirichlet parameters of every document, restricted to the three
+# topics: prior plus counts
+triangle_parameters <- function(documents) {
+  parameters <- matrix(0, nrow = length(documents), ncol = 3)
+  for (i in seq_along(documents)) {
+    counts <- tabulate(match(documents[[i]], topic_names), nbins = K)
+    parameters[i, ] <- prior[triangle_index] + counts[triangle_index]
+  }
+  parameters
+}
+
+# The log density of Dirichlet(a) at every row of theta (three shares
+# summing to one)
+log_dirichlet <- function(theta, a) {
+  log_normaliser <- lgamma(sum(a)) - sum(lgamma(a))
+  as.vector(log_normaliser + log(theta) %*% (a - 1))
+}
+
+# The density of a random document: the average over the documents
+mixture_density <- function(theta, parameters) {
+  density <- rep(0, nrow(theta))
+  for (i in seq_len(nrow(parameters))) {
+    density <- density + exp(log_dirichlet(theta, parameters[i, ]))
+  }
+  density / nrow(parameters)
+}
+
+# A grid over the triangle with corners (0, 0), (1, 0) and (1/2, sqrt(3)/2);
+# every grid point's barycentric coordinates are its three shares. Points
+# outside the triangle get NA and are not drawn.
+grid_n <- 60
+grid_x <- seq(0, 1, length.out = grid_n)
+grid_y <- seq(0, sqrt(3) / 2, length.out = grid_n)
+grid <- expand.grid(x = grid_x, y = grid_y)
+share_3 <- grid$y / (sqrt(3) / 2)
+share_2 <- grid$x - grid$y / sqrt(3)
+share_1 <- 1 - share_2 - share_3
+theta_grid <- cbind(share_1, share_2, share_3)
+inside <- share_1 > 0.02 & share_2 > 0.02 & share_3 > 0.02
+
+# The surface of a cell, as a grid_n by grid_n matrix for persp()
+simplex_surface <- function(documents) {
+  parameters <- triangle_parameters(documents)
+  density <- rep(NA, nrow(theta_grid))
+  density[inside] <- mixture_density(theta_grid[inside, ], parameters)
+  ceiling_value <- quantile(density, 0.99, na.rm = TRUE)
+  density <- pmin(density, ceiling_value)
+  matrix(density, nrow = grid_n, ncol = grid_n)
+}
+
+# Where a profile falls on the triangle
+simplex_point <- function(profile) {
+  shares <- profile[triangle_index] / sum(profile[triangle_index])
+  c(x = shares[2] + shares[3] / 2, y = shares[3] * sqrt(3) / 2)
+}
+
+surfaces <- list(walk = simplex_surface(walk_sample),
+                 henry = simplex_surface(henry_documents),
+                 sophocles = simplex_surface(sophocles_documents))
+profiles <- list(walk = cells[["walk"]]$mean, henry = cells[["henry"]]$mean,
+                 sophocles = baseline$mean)
+z_max <- max(unlist(surfaces), na.rm = TRUE)
+corners <- data.frame(x = c(0, 1, 0.5), y = c(0, 0, sqrt(3) / 2))
+par(mfrow = c(1, 3), mar = c(1, 1, 3, 1))
+for (cell_name in names(surfaces)) {
+  view <- persp(grid_x, grid_y, surfaces[[cell_name]],
+                theta = 35, phi = 30, expand = 0.6, zlim = c(0, z_max),
+                col = "lightsteelblue", border = "steelblue4", lwd = 0.3,
+                xlab = "", ylab = "", zlab = "", box = FALSE,
+                main = paste(cell_name, ": a random document", sep = ""))
+  point <- simplex_point(profiles[[cell_name]])
+  points(trans3d(point["x"], point["y"], 0, view), pch = 19,
+         col = "firebrick")
+  text(trans3d(corners$x, corners$y, 0, view), labels = triangle_topics,
+       cex = 0.6, pos = c(1, 1, 3))
+}
 ```
 
 # How variable are the topics?
