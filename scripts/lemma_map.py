@@ -4,10 +4,10 @@ Every topic-bearing lemma of the vocabulary is one point, placed by UMAP
 from its skip-gram word2vec vector (the space the 34 topics were clustered
 in, so the topics are the regions of the map) and coloured by its topic.
 A point's size is how often the walk uses the lemma; hovering shows the
-lemma's rate per thousand topic lemmata in Sophocles and in the walk, and
-whether Henry uses it; the alternative colourings show the walk's rate
-against Sophocles' (log2 ratio, blue where the walk under-uses a word, red
-where it over-uses it) and Henry's words.  The search box finds a lemma.
+lemma's rate per thousand topic lemmata in Sophocles and in the walk; the
+alternative colouring shows the walk's rate against Sophocles' (log2 ratio,
+blue where the walk under-uses a word, red where it over-uses it).  The
+search box finds a lemma.
 
   python scripts/lemma_map.py --data data --out results/analytic
 
@@ -47,7 +47,6 @@ def main():
     source = np.array(corpus["source"].to_pylist())
     restorer = np.array(imp["restorer"].to_pylist()); tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
     counts = {"sophocles": lemma_counts(corpus.filter(source == "sophocles")),
-              "henry": lemma_counts(corpus.filter(source == "henry")),
               "walk": lemma_counts(imp.filter((restorer == "walk") & ~tilted))}
 
     rows = [r for r in vocab if r["cluster_K40"] and np.any(vectors[r["index"]])]
@@ -56,7 +55,6 @@ def main():
     lemmata = [r["lemma"] for r in rows]
     total = {cell: sum(c for i, c in counts[cell].items() if i in set(index)) for cell in counts}
     rate = {cell: np.array([counts[cell].get(i, 0) for i in index]) / total[cell] * 1000 for cell in counts}
-    n_henry = np.array([counts["henry"].get(i, 0) for i in index])
     print(f"{len(rows)} topic-bearing lemmata with a vector; topic lemmata counted: " +
           ", ".join(f"{cell} {total[cell]}" for cell in total), flush=True)
 
@@ -70,28 +68,23 @@ def main():
         print("UMAP done", flush=True)
     log_ratio = np.log2((rate["walk"] + 0.05) / (rate["sophocles"] + 0.05))
     pd.DataFrame({"lemma": lemmata, "topic": labels, "x": coords[:, 0], "y": coords[:, 1],
-                  "rate_sophocles": rate["sophocles"], "rate_walk": rate["walk"], "henry": n_henry,
+                  "rate_sophocles": rate["sophocles"], "rate_walk": rate["walk"],
                   "log2_walk_over_sophocles": log_ratio}).to_csv(coords_path, index=False)
 
     import datamapplot
     sizes = 1.0 + 3.0 * np.sqrt(rate["walk"])
-    henry_flag = np.where(n_henry > 0, "used by Henry", "not used by Henry")
     extra = pd.DataFrame({"topic": labels, "rate_sophocles": np.round(rate["sophocles"], 2), "rate_walk": np.round(rate["walk"], 2),
-                          "henry": n_henry, "ratio": np.round(log_ratio, 2)})
+                          "ratio": np.round(log_ratio, 2)})
     template = ("<div><b style='font-size:1.3em'>{hover_text}</b><br>topic: <i>{topic}</i><br>"
-                "per 1000 topic lemmata: Sophocles {rate_sophocles}, walk {rate_walk} (log2 ratio {ratio})<br>"
-                "in Henry's restoration: {henry}</div>")
+                "per 1000 topic lemmata: Sophocles {rate_sophocles}, walk {rate_walk} (log2 ratio {ratio})</div>")
     plot = datamapplot.create_interactive_plot(
         coords, labels, hover_text=[html.escape(w) for w in lemmata], extra_point_data=extra, hover_text_html_template=template,
         marker_size_array=sizes, enable_search=True, search_field="hover_text",
-        cluster_boundary_polygons=True, color_cluster_boundaries=True, polygon_alpha=2.5,
         title="The topic vocabulary, with the walk drawn on it",
         sub_title=f"{len(rows)} lemmata placed by their word2vec vectors and coloured by topic; a point's size is the walk's use of the word",
         font_family="Georgia", tooltip_font_family="Georgia", label_wrap_width=14, text_min_pixel_size=12, text_max_pixel_size=28,
-        colormap_rawdata=[log_ratio, henry_flag],
-        colormap_metadata=[{"field": "ratio", "description": "walk against Sophocles (log2 rate ratio)", "kind": "continuous", "cmap": "RdBu_r"},
-                           {"field": "henry", "description": "Henry's words", "kind": "categorical",
-                            "color_mapping": {"used by Henry": "#e15759", "not used by Henry": "#dddddd"}, "show_legend": True}],
+        colormap_rawdata=[log_ratio],
+        colormap_metadata=[{"field": "ratio", "description": "walk against Sophocles (log2 rate ratio)", "kind": "continuous", "cmap": "RdBu_r"}],
         point_radius_max_pixels=14, initial_zoom_fraction=0.95)
     plot.save(os.path.join(a.out, "lemma_map.html"))
     print(f"wrote {a.out}/lemma_map.html ({os.path.getsize(os.path.join(a.out, 'lemma_map.html')) / 1e6:.1f} MB)", flush=True)

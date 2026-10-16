@@ -103,8 +103,8 @@ Two interactive maps (`datamapplot`, self-contained HTML files in `results/analy
 
 - `lemma_map.html` (`scripts/lemma_map.py`): the 2,531 topic lemmata placed by UMAP from their word2vec vectors, the space the topics
   were clustered in, so the topics are the regions of the map; a point's size is the walk's use of the word, hovering gives its rate per
-  thousand topic lemmata in Sophocles and in the walk and whether Henry uses it, the search box finds a lemma, and the alternative
-  colourings show the walk's rate against Sophocles' (log2 ratio) and Henry's words.
+  thousand topic lemmata in Sophocles and in the walk, the search box finds a lemma, and the alternative
+  colouring shows the walk's rate against Sophocles' (log2 ratio).
 - `topic_map.html` (`scripts/topic_map.py`): 4,000 walk snapshots, Henry and the 443 Sophoclean windows placed by UMAP from their
   profiles over the 34 topics (Hellinger distance), coloured by dominant topic, the Greek text on hover and searchable. Documents of
   twenty lemmata are mixtures, so this map has no clear regions: it is kept for browsing the restorations, not as evidence.
