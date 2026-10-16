@@ -180,9 +180,9 @@ Each cell's density is scaled to a peak of one so that the three share one
 triangle, and where two overlap the taller is drawn. The walk and Sophocles
 are sharp, being averages over thousands and hundreds of documents, and
 they peak close together: the three topics are lifted by similar factors,
-so their ratios barely move. Henry is one document of two dozen lemmata
-with none in the smallest topic, so his posterior is a broad wall along
-the edge where that topic is absent.
+so their ratios barely move. Henry is one document of two dozen lemmata,
+so his posterior is a broad hump over most of the triangle: for a single
+short document the posterior hardly tells the three topics apart.
 
 ```{r simplex, fig.height = 4.5, fig.width = 9}
 profile_draws <- read.csv(file.path(results_dir, "profile_draws.csv"),
@@ -208,8 +208,14 @@ share_2 <- grid$x - grid$y / sqrt(3)
 share_1 <- 1 - share_2 - share_3
 outside <- matrix(share_1 < 0 | share_2 < 0 | share_3 < 0, grid_n, grid_n)
 
-# The kernel density of a cell's draws on the grid, scaled to a peak of one
-simplex_surface <- function(points, bandwidth) {
+# The kernel density of a cell's draws on the grid, scaled to a peak of one.
+# The kernel width follows the spread of the draws (Scott's rule of thumb,
+# MASS::bandwidth.nrd): a tight cloud gets a narrow kernel, a diffuse one a
+# wide kernel; the floor keeps the kernel wider than a few grid cells.
+simplex_surface <- function(points) {
+  rule_x <- MASS::bandwidth.nrd(points$x)
+  rule_y <- MASS::bandwidth.nrd(points$y)
+  bandwidth <- max(mean(c(rule_x, rule_y)), 0.04)
   density <- MASS::kde2d(points$x, points$y, n = grid_n,
                          h = c(bandwidth, bandwidth),
                          lims = c(0, 1, 0, sqrt(3) / 2))
@@ -224,11 +230,9 @@ for (cell_name in c("walk", "henry", "sophocles")) {
   shares <- as.matrix(cell_draws[, triangle_topics])
   triangle_points[[cell_name]] <- to_triangle(shares)
 }
-bandwidths <- c(walk = 0.04, henry = 0.06, sophocles = 0.04)
 surfaces <- list()
 for (cell_name in names(triangle_points)) {
-  surfaces[[cell_name]] <- simplex_surface(triangle_points[[cell_name]],
-                                           bandwidths[cell_name])
+  surfaces[[cell_name]] <- simplex_surface(triangle_points[[cell_name]])
 }
 
 # One surface: at every grid point the tallest cell, and which cell it is

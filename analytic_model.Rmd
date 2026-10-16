@@ -413,8 +413,14 @@ share_2 <- grid$x - grid$y / sqrt(3)
 share_1 <- 1 - share_2 - share_3
 outside <- matrix(share_1 < 0 | share_2 < 0 | share_3 < 0, grid_n, grid_n)
 
-# The kernel density of a cell's draws on the grid, scaled to a peak of one
-simplex_surface <- function(points, bandwidth) {
+# The kernel density of a cell's draws on the grid, scaled to a peak of one.
+# The kernel width follows the spread of the draws (Scott's rule of thumb,
+# MASS::bandwidth.nrd): a tight cloud gets a narrow kernel, a diffuse one a
+# wide kernel; the floor keeps the kernel wider than a few grid cells.
+simplex_surface <- function(points) {
+  rule_x <- MASS::bandwidth.nrd(points$x)
+  rule_y <- MASS::bandwidth.nrd(points$y)
+  bandwidth <- max(mean(c(rule_x, rule_y)), 0.04)
   density <- MASS::kde2d(points$x, points$y, n = grid_n,
                          h = c(bandwidth, bandwidth),
                          lims = c(0, 1, 0, sqrt(3) / 2))
@@ -427,11 +433,9 @@ triangle_points <- list(
   walk = to_triangle(cells[["walk"]]$mean_draws[, triangle_index]),
   henry = to_triangle(henry_draws[, triangle_index]),
   sophocles = to_triangle(baseline$mean_draws[, triangle_index]))
-bandwidths <- c(walk = 0.04, henry = 0.06, sophocles = 0.04)
 surfaces <- list()
 for (cell_name in names(triangle_points)) {
-  surfaces[[cell_name]] <- simplex_surface(triangle_points[[cell_name]],
-                                           bandwidths[cell_name])
+  surfaces[[cell_name]] <- simplex_surface(triangle_points[[cell_name]])
 }
 
 # One surface: at every grid point the tallest cell, and which cell it is

@@ -92,8 +92,10 @@ share across the chains, written to `results/analytic/walk_stability.csv`. Drift
 $\hat R \le 1.04$; *ship-sail-hull* ($\hat R = 1.61$) lives in some chains only.
 
 Both reports also draw the posterior on the 2-simplex of the three topics the walk lifts most (the view of Blei, Ng and Jordan's
-figure 2): the density of a random document of the walk, of Henry and of Sophocles' windows restricted to that triangle, exact in the
-analytic model (a mixture of Dirichlet densities) and a kernel density of the saved posterior samples in the amortized one.
+figure 2): for the walk, Henry and Sophocles' windows, the posterior of the cell's mean profile restricted to that triangle, drawn as
+a kernel density of the posterior draws (the analytic model's own, the saved `profile_draws.csv` in the amortized one) with each cell
+scaled to a peak of one. The walk and Sophocles are sharp peaks close together, because similar lifts leave the ratios of the three
+topics unchanged; Henry, one document, is a broad hump.
 
 ## Maps
 
