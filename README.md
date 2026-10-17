@@ -102,7 +102,8 @@ topics unchanged; Henry, one document, is a broad hump.
 Two interactive maps (`datamapplot`, self-contained HTML files in `results/analytic/`, a static PNG beside each):
 
 - `lemma_map.html` (`scripts/lemma_map.py`): the 2,531 topic lemmata placed by UMAP from their word2vec vectors, the space the topics
-  were clustered in, so the topics are the regions of the map; a point's size is the walk's use of the word, hovering gives its rate per
+  were clustered in, so the topics are the regions of the map; a point's size is the walk's use of the word and a topic label's size
+  is the walk's share of the topic (so the labels that outlast zooming out are the walk's largest topics), hovering gives its rate per
   thousand topic lemmata in Sophocles and in the walk, the search box finds a lemma, and the alternative
   colouring shows the walk's rate against Sophocles' (log2 ratio).
 - `topic_map.html` (`scripts/topic_map.py`): 4,000 walk snapshots, Henry and the 443 Sophoclean windows placed by UMAP from their
