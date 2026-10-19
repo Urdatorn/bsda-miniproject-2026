@@ -15,7 +15,6 @@ params:
   out: "results/analytic"
   kappa: 1
   draws: 100
-  max_docs: 2000
   seed: 917
 ---
 
@@ -47,7 +46,7 @@ Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters
 (word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; two
 rare-lemma clusters and four function-word clusters dropped, leaving 34).
 Each cluster is named by the English glosses of the three lemmata nearest
-its centre, for example *mother-Electra-bed* or *sail-ship-sea*. A
+its centre, for example *fine-word-matter* or *ship-sail-hull*. A
 **document** is one whole restoration of the seventeen verses: all its
 topic-bearing lemmata, however many there are, with nothing
 cut off. Its topic counts are
@@ -150,7 +149,6 @@ cat(K, "topics;", nrow(vocab), "lemmata in the vocabulary,",
 ```{r model}
 kappa <- params$kappa
 draws <- params$draws
-max_docs <- params$max_docs
 
 # One line per topic-bearing lemma of a table of bags, with the document
 # (group) the lemma belongs to. `group` names the document of every row.
@@ -167,15 +165,6 @@ lemma_table <- function(table, group) {
 make_documents <- function(table, group) {
   lemmata <- lemma_table(table, group)
   split(lemmata$topic, lemmata$group)
-}
-
-# At most `limit` documents, sampled at random
-at_most <- function(documents, limit) {
-  if (length(documents) > limit) {
-    keep <- sort(sample(length(documents), limit))
-    documents <- documents[keep]
-  }
-  documents
 }
 
 # S draws from a Dirichlet distribution: gamma variables, normalised to sum 1
@@ -259,8 +248,7 @@ henry <- filter(corpus, source == "henry")
 henry_documents <- make_documents(henry, rep("henry", nrow(henry)))
 
 cells <- list()
-walk_sample <- at_most(walk_documents, max_docs)
-cells[["walk"]] <- summarise_cell(walk_sample, baseline)
+cells[["walk"]] <- summarise_cell(walk_documents, baseline)
 cells[["henry"]] <- summarise_cell(henry_documents, baseline)
 
 # One row per cell and topic, saved as the model's table
@@ -503,9 +491,8 @@ topic_variability <- function(documents, label) {
              sd = share_sd, sampling_sd = sampling_sd,
              excess = share_sd / sampling_sd)
 }
-walk_sample <- at_most(walk_documents, max_docs)
 variability <- rbind(topic_variability(sophocles_documents, "sophocles"),
-                     topic_variability(walk_sample, "walk"))
+                     topic_variability(walk_documents, "walk"))
 for (column in c("mean", "sd", "sampling_sd", "excess")) {
   variability[[column]] <- round(variability[[column]], 4)
 }
@@ -557,7 +544,7 @@ A reviewer may object that the walk's topics only reflect the region of the
 restoration space that the chains happened to visit. Two checks answer that.
 First, does the lift of a topic drift as the walk proceeds? The snapshots are
 grouped into windows of steps, every window is a cell, and the slope of its
-lift against the step is the rate of change. Second, do the 120 chains
+lift against the step is the rate of change. Second, do the 48 chains
 agree? Each chain's snapshots form a series of topic shares, and the
 Gelman–Rubin $\hat R$ (BDA3 §11.4) compares the spread between chains with the
 spread within them: $\hat R$ near 1 means a chain's share does not depend on
@@ -583,7 +570,7 @@ lift_in_windows <- function(lemmata, breaks) {
   for (i in seq_len(length(breaks) - 1)) {
     in_window <- lemmata$step > breaks[i] & lemmata$step <= breaks[i + 1]
     documents <- split(lemmata$topic[in_window], lemmata$snapshot[in_window])
-    cell <- summarise_cell(at_most(documents, max_docs), baseline)
+    cell <- summarise_cell(documents, baseline)
     window_rows <- data.frame(step = (breaks[i] + breaks[i + 1]) / 2,
                               topic = topic_names,
                               n_docs = cell$n_docs,
@@ -595,7 +582,7 @@ lift_in_windows <- function(lemmata, breaks) {
 
 # All chains over their common range, in windows of 250 steps
 short_range <- lift_in_windows(walk_lemmata, seq(500, 3000, by = 250))
-short_range$chains <- "all 120 chains, steps 525-3000"
+short_range$chains <- "all 48 chains, steps 525-3000"
 
 # The 24 long chains over their whole run, in windows of 1000 steps
 long_lemmata <- filter(walk_lemmata, startsWith(chain_id, "chains_eric_long"))

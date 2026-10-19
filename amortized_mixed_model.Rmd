@@ -35,7 +35,9 @@ $\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\mathbf 1)$.
 The topic-word distributions $\phi$ ($K \times V$) are **soft**: a lemma has
 probability under several topics, so every word is a mixture and the posterior
 $p(\theta \mid \text{document})$ has no closed form. $\phi$ is fitted once on
-the three tragedians by a seeded latent Dirichlet allocation (tomotopy), each
+Aeschylus and Euripides by a seeded latent Dirichlet allocation (tomotopy),
+so that Sophocles, the baseline, is a test corpus like the restorations and
+$\phi$ is not fitted on the text it is then compared with; each
 of the unsupervised clusters of the analytic model seeding one topic with
 a strong word prior on all its lemmata, plus a few free topics.
 
@@ -85,8 +87,9 @@ cat(H, "seeded topics and", K - H, "free topics;",
 
 # The topics
 
-The ten top lemmata of every topic as the seeded LDA fitted them on the
-tragedians, with the number of seed lemmata found in the vocabulary.
+The ten top lemmata of every topic as the seeded LDA fitted them on
+Aeschylus and Euripides, with the number of seed lemmata found in the
+vocabulary.
 
 ```{r topics, results = "asis"}
 for (k in seq_len(K)) {

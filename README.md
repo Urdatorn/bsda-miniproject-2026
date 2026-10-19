@@ -41,7 +41,8 @@ The R Markdown reports download these files themselves if `data/` is missing.
 The walk is the object of study; the two one-verse generators are baselines. A **document** is one whole restoration of the seventeen lost
 verses, all its lemmata, however many there are and nothing cut off. The cells are
 
-- **walk**: one document per untilted snapshot (one chain at one step, all seventeen verses), 19,922 of them;
+- **walk**: one document per untilted snapshot (one chain at one step, all seventeen verses) of the walk's final rule set, 12,722 of them
+  in 48 chains (the earlier rule sets are out: they proposed and filtered differently, and one froze words of Henry's text);
 - **henry**: Henry's seventeen restored verses, one document;
 - **sophocles**, the reference: every window of seventeen consecutive extant trimeters of Sophocles, 444 of them, the same shape as the lacuna.
 
@@ -55,7 +56,9 @@ populations overlap. A topic counts as raised when the mean-profile probability 
 
 The 34 unsupervised clusters of the analytic model are seeded into a latent Dirichlet allocation with strong word priors, each cluster
 seeding one topic with all its lemmata, plus four free topics, so that the corpus decides how much a lemma leaks between clusters. The topic-word
-distributions $\phi$ ($K \times V$) are fitted once on the three tragedians with tomotopy.
+distributions $\phi$ ($K \times V$) are fitted once with tomotopy on Aeschylus and Euripides, not on Sophocles: the baseline windows are
+test documents like the restorations, so $\phi$ is never fitted on the text it is compared with (`--phi-corpus all` fits it on all three
+as a sensitivity check, written to `results/amortized_mixed_phi_all/`).
 
 A document's $N$ lemmata are drawn from the mixture $\sum_k \theta_k \phi_k$ with
 $\theta \sim \mathrm{Dirichlet}(\mathbf 1)$, and the quantity of interest is $p(\theta \mid \text{document})$. Because a word enters the
@@ -87,9 +90,10 @@ The prior is centred on Sophocles rather than symmetric because documents differ
 towards the uniform profile, which fabricates lift for topics that are simply absent. Results: `results/analytic/`.
 
 Is the walk's topic profile an artefact of where the walk went? The report checks it two ways: the lift of every topic in windows of steps
-(all 120 chains over steps 525–3000, the 24 long chains to 12000) with its slope per 1000 steps, and the Gelman–Rubin $\hat R$ of each topic's
+(all 48 chains over steps 525–3000, the 24 long chains to 12000) with its slope per 1000 steps, and the Gelman–Rubin $\hat R$ of each topic's
 share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *ship-sail-hull* has
-$\hat R \le 1.04$; *ship-sail-hull* ($\hat R = 1.61$) lives in some chains only.
+$\hat R \le 1.04$. (With the earlier rule sets in the walk, *ship-sail-hull* had $\hat R = 1.61$: one v1 chain set had frozen Henry's
+κῦμα, which is why the walk is now the final rule set alone.)
 
 Both reports also draw the posterior on the 2-simplex of the three topics the walk lifts most (the view of Blei, Ng and Jordan's
 figure 2): for the walk, Henry and Sophocles' windows, the posterior of the cell's mean profile restricted to that triangle, drawn as

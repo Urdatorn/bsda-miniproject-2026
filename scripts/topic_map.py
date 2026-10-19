@@ -68,7 +68,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default="data")
     ap.add_argument("--out", default="results/analytic")
-    ap.add_argument("--max-walk", type=int, default=4000, help="walk snapshots drawn at random (all 19,922 make a 20 MB page)")
+    ap.add_argument("--max-walk", type=int, default=4000, help="walk snapshots drawn at random (all 12,722 make a 13 MB page)")
     ap.add_argument("--neighbors", type=int, default=15)
     ap.add_argument("--min-dist", type=float, default=0.1)
     ap.add_argument("--seed", type=int, default=917)
