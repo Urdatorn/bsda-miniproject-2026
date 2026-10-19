@@ -91,7 +91,7 @@ towards the uniform profile, which fabricates lift for topics that are simply ab
 
 Is the walk's topic profile an artefact of where the walk went? The report checks it two ways: the lift of every topic in windows of steps
 (all 48 chains over steps 525–3000, the 24 long chains to 12000) with its slope per 1000 steps, and the Gelman–Rubin $\hat R$ of each topic's
-share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic but *ship-sail-hull* has
+share across the chains, written to `results/analytic/walk_stability.csv`. Drift is negligible and every topic has
 $\hat R \le 1.04$. (With the earlier rule sets in the walk, *ship-sail-hull* had $\hat R = 1.61$: one v1 chain set had frozen Henry's
 κῦμα, which is why the walk is now the final rule set alone.)
 
@@ -99,7 +99,7 @@ Both reports also draw the posterior on the 2-simplex of the three topics the wa
 figure 2): for the walk, Henry and Sophocles' windows, the posterior of the cell's mean profile restricted to that triangle, drawn as
 a kernel density of the posterior draws (the analytic model's own, the saved `profile_draws.csv` in the amortized one) with each cell
 scaled to a peak of one. The walk and Sophocles are sharp peaks close together, because similar lifts leave the ratios of the three
-topics unchanged; Henry, one document, is a broad hump.
+topics unchanged; Henry, one document, is a broad hump, drawn as a wireframe so that it does not hide the two peaks.
 
 ## Maps
 

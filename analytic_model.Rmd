@@ -364,7 +364,9 @@ cell's mean profile is averaged over its documents' Dirichlet posteriors,
 so on the triangle it has no closed form; the surface is a kernel density
 of its draws, the view of Blei, Ng and Jordan's figure 2.
 Each cell's density is scaled to a peak of one so that the three share one
-triangle, and where two overlap the taller is drawn. The walk and Sophocles
+triangle. Henry's, the broadest, is drawn as a wireframe so that it does not
+hide the two sharp peaks, which are solid and, where they overlap, show the
+taller. The walk and Sophocles
 are sharp, being averages over thousands and hundreds of documents, and
 they peak close together: the three topics are lifted by similar factors,
 so their ratios barely move. Henry is one document of two dozen lemmata
@@ -404,11 +406,13 @@ outside <- matrix(share_1 < 0 | share_2 < 0 | share_3 < 0, grid_n, grid_n)
 # The kernel density of a cell's draws on the grid, scaled to a peak of one.
 # The kernel width follows the spread of the draws (Scott's rule of thumb,
 # MASS::bandwidth.nrd): a tight cloud gets a narrow kernel, a diffuse one a
-# wide kernel; the floor keeps the kernel wider than a few grid cells.
+# wide kernel. kde2d's h is four times the kernel's standard deviation; the
+# floor keeps that standard deviation at two and a half grid cells, so that
+# a needle-sharp posterior is still drawn as a visible peak.
 simplex_surface <- function(points) {
   rule_x <- MASS::bandwidth.nrd(points$x)
   rule_y <- MASS::bandwidth.nrd(points$y)
-  bandwidth <- max(mean(c(rule_x, rule_y)), 0.04)
+  bandwidth <- max(mean(c(rule_x, rule_y)), 10 / grid_n)
   density <- MASS::kde2d(points$x, points$y, n = grid_n,
                          h = c(bandwidth, bandwidth),
                          lims = c(0, 1, 0, sqrt(3) / 2))
@@ -426,24 +430,47 @@ for (cell_name in names(triangle_points)) {
   surfaces[[cell_name]] <- simplex_surface(triangle_points[[cell_name]])
 }
 
-# One surface: at every grid point the tallest cell, and which cell it is
-z <- surfaces[[1]]
-owner <- matrix(names(surfaces)[1], grid_n, grid_n)
-for (cell_name in names(surfaces)[-1]) {
+# The broadest cell (one document's posterior) is a hump over most of the
+# triangle, and when every cell is scaled to a peak of one the hump hides the
+# sharp peaks of the others. So the broad cell is drawn as a wireframe on a
+# coarser grid, and the sharp cells as solid surfaces on top of it: at every
+# grid point the taller of them, coloured by which cell it is.
+kernel_width <- c()
+for (cell_name in names(triangle_points)) {
+  points <- triangle_points[[cell_name]]
+  kernel_width[cell_name] <- mean(c(MASS::bandwidth.nrd(points$x),
+                                    MASS::bandwidth.nrd(points$y)))
+}
+broad_cell <- names(which.max(kernel_width))
+sharp_cells <- setdiff(names(surfaces), broad_cell)
+
+z <- surfaces[[sharp_cells[1]]]
+owner <- matrix(sharp_cells[1], grid_n, grid_n)
+for (cell_name in sharp_cells[-1]) {
   taller <- !is.na(surfaces[[cell_name]]) &
     (is.na(z) | surfaces[[cell_name]] > z)
   z[taller] <- surfaces[[cell_name]][taller]
   owner[taller] <- cell_name
 }
+z[!is.na(z) & z < 0.02] <- NA          # the floor: no sharp cell has mass here
 cell_colours <- c(walk = "#4e79a7", henry = "#e15759", sophocles = "#59a14f")
 facet_colour <- cell_colours[owner[-1, -1]]
-facet_colour[z[-1, -1] < 0.02] <- "grey92"        # the floor, no cell's peak
+coarse <- seq(1, grid_n, by = 4)       # every fourth grid line of the wireframe
+wire_colour <- adjustcolor(cell_colours[broad_cell], alpha.f = 0.6)
 
 par(mfrow = c(1, 2), mar = c(0, 0, 0, 0), oma = c(0, 0, 3, 0))
 for (angle in c(30, -50)) {
-  view <- persp(grid_x, grid_y, z, theta = angle, phi = 25, expand = 0.7,
-                zlim = c(0, 1.05), col = facet_colour, border = NA,
-                shade = 0.2, xlab = "", ylab = "", zlab = "", box = TRUE)
+  view <- persp(grid_x[coarse], grid_y[coarse],
+                surfaces[[broad_cell]][coarse, coarse],
+                theta = angle, phi = 25, expand = 0.7, zlim = c(0, 1.05),
+                xlim = c(0, 1), ylim = c(0, sqrt(3) / 2),
+                col = NA, border = wire_colour,
+                xlab = "", ylab = "", zlab = "", box = TRUE)
+  par(new = TRUE)                       # the sharp cells in the same box
+  persp(grid_x, grid_y, z, theta = angle, phi = 25, expand = 0.7,
+        zlim = c(0, 1.05), xlim = c(0, 1), ylim = c(0, sqrt(3) / 2),
+        col = facet_colour, border = NA, shade = 0.2,
+        xlab = "", ylab = "", zlab = "", box = FALSE, axes = FALSE)
   lines(trans3d(c(0, 1, 0.5, 0), c(0, 0, sqrt(3) / 2, 0), 0, view), lwd = 2)
   text(trans3d(c(0, 1, 0.5), c(0, 0, sqrt(3) / 2), 0, view),
        labels = triangle_topics, cex = 0.6, pos = c(1, 1, 3))
