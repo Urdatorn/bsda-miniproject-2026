@@ -39,17 +39,17 @@ def main(topics_path, out_path):
     topics = json.load(open(topics_path, encoding="utf-8"))["topics"]
     n_lemmata, n_tokens = sum(t["size"] for t in topics), sum(t["tragic_tokens"] for t in topics)
     lines = ["% The topics of the hard model: English gloss, the three label lemmata, their transliteration.",
-             "% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \\usepackage{booktabs} and \\usepackage{tabularx}.",
-             "\\begin{table}[htbp]", "\\centering", "\\footnotesize", "\\begin{tabularx}{\\textwidth}{XXXrr}", "\\toprule",
+             "% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \\usepackage{booktabs}; spans both columns of a two-column layout.",
+             "\\begin{table*}[htbp]", "\\centering", "\\footnotesize", "\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lllrr}", "\\toprule",
              "Topic & Label lemmata & Transliteration & Lemmata (\\%) & Tragic tokens (\\%) \\\\", "\\midrule"]
     for t in topics:
         transliteration = "-".join(transliterate(w) for w in t["lemmata"].split("-"))
         lines.append(f"{t['label']} & {t['lemmata']} & {transliteration} & {100 * t['size'] / n_lemmata:.1f} & {100 * t['tragic_tokens'] / n_tokens:.1f} \\\\")
-    lines += ["\\bottomrule", "\\end{tabularx}",
+    lines += ["\\bottomrule", "\\end{tabular*}",
               f"\\caption{{The {len(topics)} unsupervised topics, in order of their mass in the three tragedians. A topic is named by the three",
               "non-cognate lemmata nearest its centroid in the word2vec space; the English glosses are the labels used in the",
               f"analysis. The last columns give the cluster's share of the {n_lemmata} topic-bearing lemmata of the vocabulary and of their {n_tokens}",
-              "tokens in the three tragedians; each column sums to 100.}", "\\label{tab:topics}", "\\end{table}"]
+              "tokens in the three tragedians; each column sums to 100.}", "\\label{tab:topics}", "\\end{table*}"]
     open(out_path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
     print(f"{len(topics)} topics -> {out_path}")
 
