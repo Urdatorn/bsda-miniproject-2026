@@ -18,7 +18,7 @@ params:
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 7)
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 # on a headless Linux box ragg draws the PNGs without an X11 display
 if (requireNamespace("ragg", quietly = TRUE)) {
   knitr::opts_chunk$set(dev = "ragg_png")
@@ -27,6 +27,10 @@ library(arrow)      # reads the parquet files
 library(dplyr)      # filter(), arrange(), bind_rows()
 library(jsonlite)   # reads vocab.json
 library(ggplot2)
+# The figures follow the ICML two-column style: Times at 8-9 pt on a 6.75 in
+# text width, so that they drop into the paper as they are
+theme_set(theme_minimal(base_size = 8, base_family = "Times New Roman"))
+knitr::opts_chunk$set(fig.width = 6.75)
 set.seed(params$seed)
 ```
 
@@ -169,8 +173,7 @@ knitr::kable(topics_table, row.names = FALSE,
 The vocabulary on the map it was clustered in: every topic-bearing lemma
 placed by UMAP from its word2vec vector and coloured by its topic, a
 point's size the walk's use of the word, a label's size the walk's share of
-the topic (`scripts/lemma_map.py`; the interactive version with hover and
-search is `figures/hard_lemma_map.html`).
+the topic (`scripts/lemma_map.py`).
 
 ```{r lemma_map, echo = FALSE, out.width = "100%"}
 knitr::include_graphics("figures/hard_lemma_map.png")
@@ -178,8 +181,8 @@ knitr::include_graphics("figures/hard_lemma_map.png")
 
 And the documents themselves: every walk snapshot and every Sophoclean
 window placed by UMAP from its profile over the 34 topics (Hellinger
-distance), coloured by its dominant topic (`scripts/topic_map.py`,
-interactive `figures/hard_topic_map.html`). Documents of a few dozen
+distance), coloured by its dominant topic (`scripts/topic_map.py`).
+Documents of a few dozen
 lemmata are mixtures, so the map has no clean regions; it is for browsing
 the restorations, not evidence.
 
@@ -333,8 +336,7 @@ ggplot(baseline_table, aes(x = topic, y = mean)) +
   coord_flip() +
   labs(x = NULL, y = "posterior mean of theta",
        title = paste("Sophocles,", baseline$n_docs,
-                     "windows of seventeen trimeters")) +
-  theme_minimal(9)
+                     "windows of seventeen trimeters"))
 ```
 
 # Topics raised above Sophocles
@@ -375,7 +377,6 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   scale_fill_manual(values = c("grey70", "firebrick"),
                     name = "raised: P >= 0.9\nand lift >= 1.5") +
   labs(x = NULL, y = "lift of the posterior mean against Sophocles") +
-  theme_minimal(8) +
   theme(legend.position = "bottom")
 ```
 
@@ -412,10 +413,13 @@ walk by chain and a baseline by window. The figures are drawn by
 
 One circle per topic, ordered by the walk's share of it (the area), coloured
 by the log2 lift against each baseline, in full colour with the lift printed
-where the interval excludes 1:
+where the interval excludes 1: against Sophocles, against Aeschylus and
+Euripides, and against Classical Attic.
 
 ```{r circles_walk, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/hard_topic_circles.png")
+knitr::include_graphics(c("figures/hard_circles_walk_vs_sophocles.png",
+                          "figures/hard_circles_walk_vs_tragedians.png",
+                          "figures/hard_circles_walk_vs_attic.png"))
 ```
 
 The same with Sophocles as the focus, against the other two tragedians and
@@ -423,7 +427,8 @@ against Classical Attic, so that his own topics are visible beside the
 walk's:
 
 ```{r circles_sophocles, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/hard_topic_circles_sophocles.png")
+knitr::include_graphics(c("figures/hard_circles_sophocles_vs_tragedians.png",
+                          "figures/hard_circles_sophocles_vs_attic.png"))
 ```
 
 ```{r baselines_table}
@@ -583,8 +588,7 @@ ggplot(variability, aes(x = mean, y = sd, colour = cell)) +
   geom_line(aes(y = sampling_sd), linetype = "dashed") +
   labs(x = "mean share of the topic", y = "sd of the share across documents",
        title = "Topic variability against its mean; dashed: sampling alone",
-       colour = NULL) +
-  theme_minimal(9)
+       colour = NULL)
 ```
 
 ## Where the walk went
@@ -662,8 +666,7 @@ ggplot() +
   geom_hline(yintercept = 1, linetype = "dashed") +
   facet_wrap(~ chains, scales = "free_x") +
   labs(x = "step of the walk", y = "lift against Sophocles", colour = NULL,
-       title = "Lift of every topic along the walk") +
-  theme_minimal(9)
+       title = "Lift of every topic along the walk")
 ```
 
 ## Agreement between the chains

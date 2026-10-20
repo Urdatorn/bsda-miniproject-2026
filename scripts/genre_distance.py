@@ -136,22 +136,21 @@ def main():
     print(f"per topic, the walk's rate is closer to epic's for {n_epic} of {len(topics)} topics and to tragedy's for "
           f"{len(topics) - n_epic}: " + ", ".join(f"{r.topic} ({r.closer_to}, P(epic) {r.p_closer_to_epic:.2f})" for r in per_topic.itertuples()), flush=True)
 
-    import matplotlib
-    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2), sharey=False)
+    from figure_style import apply, TEXT_WIDTH
+    apply()
+    fig, axes = plt.subplots(1, 2, figsize=(TEXT_WIDTH, 2.6), sharey=False)
     for ax, focus in zip(axes, ("walk", "sophocles")):
         t = table[table.focus == focus].sort_values("js_bits", ascending=False)
         y = np.arange(len(t))
         ax.barh(y, t.js_bits, color=np.where(t.genre.isin(["epic", "tragedy"]), "#e15759", "#9aa0a6"))
         ax.errorbar(t.js_bits, y, xerr=[t.js_bits - t.js_q05, t.js_q95 - t.js_bits], fmt="none", ecolor="black", capsize=2, lw=0.8)
-        ax.set_yticks(y); ax.set_yticklabels([f"{g} ({w} windows)" for g, w in zip(t.genre, t.windows)], fontsize=8)
-        ax.set_xlabel("Jensen-Shannon divergence of the topic profiles (bits)", fontsize=8)
-        ax.set_title(f"distance from {'the walk' if focus == 'walk' else 'Sophocles'} to each genre", fontsize=10)
-        ax.tick_params(axis="x", labelsize=8)
-    fig.suptitle("Which genre's topic profile is the walk's nearest? (bars: 90 % bootstrap intervals)", fontsize=11)
+        ax.set_yticks(y); ax.set_yticklabels([f"{g} ({w})" for g, w in zip(t.genre, t.windows)], fontsize=7)
+        ax.set_xlabel("Jensen–Shannon divergence (bits)", fontsize=7.5)
+        ax.set_title(f"from {'the walk' if focus == 'walk' else 'Sophocles'} to each genre (windows)", fontsize=8)
+        ax.tick_params(axis="x", labelsize=7)
     fig.tight_layout()
-    fig.savefig(os.path.join(a.figures, "hard_genre_distance.png"), dpi=160, bbox_inches="tight")
+    fig.savefig(os.path.join(a.figures, "hard_genre_distance.png"), bbox_inches="tight")
     print(f"wrote {a.out}/genre_distance.csv, genre_topics.csv and {a.figures}/hard_genre_distance.png", flush=True)
 
 

@@ -18,7 +18,10 @@ vocab.json): baseline_windows.parquet with `source` (oga or tragedians),
 `author`, `work`, `window` and one uint8 column per topic, plus
 `n_lemmata`.  Lemmata without a topic are counted in `n_lemmata` only.
 Beside it, baseline_lemma_counts.parquet counts every vocabulary lemma per
-author (`source`, `author`, `lemma_idx`, `count`), for lemma-level plots.
+author (`source`, `author`, `lemma_idx`, `count`), for lemma-level plots,
+and attic_windows.parquet keeps the Classical Attic windows (the authors in
+ATTIC of topic_circles.py) as bags of lemmata (`author`, `work`, `window`,
+`lemma_idx`, `count`), the documents the soft model scores as a baseline.
 
   python scripts/window_baselines.py --data data --oga <dir of parquet shards> --out data
 
@@ -30,6 +33,8 @@ from collections import defaultdict
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+
+from topic_circles import ATTIC
 
 CONTENT = {"NOUN", "VERB", "ADJ", "ADV", "PROPN"}        # as in the dataset builder
 TRAGEDIANS = ("sophocles", "aeschylus", "euripides")
@@ -102,6 +107,7 @@ def main():
     if not shards:
         sys.exit(f"no parquet shards in {a.oga}")
     streams = defaultdict(list)          # (author, work id) -> topic stream
+    attic_streams = defaultdict(list)    # the same as lemma indices, Classical Attic authors only
     n_sent = n_tok = 0
     for s, shard in enumerate(shards):
         table = pq.read_table(shard, columns=["author", "id", "conllu"])
@@ -111,6 +117,7 @@ def main():
             indices = [lemma_index[l] for l in lemmata if l in lemma_index]
             streams[(author, work)].extend(index_topic[i] for i in indices)
             np.add.at(lemma_counts[("oga", author)], indices, 1)
+            if author in ATTIC: attic_streams[(author, work)].extend(indices)
         print(f"[{time.time() - t0:7.1f}s] shard {s + 1}/{len(shards)} {os.path.basename(shard)}: {n_sent} sentences, "
               f"{n_tok} content lemmata, {len(streams)} works so far", flush=True)
     n_oga = 0
@@ -149,6 +156,19 @@ def main():
                              "lemma_idx": pa.array(idx_col, pa.int32()), "count": pa.array(count_col, pa.int64())}),
                    path, compression="zstd")
     print(f"wrote {path}: {len(idx_col)} author-lemma rows ({os.path.getsize(path) / 1e6:.1f} MB)", flush=True)
+
+    # the Classical Attic windows as bags, for the soft model
+    bags = {"author": [], "work": [], "window": [], "lemma_idx": [], "count": []}
+    for (author, work), stream in attic_streams.items():
+        for w, win in enumerate(windows_of(stream, a.window)):
+            ids, cnt = np.unique(np.array(win, dtype=np.int32), return_counts=True)
+            bags["author"].append(author); bags["work"].append(work); bags["window"].append(w)
+            bags["lemma_idx"].append(ids.tolist()); bags["count"].append(cnt.astype(np.int16).tolist())
+    path = os.path.join(a.out, "attic_windows.parquet")
+    pq.write_table(pa.table({"author": pa.array(bags["author"]), "work": pa.array(bags["work"]), "window": pa.array(bags["window"], pa.int32()),
+                             "lemma_idx": pa.array(bags["lemma_idx"], pa.list_(pa.int32())), "count": pa.array(bags["count"], pa.list_(pa.int16()))}),
+                   path, compression="zstd")
+    print(f"wrote {path}: {len(bags['window'])} Classical Attic windows ({os.path.getsize(path) / 1e6:.1f} MB)", flush=True)
 
 
 if __name__ == "__main__":

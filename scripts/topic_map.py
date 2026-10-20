@@ -9,15 +9,13 @@ Hellinger distances between profiles), laid out in two dimensions by UMAP;
 its colour is its dominant topic, the topic with the most lemmata in it.
 With --space word2vec the position is instead the mean of the document's
 word2vec lemma vectors, which for documents of twenty lemmata averages out
-to a featureless cloud.  Hovering shows the Greek text, searching finds a
-word in it, and a second colouring separates the walk and Sophocles.
+to a featureless cloud.
 
   python scripts/topic_map.py --data data --out figures
 
-writes hard_topic_map.html (the interactive map, self-contained) and
-hard_topic_map.png (a static version).
+writes hard_topic_map.png (text width, ICML style, figure_style.py).
 """
-import argparse, html, json, os
+import argparse, json, os
 from collections import defaultdict
 
 import numpy as np
@@ -113,33 +111,16 @@ def main():
     print("UMAP done", flush=True)
 
     import datamapplot
+    from figure_style import apply, font_family, TEXT_WIDTH
+    apply()
     cells = np.array([d["cell"] for d in docs])
-    sizes = np.where(cells == "sophocles", 3.0, 1.5)
-    hover = [html.escape(d["text"]) for d in docs]
-    extra = {"name": [d["name"] for d in docs], "cell": cells, "chain": [d["chain"] for d in docs], "step": [d["step"] for d in docs],
-             "topic": labels, "n_lemmata": [sum(d["counts"].values()) for d in docs]}
-    extra = pd.DataFrame(extra)
-    template = ("<div style='max-width:420px'><b>{name}</b><br>dominant topic: <i>{topic}</i> ({n_lemmata} lemmata)<br>"
-                "<span style='font-size:0.9em'>{hover_text}</span></div>")
-    cell_colors = {"walk": "#4e79a7", "sophocles": "#59a14f"}
-    plot = datamapplot.create_interactive_plot(
-        coords, labels, hover_text=hover, extra_point_data=extra, hover_text_html_template=template,
-        marker_size_array=sizes, enable_search=True, search_field="hover_text",
-        cluster_boundary_polygons=True, color_cluster_boundaries=True, polygon_alpha=4.0,  # in the 30-unit space datamapplot rescales the layout to
-        title="Restorations of P.Oxy. 5292 in the topic space",
-        sub_title=f"{int((cells == 'walk').sum())} walk snapshots and {int((cells == 'sophocles').sum())} Sophoclean windows of seventeen trimeters; "
-                  "a point is a document's profile over the 34 word2vec topics, coloured by its dominant topic",
-        font_family="Georgia", tooltip_font_family="Georgia", label_wrap_width=14, text_min_pixel_size=12, text_max_pixel_size=28,
-        colormap_rawdata=[cells], colormap_metadata=[{"field": "cell", "description": "Source", "kind": "categorical",
-                                                     "color_mapping": cell_colors, "show_legend": True}],
-        point_radius_max_pixels=12, initial_zoom_fraction=0.95, noise_label=NOISE)
-    plot.save(os.path.join(a.out, "hard_topic_map.html"))
-    print(f"wrote {a.out}/hard_topic_map.html ({os.path.getsize(os.path.join(a.out, 'hard_topic_map.html')) / 1e6:.1f} MB)", flush=True)
-
-    fig, ax = datamapplot.create_plot(coords, labels, noise_label=NOISE, label_font_size=7, label_wrap_width=14, marker_size_array=sizes * 2,
-                                      title="Restorations in the topic space",
-                                      sub_title="walk snapshots (small), Sophoclean windows (medium)", figsize=(12, 12))
-    fig.savefig(os.path.join(a.out, "hard_topic_map.png"), dpi=150, bbox_inches="tight")
+    sizes = np.where(cells == "sophocles", 2.0, 1.0)
+    fig, ax = datamapplot.create_plot(coords, labels, noise_label=NOISE, label_font_size=6, label_wrap_width=14, marker_size_array=sizes,
+                                      font_family=font_family(), title="Restorations in the topic space",
+                                      sub_title="walk snapshots (small), Sophoclean windows (larger), coloured by dominant topic",
+                                      title_keywords={"fontsize": 9}, sub_title_keywords={"fontsize": 7},
+                                      figsize=(TEXT_WIDTH, TEXT_WIDTH), dpi=300)
+    fig.savefig(os.path.join(a.out, "hard_topic_map.png"), dpi=300, bbox_inches="tight")
     print(f"wrote {a.out}/hard_topic_map.png", flush=True)
 
 

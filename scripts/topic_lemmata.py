@@ -77,12 +77,12 @@ def main():
     print("lemmata carrying the first three quarters of the positive excess over Sophocles: "
           + ", ".join(f"{r.lemma} {r.excess_over_sophocles:+.2f}" for r in excess[cum <= 0.75].itertuples()), flush=True)
 
-    import matplotlib
-    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from figure_style import apply, TEXT_WIDTH
+    apply()
     n = len(table)
     half = int(np.ceil(n / 2))
-    fig = plt.figure(figsize=(15, 0.118 * half + 1.8), layout="constrained")
+    fig = plt.figure(figsize=(TEXT_WIDTH, 0.112 * half + 1.0), layout="constrained")
     grid = fig.add_gridspec(1, 3, width_ratios=[1, 1, 0.9])
     floor = 0.02                                             # a rate of zero is drawn at the floor
     for part, ax in enumerate((fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1]))):
@@ -91,30 +91,30 @@ def main():
         for k, (_, r) in enumerate(rows.iterrows()):
             up = r.rate_walk >= r.rate_sophocles
             ax.plot([max(r.rate_sophocles, floor), max(r.rate_walk, floor)], [y[k], y[k]],
-                    color="#d62728" if up else "#1f77b4", lw=1.6, alpha=0.75, zorder=1)
-        for cell, marker, size in (("attic", "x", 22), ("tragedians", "D", 14), ("sophocles", "o", 26), ("walk", "o", 26)):
+                    color="#d62728" if up else "#1f77b4", lw=1.0, alpha=0.75, zorder=1)
+        for cell, marker, size in (("attic", "x", 9), ("tragedians", "D", 6), ("sophocles", "o", 11), ("walk", "o", 11)):
             ax.scatter(np.maximum(rows[f"rate_{cell}"], floor), y, s=size, marker=marker, color=COLOURS[cell],
                        linewidth=0.5, label=CELLS[cell], zorder=3, **({"edgecolor": "white"} if marker == "o" else {}))
-        ax.set_yticks(y); ax.set_yticklabels(rows.lemma, fontsize=7)
+        ax.set_yticks(y); ax.set_yticklabels(rows.lemma, fontsize=6)
         ax.set_xscale("log"); ax.set_xlim(floor * 0.8, max(table.rate_walk.max(), table.rate_sophocles.max(), table.rate_attic.max()) * 1.6)
-        ax.set_xlabel("rate per thousand topic lemmata (log scale; zero drawn at the left edge)", fontsize=7.5)
-        ax.tick_params(axis="x", labelsize=7); ax.grid(axis="x", lw=0.3, alpha=0.5)
+        ax.set_xlabel("per thousand topic lemmata (log; zero at the left edge)", fontsize=6.5)
+        ax.tick_params(axis="x", labelsize=6); ax.grid(axis="x", lw=0.3, alpha=0.5)
         ax.set_ylim(-1, len(rows))
         if part == 0:
-            ax.legend(fontsize=7, loc="lower right", framealpha=0.9)
+            ax.legend(fontsize=6, loc="lower right", framealpha=0.9)
     ax = fig.add_subplot(grid[0, 2])
     shown = excess.head(30)[::-1]
     ax.barh(np.arange(len(shown)), shown.excess_over_sophocles,
             color=np.where(shown.excess_over_sophocles >= 0, "#d62728", "#1f77b4"))
-    ax.set_yticks(np.arange(len(shown))); ax.set_yticklabels(shown.lemma, fontsize=7)
+    ax.set_yticks(np.arange(len(shown))); ax.set_yticklabels(shown.lemma, fontsize=6)
     ax.axvline(0, color="black", lw=0.6)
-    ax.set_xlabel("walk rate minus Sophocles rate (per thousand topic lemmata)", fontsize=7.5)
-    ax.set_title("the thirty largest contributions to the walk's excess", fontsize=9)
-    ax.tick_params(axis="x", labelsize=7); ax.grid(axis="x", lw=0.3, alpha=0.5)
+    ax.set_xlabel("walk minus Sophocles (per thousand)", fontsize=6.5)
+    ax.set_title("thirty largest contributions to the walk's excess", fontsize=7)
+    ax.tick_params(axis="x", labelsize=6); ax.grid(axis="x", lw=0.3, alpha=0.5)
     fig.suptitle(f"The lemmata of {a.topic}: {CELLS['walk']} {total['walk']:.1f}, Sophocles {total['sophocles']:.1f}, "
                  f"Aeschylus and Euripides {total['tragedians']:.1f}, Classical Attic {total['attic']:.1f} per thousand topic lemmata",
-                 fontsize=11)
-    fig.savefig(os.path.join(a.figures, f"hard_topic_lemmata_{a.topic}.png"), dpi=160, bbox_inches="tight")
+                 fontsize=8)
+    fig.savefig(os.path.join(a.figures, f"hard_topic_lemmata_{a.topic}.png"), bbox_inches="tight")
     print(f"wrote {a.figures}/hard_topic_lemmata_{a.topic}.png and {a.out}/topic_lemmata_{a.topic}.csv", flush=True)
 
 

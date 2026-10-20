@@ -16,7 +16,7 @@ params:
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 7)
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 # on a headless Linux box ragg draws the PNGs without an X11 display
 if (requireNamespace("ragg", quietly = TRUE)) {
   knitr::opts_chunk$set(dev = "ragg_png")
@@ -24,6 +24,10 @@ if (requireNamespace("ragg", quietly = TRUE)) {
 library(dplyr)      # filter(), arrange()
 library(jsonlite)   # reads the json files
 library(ggplot2)
+# The figures follow the ICML two-column style: Times at 8-9 pt on a 6.75 in
+# text width, so that they drop into the paper as they are
+theme_set(theme_minimal(base_size = 8, base_family = "Times New Roman"))
+knitr::opts_chunk$set(fig.width = 6.75)
 results_dir <- params$results
 ```
 
@@ -123,6 +127,15 @@ for (k in seq_len(K)) {
 }
 ```
 
+The vocabulary on the hard model's map, every lemma coloured instead by the
+topic that gives it most probability under $\phi$ (`scripts/lemma_map.py`).
+This is what soft topics buy: a word can belong elsewhere than its cluster
+put it.
+
+```{r soft_lemma_map, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/soft_lemma_map.png")
+```
+
 # The posterior
 
 The amortized posterior is a network, so before it reads a real document it
@@ -149,8 +162,7 @@ ggplot(sbc_shown, aes(x = rank)) +
   geom_histogram(bins = 20, fill = "grey60") +
   facet_wrap(~ topic, ncol = 4) +
   labs(title = "SBC rank histograms (uniform if calibrated)",
-       x = "rank of the true theta among the posterior draws", y = NULL) +
-  theme_minimal(8)
+       x = "rank of the true theta among the posterior draws", y = NULL)
 ```
 
 ```{r recovery, fig.height = 6}
@@ -162,8 +174,7 @@ ggplot(recovery_shown, aes(x = true, y = post_mean)) +
   geom_point(size = 0.6) +
   facet_wrap(~ topic, ncol = 4) +
   labs(title = "Recovery on held-out simulations (mean and 90 % interval)",
-       x = "true theta", y = "posterior") +
-  theme_minimal(8)
+       x = "true theta", y = "posterior")
 ```
 
 
@@ -187,8 +198,7 @@ ggplot(baseline_table, aes(x = topic, y = mean)) +
   coord_flip() +
   labs(x = NULL, y = "posterior mean of theta",
        title = paste("Sophocles,", sophocles_rows$n_docs[1],
-                     "windows of seventeen trimeters")) +
-  theme_minimal(9)
+                     "windows of seventeen trimeters"))
 ```
 
 # Topics raised above Sophocles
@@ -227,7 +237,6 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   scale_fill_manual(values = c("grey70", "firebrick"),
                     name = "raised: P >= 0.9\nand lift >= 1.5") +
   labs(x = NULL, y = "lift of the mean profile against Sophocles") +
-  theme_minimal(8) +
   theme(legend.position = "bottom")
 ```
 
@@ -246,6 +255,63 @@ top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95",
 knitr::kable(top_five, digits = 2, row.names = FALSE)
 ```
 
+# Beyond Sophocles: three baselines
+
+The same two further baselines as in the hard report, Aeschylus and
+Euripides and Classical Attic (`data/attic_windows.parquet`, windows of 28
+lemmata of the Attic authors before Alexander), read here through the
+amortized posterior: every baseline window is a document, the cell's mean
+profile is compared with the walk's draw by draw, and a lift's 90 %
+interval is that of the ratio of the two mean profiles over the posterior
+draws, not a bootstrap. `scripts/soft_circles.py` draws the grids from
+`results/soft/comparisons.csv`.
+
+```{r soft_circles_walk, echo = FALSE, out.width = "100%"}
+knitr::include_graphics(c("figures/soft_circles_walk_vs_sophocles.png",
+                          "figures/soft_circles_walk_vs_tragedians.png",
+                          "figures/soft_circles_walk_vs_attic.png"))
+```
+
+Sophocles as the focus, against the other two tragedians and against
+Classical Attic:
+
+```{r soft_circles_sophocles, echo = FALSE, out.width = "100%"}
+knitr::include_graphics(c("figures/soft_circles_sophocles_vs_tragedians.png",
+                          "figures/soft_circles_sophocles_vs_attic.png"))
+```
+
+```{r soft_baselines_table}
+comparisons <- read.csv(file.path(results_dir, "comparisons.csv"),
+                        encoding = "UTF-8")
+comparisons$off_one <- comparisons$lift_q05 > 1 | comparisons$lift_q95 < 1
+baseline_rows <- NULL
+for (comparison in unique(comparisons$comparison)) {
+  these <- filter(comparisons, comparison == !!comparison, off_one)
+  these <- arrange(these, desc(lift))
+  largest <- paste(sprintf("%s %.2f", head(these$topic, 3),
+                           head(these$lift, 3)), collapse = ", ")
+  smallest <- paste(sprintf("%s %.2f", tail(these$topic, 3),
+                            tail(these$lift, 3)), collapse = ", ")
+  baseline_rows <- rbind(baseline_rows,
+                         data.frame(comparison = comparison,
+                                    off_one = nrow(these),
+                                    largest = largest, smallest = smallest))
+}
+knitr::kable(baseline_rows, row.names = FALSE,
+             col.names = c("comparison", "topics off 1", "largest lifts",
+                           "smallest lifts"))
+```
+
+The topic the hard report singles out, *wrong-vengeance-err*, under the
+soft model:
+
+```{r soft_wrong_vengeance}
+one_topic <- filter(comparisons, topic == "wrong-vengeance-err")
+one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
+                           "p_document")]
+knitr::kable(one_topic, digits = 3, row.names = FALSE)
+```
+
 # Which seeded topic dominates
 
 A reading the soft model alone affords, since its posterior is over the
@@ -261,8 +327,7 @@ ggplot(heat, aes(x = cell, y = topic, fill = p_dominant)) +
   scale_fill_gradient(low = "white", high = "firebrick",
                       name = "P(largest\nseeded topic)") +
   labs(x = NULL, y = NULL,
-       title = "Which seeded topic dominates a random document of the cell") +
-  theme_minimal(8)
+       title = "Which seeded topic dominates a random document of the cell")
 ```
 
 The five largest mean profiles in every cell.

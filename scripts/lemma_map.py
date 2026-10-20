@@ -3,19 +3,18 @@
 Every topic-bearing lemma of the vocabulary is one point, placed by UMAP
 from its skip-gram word2vec vector (the space the 34 topics were clustered
 in, so the topics are the regions of the map) and coloured by its topic.
-A point's size is how often the walk uses the lemma, and a topic label's
-size (and so the order in which labels give way as one zooms out) is the
-walk's share of that topic; hovering shows the
-lemma's rate per thousand topic lemmata in Sophocles and in the walk; the
-alternative colouring shows the walk's rate against Sophocles' (log2 ratio,
-blue where the walk under-uses a word, red where it over-uses it).  The
-search box finds a lemma.
+A point's size is how often the walk uses the lemma.
 
   python scripts/lemma_map.py --data data --out figures
 
-writes hard_lemma_map.html (self-contained) and hard_lemma_map.png.
+writes hard_lemma_map.png and, when the soft model's results/soft/phi_matrix.npy
+exists, soft_lemma_map.png on the same layout: every lemma coloured by the
+topic that gives it the most probability under the soft model's phi (the
+seeded topic with the largest phi[k, w], or a free topic), so that the
+lemmata the soft model moves out of their cluster show.  Text-width figures
+in the ICML style (figure_style.py).
 """
-import argparse, html, json, os
+import argparse, json, os
 from collections import defaultdict
 
 import numpy as np
@@ -38,6 +37,7 @@ def main():
     ap.add_argument("--neighbors", type=int, default=15)
     ap.add_argument("--min-dist", type=float, default=0.05)
     ap.add_argument("--seed", type=int, default=917)
+    ap.add_argument("--soft", default="results/soft", help="the soft model's results (phi.json, phi_matrix.npy); skipped if absent")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
 
@@ -66,43 +66,35 @@ def main():
     log_ratio = np.log2((rate["walk"] + 0.05) / (rate["sophocles"] + 0.05))
 
     import datamapplot
-    import datamapplot.create_plots
+    from figure_style import apply, font_family, TEXT_WIDTH
+    apply()
     sizes = 1.0 + 3.0 * np.sqrt(rate["walk"])
-
-    # datamapplot sizes a label (and ranks it when labels collide) by its cluster's point count;
-    # here a label is sized by the walk's share of the topic instead, so the labels that survive
-    # zooming out are the topics the walk uses most.  The function that builds the label table is
-    # wrapped to overwrite its size column (square root, so the small topics stay legible).
-    walk_share = pd.Series(rate["walk"]).groupby(labels).sum()
-    build_labels = datamapplot.create_plots.label_text_and_polygon_dataframes
-
-    def labels_sized_by_walk(*args, **kwargs):
-        table = build_labels(*args, **kwargs)
-        table["size"] = np.sqrt(table["label"].map(walk_share).fillna(0.0).to_numpy())
-        return table
-    datamapplot.create_plots.label_text_and_polygon_dataframes = labels_sized_by_walk
-    extra = pd.DataFrame({"topic": labels, "rate_sophocles": np.round(rate["sophocles"], 2), "rate_walk": np.round(rate["walk"], 2),
-                          "ratio": np.round(log_ratio, 2)})
-    template = ("<div><b style='font-size:1.3em'>{hover_text}</b><br>topic: <i>{topic}</i><br>"
-                "per 1000 topic lemmata: Sophocles {rate_sophocles}, walk {rate_walk} (log2 ratio {ratio})</div>")
-    plot = datamapplot.create_interactive_plot(
-        coords, labels, hover_text=[html.escape(w) for w in lemmata], extra_point_data=extra, hover_text_html_template=template,
-        marker_size_array=sizes, enable_search=True, search_field="hover_text",
-        title="The topic vocabulary, with the walk drawn on it",
-        sub_title=f"{len(rows)} lemmata placed by their word2vec vectors and coloured by topic; a point's size is the walk's use of the word, "
-                  "a label's size the walk's share of the topic",
-        font_family="Georgia", tooltip_font_family="Georgia", label_wrap_width=14, text_min_pixel_size=12, text_max_pixel_size=28,
-        colormap_rawdata=[log_ratio],
-        colormap_metadata=[{"field": "ratio", "description": "walk against Sophocles (log2 rate ratio)", "kind": "continuous", "cmap": "RdBu_r"}],
-        point_radius_max_pixels=14, initial_zoom_fraction=0.95)
-    plot.save(os.path.join(a.out, "hard_lemma_map.html"))
-    print(f"wrote {a.out}/hard_lemma_map.html ({os.path.getsize(os.path.join(a.out, 'hard_lemma_map.html')) / 1e6:.1f} MB)", flush=True)
-
-    fig, ax = datamapplot.create_plot(coords, labels, label_font_size=7, label_wrap_width=14, marker_size_array=sizes * 2,
-                                      title="The topic vocabulary", sub_title="lemmata placed by word2vec, coloured by topic, sized by the walk's use",
-                                      figsize=(12, 12))
-    fig.savefig(os.path.join(a.out, "hard_lemma_map.png"), dpi=150, bbox_inches="tight")
+    fig, ax = datamapplot.create_plot(coords, labels, label_font_size=6, label_wrap_width=14, marker_size_array=sizes,
+                                      font_family=font_family(), title="The topic vocabulary",
+                                      sub_title="lemmata placed by word2vec, coloured by topic, sized by the walk's use",
+                                      title_keywords={"fontsize": 9}, sub_title_keywords={"fontsize": 7},
+                                      figsize=(TEXT_WIDTH, TEXT_WIDTH), dpi=300)
+    fig.savefig(os.path.join(a.out, "hard_lemma_map.png"), dpi=300, bbox_inches="tight")
     print(f"wrote {a.out}/hard_lemma_map.png", flush=True)
+
+    # the soft map: the same layout, every lemma coloured by its soft topic
+    phi_path = os.path.join(a.soft, "phi_matrix.npy")
+    if not os.path.exists(phi_path):
+        print(f"no {phi_path}: the soft map is skipped", flush=True); return
+    phi = np.load(phi_path)                                                   # (K, V), rows sum to one
+    names = json.load(open(os.path.join(a.soft, "phi.json"), encoding="utf-8"))["names"]
+    responsibility = phi[:, index] / phi[:, index].sum(0, keepdims=True)      # P(topic | lemma) with a flat prior over topics
+    soft_labels = np.array([names[k] for k in responsibility.argmax(0)])
+    moved = soft_labels != labels
+    print(f"soft topics: {moved.sum()} of {len(rows)} lemmata ({100 * moved.mean():.1f} %) get a topic other than their cluster; "
+          + f"{np.isin(soft_labels, names[-(len(names) - len(set(labels))):]).sum()} go to a free topic", flush=True)
+    fig, ax = datamapplot.create_plot(coords, soft_labels, label_font_size=6, label_wrap_width=14, marker_size_array=sizes,
+                                      font_family=font_family(), title="The topic vocabulary under the soft model",
+                                      sub_title=f"same layout, coloured by the soft topic; {moved.sum()} of {len(rows)} lemmata leave their cluster",
+                                      title_keywords={"fontsize": 9}, sub_title_keywords={"fontsize": 7},
+                                      figsize=(TEXT_WIDTH, TEXT_WIDTH), dpi=300)
+    fig.savefig(os.path.join(a.out, "soft_lemma_map.png"), dpi=300, bbox_inches="tight")
+    print(f"wrote {a.out}/soft_lemma_map.png", flush=True)
 
 
 if __name__ == "__main__":

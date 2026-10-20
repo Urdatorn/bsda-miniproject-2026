@@ -4,12 +4,13 @@ One circle per topic in a grid ordered by the focus cell's share of the
 topic, largest first.  A circle's area is that share, its colour the log2
 lift of the share against a baseline, and it is drawn in full colour with a
 black edge when the lift's 90 % interval excludes 1 (otherwise faded, the
-lift in brackets).  Two figures:
+lift in brackets).  Five figures:
 
-  hard_topic_circles.png       the walk against Sophocles, against Aeschylus
-                               and Euripides, and against Classical Attic;
-  hard_topic_circles_sophocles.png  Sophocles against Aeschylus and Euripides and
-                               against Classical Attic: his own topics.
+  hard_circles_walk_vs_{sophocles,tragedians,attic}.png   the walk against
+      Sophocles, against Aeschylus and Euripides, against Classical Attic;
+  hard_circles_sophocles_vs_{tragedians,attic}.png   Sophocles against the
+      other two: his own topics.
+One text-width figure (ICML) per comparison, figure_style.py.
 
 Shares are rates per thousand topic lemmata, pooled over the cell's
 documents.  The baselines are windows of 28 vocabulary lemmata
@@ -108,48 +109,41 @@ def compare(name, focus, base, focus_boot, base_boot, topics):
                          "p_document": p_document(focus, base)})
 
 
-def draw(panels, focus_name, topics, path, columns=12):
-    """one circle per topic in a grid ordered by the focus cell's share, largest first (row by row); one panel per baseline, stacked"""
-    import matplotlib
-    matplotlib.use("Agg")
+def draw(table, title, topics, path, columns=9):
+    """one circle per topic in a grid ordered by the focus cell's share, largest first (row by row), one text-width figure"""
     import matplotlib.pyplot as plt
     from matplotlib.colors import TwoSlopeNorm
+    from figure_style import apply, TEXT_WIDTH
+    apply()
     cmap = plt.get_cmap("RdBu_r")
     norm = TwoSlopeNorm(vcenter=0.0, vmin=-1.5, vmax=1.5)
-    share = panels[0][1]["rate_focus"].to_numpy()           # the focus cell's share, the same in every panel
+    share = table["rate_focus"].to_numpy()
     order = np.argsort(-share)
     rows = int(np.ceil(len(topics) / columns))
-    radius = 0.42 * np.sqrt(share / share.max())             # cell of the grid = 1 x 1.45, label under the circle
-    col_of = np.empty(len(topics)); row_of = np.empty(len(topics))
+    radius = 0.4 * np.sqrt(share / share.max())              # cell of the grid = 1 x 1.5, label under the circle
+    significant = ((table["lift_q05"] > 1) | (table["lift_q95"] < 1)).to_numpy()
+    lift = table["lift"].to_numpy()
+    width_units, height_units = columns, 1.5 * rows + 0.3
+    fig, ax = plt.subplots(figsize=(TEXT_WIDTH, TEXT_WIDTH * height_units / width_units + 0.55), layout="constrained")
     for rank, k in enumerate(order):
-        col_of[k] = rank % columns; row_of[k] = rank // columns
-    fig, axes = plt.subplots(len(panels), 1, figsize=(1.3 * columns + 0.4, (1.55 * rows + 0.9) * len(panels) + 0.8),
-                             squeeze=False, layout="constrained")
-    for ax, (title, table) in zip(axes[:, 0], panels):
-        significant = ((table["lift_q05"] > 1) | (table["lift_q95"] < 1)).to_numpy()
-        lift = table["lift"].to_numpy()
-        for k in range(len(topics)):
-            x, y = col_of[k], -1.45 * row_of[k]
-            colour = cmap(norm(np.log2(lift[k])))
-            if significant[k]:
-                ax.add_patch(plt.Circle((x, y), radius[k], facecolor=colour, edgecolor="black", linewidth=1.1, zorder=2))
-            else:
-                ax.add_patch(plt.Circle((x, y), radius[k], facecolor=colour, alpha=0.3, edgecolor="none", zorder=1))
-            name = topics[k].replace("-", "\n", 1) if len(topics[k]) > 16 else topics[k]
-            label = f"{name}\n{lift[k]:.2f}×" if significant[k] else f"{name}\n({lift[k]:.2f}×)"
-            ax.text(x, y - 0.46, label, ha="center", va="top", fontsize=6.8, linespacing=0.95, zorder=3,
-                    fontweight="bold" if significant[k] else "normal", color="black" if significant[k] else "#666666")
-        ax.set_title(title, fontsize=11, pad=10)
-        ax.set_xlim(-0.6, columns - 0.4); ax.set_ylim(-1.45 * (rows - 1) - 1.0, 0.6)
-        ax.set_aspect("equal"); ax.axis("off")
+        x, y = rank % columns, -1.5 * (rank // columns)
+        colour = cmap(norm(np.log2(lift[k])))
+        if significant[k]:
+            ax.add_patch(plt.Circle((x, y), radius[k], facecolor=colour, edgecolor="black", linewidth=0.7, zorder=2))
+        else:
+            ax.add_patch(plt.Circle((x, y), radius[k], facecolor=colour, alpha=0.3, edgecolor="none", zorder=1))
+        name = topics[k].replace("-", "\n", 1) if len(topics[k]) > 14 else topics[k]
+        label = f"{name}\n{lift[k]:.2f}×" if significant[k] else f"{name}\n({lift[k]:.2f}×)"
+        ax.text(x, y - 0.44, label, ha="center", va="top", fontsize=6, linespacing=0.95, zorder=3,
+                fontweight="bold" if significant[k] else "normal", color="black" if significant[k] else "#666666")
+    ax.set_title(title, fontsize=8, pad=4)
+    ax.set_xlim(-0.55, columns - 0.45); ax.set_ylim(-1.5 * (rows - 1) - 1.05, 0.5)
+    ax.set_aspect("equal"); ax.axis("off")
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap); sm.set_array([])
-    bar = fig.colorbar(sm, ax=axes[:, 0].tolist(), orientation="horizontal", fraction=0.03, pad=0.01, aspect=60, shrink=0.6)
-    bar.set_label("log2 lift of the topic's share against the baseline; full colour and black edge: its 90 % interval "
-                  "excludes 1 (lift in brackets otherwise)", fontsize=8)
-    bar.ax.tick_params(labelsize=8)
-    fig.suptitle(f"The topics of {focus_name}, ordered by {focus_name}'s share of them (circle area), largest first",
-                 fontsize=12, y=1.02)
-    fig.savefig(path, dpi=160, bbox_inches="tight")
+    bar = fig.colorbar(sm, ax=ax, orientation="horizontal", fraction=0.05, pad=0.01, aspect=70, shrink=0.55)
+    bar.set_label("log2 lift against the baseline (full colour, black edge, lift printed: 90 % interval off 1)", fontsize=6.5)
+    bar.ax.tick_params(labelsize=6)
+    fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -194,16 +188,16 @@ def main():
             tables[(focus, base)] = compare(f"{focus} vs {base}", counts[focus], counts[base], boot[focus], boot[base], topics)
     pd.concat(tables.values()).to_csv(os.path.join(a.out, "topic_circles.csv"), index=False, float_format="%.4f")
 
-    draw([(f"against {baseline_name[b]}", tables[("walk", b)]) for b in ("sophocles", "tragedians", "attic")],
-         "the walk", topics, os.path.join(a.figures, "hard_topic_circles.png"))
-    draw([(f"against {baseline_name[b]}", tables[("sophocles", b)]) for b in ("tragedians", "attic")],
-         "Sophocles", topics, os.path.join(a.figures, "hard_topic_circles_sophocles.png"))
+    focus_name = {"walk": "the walk", "sophocles": "Sophocles"}
+    for (focus, base), table in tables.items():
+        title = f"The topics of {focus_name[focus]} against {baseline_name[base]}: area the share, colour the lift"
+        draw(table, title, topics, os.path.join(a.figures, f"hard_circles_{focus}_vs_{base}.png"))
     for (focus, base), t in tables.items():
         sig = t[(t.lift_q05 > 1) | (t.lift_q95 < 1)].sort_values("lift", ascending=False)
         print(f"{focus} vs {base}: {len(sig)} topics with an interval off 1; largest lifts "
               + ", ".join(f"{r.topic} {r.lift:.2f}" for r in sig.head(4).itertuples())
               + "; smallest " + ", ".join(f"{r.topic} {r.lift:.2f}" for r in sig.tail(3).itertuples()), flush=True)
-    print(f"wrote {a.figures}/hard_topic_circles.png, hard_topic_circles_sophocles.png and {a.out}/topic_circles.csv", flush=True)
+    print(f"wrote {a.figures}/hard_circles_<focus>_vs_<baseline>.png ({len(tables)} figures) and {a.out}/topic_circles.csv", flush=True)
 
 
 if __name__ == "__main__":

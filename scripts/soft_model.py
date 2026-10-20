@@ -33,7 +33,11 @@ document against a random window of Sophocles, P(theta_k^doc > theta_k^window).
 
 Usage (GPU recommended; KERAS_BACKEND=torch):
   python scripts/soft_model.py --data data --out results/soft
-Writes phi.json (topics), sbc.csv, recovery.csv, cells.{json,md,csv}.
+Writes phi.json (topics) and phi_matrix.npy (K x V), sbc.csv, recovery.csv,
+cells.{json,csv}, and comparisons.csv: the walk against Sophocles, against
+Aeschylus and Euripides and against Classical Attic (data/attic_windows.parquet,
+scripts/window_baselines.py), and Sophocles against the latter two, with the
+lift's 90 % interval over the posterior draws of the two mean profiles.
 """
 import argparse, json, os, time, unicodedata
 from collections import Counter, defaultdict
@@ -64,7 +68,8 @@ def windows(rows, size=WINDOW):
 
 def load(data_dir):
     """vocab (the lemmata, index = column of a bag), cluster (the topic of each lemma or None),
-    docs: {"sophocles": windows, "walk": snapshots}, and the windows of Aeschylus and Euripides for the LDA"""
+    docs: {"sophocles": windows, "walk": snapshots, "tragedians": the windows of Aeschylus and Euripides (also the LDA's
+    corpus), "attic": the Classical Attic windows of 28 lemmata}, and the windows of Aeschylus and Euripides for the LDA"""
     vocab = json.load(open(os.path.join(data_dir, "vocab.json"), encoding="utf-8"))
     corpus = pq.read_table(os.path.join(data_dir, "corpus.parquet"))
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet"))
@@ -81,6 +86,12 @@ def load(data_dir):
     for key_set, key_chain, key_step, lemmata in zip(walk["chain_set"].to_pylist(), walk["chain"].to_pylist(), walk["iteration"].to_pylist(), row_lemmata(walk)):
         snapshot[(key_set, key_chain, key_step)] += lemmata
     docs["walk"] = [snapshot[k] for k in sorted(snapshot, key=str)]
+    docs["tragedians"] = list(tragic)
+    attic_path = os.path.join(data_dir, "attic_windows.parquet")
+    if os.path.exists(attic_path):
+        docs["attic"] = row_lemmata(pq.read_table(attic_path))
+    else:
+        print(f"no {attic_path}: the Classical Attic cell is skipped (scripts/window_baselines.py writes it)", flush=True)
     docs = {name: [d for d in ds if d] for name, ds in docs.items()}                  # a document needs at least one lemma
     return [r["lemma"] for r in vocab], [r["cluster_K40"] for r in vocab], docs, tragic
 
@@ -138,6 +149,7 @@ def main():
         for w, i in wid.items():
             if w in order: phi[k, i] = d[order[w]]
     phi /= phi.sum(1, keepdims=True); logphi = np.log(phi).T.astype(np.float32)          # (V, K)
+    np.save(f"{a.out}/phi_matrix.npy", phi.astype(np.float32))                            # for the soft lemma map
     top = {names[k]: [w for w, _ in lda.get_topic_words(k, top_n=15)] for k in range(K)}
     json.dump({"names": names, "top_words": top, "ll_per_word": lda.ll_per_word, "seeds_found": found, "vocab_size": V}, open(f"{a.out}/phi.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     for k in range(K): print(f"  {names[k]:18s} " + " ".join(top[names[k]][:10]), flush=True)
@@ -227,8 +239,31 @@ def main():
             s["p_document"] = (P > B).mean(0).tolist()
         return s
     cells = {"sophocles": summarise(docs["sophocles"])}
-    for name in ("walk",):
-        cells[name] = summarise(docs[name], cells["sophocles"]); print(f"  {name} read: {cells[name]['n_docs']} documents", flush=True)
+    for name in ("walk", "tragedians", "attic"):
+        if name in docs:
+            cells[name] = summarise(docs[name], cells["sophocles"]); print(f"  {name} read: {cells[name]['n_docs']} documents", flush=True)
+
+    # the comparisons behind the circle grids: focus against baseline, seeded topics only, the lift's interval over
+    # the posterior draws of the two mean profiles (paired by draw index) and the document-level probability
+    def compare(focus, base, name):
+        F, Bm = cells[focus]["_mean_draws"][:, :H], cells[base]["_mean_draws"][:, :H]
+        ratio = F / Bm
+        P, Q = cells[focus]["_document_draws"][:, :H], cells[base]["_document_draws"][:, :H]
+        Q = Q[rng.integers(0, len(Q), len(P))]
+        return [{"topic": names[k], "comparison": name, "rate_focus": F.mean(0)[k], "rate_baseline": Bm.mean(0)[k],
+                 "lift": F.mean(0)[k] / Bm.mean(0)[k], "lift_q05": np.quantile(ratio[:, k], 0.05), "lift_q95": np.quantile(ratio[:, k], 0.95),
+                 "p_above": (F[:, k] > Bm[:, k]).mean(), "p_document": (P[:, k] > Q[:, k]).mean()} for k in range(H)]
+    comparisons = []
+    for focus, base in (("walk", "sophocles"), ("walk", "tragedians"), ("walk", "attic"), ("sophocles", "tragedians"), ("sophocles", "attic")):
+        if focus in cells and base in cells: comparisons += compare(focus, base, f"{focus} vs {base}")
+    with open(f"{a.out}/comparisons.csv", "w") as f:
+        f.write("topic,comparison,rate_focus,rate_baseline,lift,lift_q05,lift_q95,p_above,p_document\n")
+        for r in comparisons:
+            f.write(f"{r['topic']},{r['comparison']},{r['rate_focus']:.5f},{r['rate_baseline']:.5f},{r['lift']:.4f},{r['lift_q05']:.4f},{r['lift_q95']:.4f},{r['p_above']:.4f},{r['p_document']:.4f}\n")
+    for name in dict.fromkeys(r["comparison"] for r in comparisons):
+        rows = sorted((r for r in comparisons if r["comparison"] == name and (r["lift_q05"] > 1 or r["lift_q95"] < 1)), key=lambda r: -r["lift"])
+        print(f"  {name}: {len(rows)} topics with an interval off 1; largest " + ", ".join(f"{r['topic']} {r['lift']:.2f}" for r in rows[:3])
+              + "; smallest " + ", ".join(f"{r['topic']} {r['lift']:.2f}" for r in rows[-3:]), flush=True)
     res = {"names": names, "cells": {name: {k: v for k, v in s.items() if not k.startswith("_")} for name, s in cells.items()},
            "checks": {"recovery_r2": r2, "coverage90": cover, "sbc_p": sbc_p}}
     json.dump(res, open(f"{a.out}/cells.json", "w"), indent=1)
