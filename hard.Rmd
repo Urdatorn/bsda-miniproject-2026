@@ -142,7 +142,52 @@ cat(K, "topics;", nrow(vocab), "lemmata in the vocabulary,",
     nrow(imputations), "restored verses\n")
 ```
 
-# Documents and the exact posterior
+# The topics
+
+The 34 topics are hard clusters of the vocabulary, built upstream (word2vec
+on the lemmatised Greek corpus, Ward's method, cut at $K = 40$, six clusters
+dropped) and delivered with the vocabulary as `cluster_K40`; the Greek
+triple behind each English label is the three lemmata nearest the cluster's
+centre. The table orders them by their share of the three tragedians'
+trimeters; the LaTeX version for the paper is `latex/topics_table.tex`.
+
+```{r topics_table}
+with_topic <- filter(vocab, !is.na(cluster_K40))
+topics_table <- data.frame(topic = topic_names,
+                           lemmata_greek = NA, lemmata = NA, tragic_tokens = NA)
+for (i in seq_len(K)) {
+  members <- filter(with_topic, cluster_K40 == topic_names[i])
+  topics_table$lemmata_greek[i] <- members$cluster_K40_lemmata[1]
+  topics_table$lemmata[i] <- nrow(members)
+  topics_table$tragic_tokens[i] <- sum(members$tragic_count)
+}
+knitr::kable(topics_table, row.names = FALSE,
+             col.names = c("topic", "its three central lemmata", "lemmata",
+                           "tragic tokens"))
+```
+
+The vocabulary on the map it was clustered in: every topic-bearing lemma
+placed by UMAP from its word2vec vector and coloured by its topic, a
+point's size the walk's use of the word, a label's size the walk's share of
+the topic (`scripts/lemma_map.py`; the interactive version with hover and
+search is `figures/hard_lemma_map.html`).
+
+```{r lemma_map, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_lemma_map.png")
+```
+
+And the documents themselves: every walk snapshot and every Sophoclean
+window placed by UMAP from its profile over the 34 topics (Hellinger
+distance), coloured by its dominant topic (`scripts/topic_map.py`,
+interactive `figures/hard_topic_map.html`). Documents of a few dozen
+lemmata are mixtures, so the map has no clean regions; it is for browsing
+the restorations, not evidence.
+
+```{r topic_map, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_topic_map.png")
+```
+
+# The posterior
 
 ```{r model}
 kappa <- params$kappa
@@ -219,6 +264,8 @@ summarise_cell <- function(documents, baseline = NULL) {
   result
 }
 ```
+
+The cells, and the model's table: one row per cell and topic.
 
 ```{r cells}
 # Sophocles' extant trimeters in windows of seventeen, the baseline
@@ -347,7 +394,120 @@ top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95",
 knitr::kable(top_five, digits = 2, row.names = FALSE)
 ```
 
-# How variable are the topics?
+# Beyond Sophocles: three baselines
+
+Is the walk's profile unusual, and against whom? Two further baselines are
+cut from other text into windows of 28 vocabulary lemmata, the length of
+the walk's mean document: Aeschylus and Euripides, and Classical Attic,
+the works of the Attic authors before Alexander in the Open Greek and Latin
+texts parsed by the same tagger (the tragedians with their lyrics,
+Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the Attic orators and
+the sophists who wrote Attic, 28,882 windows). Sophocles is cut the same
+way. The shares here are plain rates per thousand topic lemmata, pooled
+over a cell's documents; a lift's 90 % interval comes from resampling the
+walk by chain and a baseline by window. The figures are drawn by
+`scripts/topic_circles.py`, `scripts/topic_lemmata.py` and
+`scripts/genre_distance.py` from `data/baseline_windows.parquet`
+(`scripts/window_baselines.py`); their tables are in `results/hard/`.
+
+One circle per topic, ordered by the walk's share of it (the area), coloured
+by the log2 lift against each baseline, in full colour with the lift printed
+where the interval excludes 1:
+
+```{r circles_walk, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_topic_circles.png")
+```
+
+The same with Sophocles as the focus, against the other two tragedians and
+against Classical Attic, so that his own topics are visible beside the
+walk's:
+
+```{r circles_sophocles, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_topic_circles_sophocles.png")
+```
+
+```{r baselines_table}
+circles <- read.csv("results/hard/topic_circles.csv", encoding = "UTF-8")
+circles$off_one <- circles$lift_q05 > 1 | circles$lift_q95 < 1
+# For every comparison: how many topics have an interval off 1, and the
+# three largest and three smallest lifts among them
+baseline_rows <- NULL
+for (comparison in unique(circles$comparison)) {
+  these <- filter(circles, comparison == !!comparison, off_one)
+  these <- arrange(these, desc(lift))
+  largest <- paste(sprintf("%s %.2f", head(these$topic, 3),
+                           head(these$lift, 3)), collapse = ", ")
+  smallest <- paste(sprintf("%s %.2f", tail(these$topic, 3),
+                            tail(these$lift, 3)), collapse = ", ")
+  baseline_rows <- rbind(baseline_rows,
+                         data.frame(comparison = comparison,
+                                    off_one = nrow(these),
+                                    largest = largest, smallest = smallest))
+}
+knitr::kable(baseline_rows, row.names = FALSE,
+             col.names = c("comparison", "topics off 1", "largest lifts",
+                           "smallest lifts"))
+```
+
+The one lift of the walk that holds against every baseline is
+*wrong-vengeance-err*:
+
+```{r wrong_vengeance}
+one_topic <- filter(circles, topic == "wrong-vengeance-err")
+one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
+                           "p_document")]
+knitr::kable(one_topic, digits = 3, row.names = FALSE)
+```
+
+Opened up lemma by lemma, the lift is not vengeance: the walk's excess over
+Sophocles is carried by χάρις, ἄξιος, μένω, πόνος, ἀσφαλής and ὠφελέω, the
+vocabulary of favour, worth, toil and safety, while the cluster's words of
+punishment are flat or down.
+
+```{r lemmata, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_topic_lemmata_wrong-vengeance-err.png")
+```
+
+```{r excess}
+lemmata <- read.csv("results/hard/topic_lemmata_wrong-vengeance-err.csv",
+                    encoding = "UTF-8")
+lemmata <- arrange(lemmata, desc(excess_over_sophocles))
+top_lemmata <- head(lemmata, 12)
+top_lemmata <- top_lemmata[, c("lemma", "rate_walk", "rate_sophocles",
+                               "rate_tragedians", "rate_attic",
+                               "excess_over_sophocles")]
+caption <- paste("Rates per thousand topic lemmata: the twelve lemmata",
+                 "with the largest excess over Sophocles")
+knitr::kable(top_lemmata, digits = 2, row.names = FALSE, caption = caption)
+```
+
+Finally, does the walk write tragedy or its generator's Greek at large? The
+Jensen–Shannon divergence from the walk's topic profile to nine genres of
+authors of every period, with the same bootstraps; Sophocles beside it as
+the profile of a text that is tragedy:
+
+```{r genres, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_genre_distance.png")
+```
+
+```{r genre_table}
+genres <- read.csv("results/hard/genre_distance.csv", encoding = "UTF-8")
+genres <- genres[, c("focus", "genre", "windows", "js_bits", "js_q05",
+                     "js_q95")]
+knitr::kable(genres, digits = 4, row.names = FALSE)
+genre_topics <- read.csv("results/hard/genre_topics.csv", encoding = "UTF-8")
+closer <- table(genre_topics$closer_to)
+cat("Topic by topic, the walk's rate is closer to tragedy's for",
+    closer[["tragedy"]], "topics and to epic's for", closer[["epic"]], "\n")
+```
+
+# Checks of the walk's profile
+
+Three checks that belong to the hard model's counts and are therefore in
+this report only: how variable the topics are from document to document,
+whether the walk's lifts drift along the walk, and whether the chains agree.
+
+## How variable are the topics?
 
 How much does a topic's share move from one document to the next, and does
 that variability itself differ between topics? For every topic, the share
@@ -427,7 +587,7 @@ ggplot(variability, aes(x = mean, y = sd, colour = cell)) +
   theme_minimal(9)
 ```
 
-# Is the walk's topic profile an artefact of where the walk went?
+## Where the walk went
 
 A reviewer may object that the walk's topics only reflect the region of the
 restoration space that the chains happened to visit. Two checks answer that.
@@ -561,112 +721,4 @@ sentence <- paste("Over the common range the median absolute slope is %.3f",
 cat(sprintf(sentence, median(abs(stability$slope_per_1000)), steepest_topic,
             max(abs(stability$slope_per_1000)), stability$rhat[1],
             stability$topic[1], stability$rhat[2], stability$topic[2]), "\n")
-```
-
-# Beyond Sophocles: three baselines
-
-Is the walk's profile unusual, and against whom? Two further baselines are
-cut from other text into windows of 28 vocabulary lemmata, the length of
-the walk's mean document: Aeschylus and Euripides, and Classical Attic,
-the works of the Attic authors before Alexander in the Open Greek and Latin
-texts parsed by the same tagger (the tragedians with their lyrics,
-Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the Attic orators and
-the sophists who wrote Attic, 28,882 windows). Sophocles is cut the same
-way. The shares here are plain rates per thousand topic lemmata, pooled
-over a cell's documents; a lift's 90 % interval comes from resampling the
-walk by chain and a baseline by window. The figures are drawn by
-`scripts/topic_circles.py`, `scripts/topic_lemmata.py` and
-`scripts/genre_distance.py` from `data/baseline_windows.parquet`
-(`scripts/window_baselines.py`); their tables are in `results/hard/`.
-
-One circle per topic, ordered by the walk's share of it (the area), coloured
-by the log2 lift against each baseline, in full colour with the lift printed
-where the interval excludes 1:
-
-```{r circles_walk, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/hard_topic_circles.png")
-```
-
-The same with Sophocles as the focus, against the other two tragedians and
-against Classical Attic, so that his own topics are visible beside the
-walk's:
-
-```{r circles_sophocles, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/hard_topic_circles_sophocles.png")
-```
-
-```{r baselines_table}
-circles <- read.csv("results/hard/topic_circles.csv", encoding = "UTF-8")
-circles$off_one <- circles$lift_q05 > 1 | circles$lift_q95 < 1
-# For every comparison: how many topics have an interval off 1, and the
-# three largest and three smallest lifts among them
-baseline_rows <- NULL
-for (comparison in unique(circles$comparison)) {
-  these <- filter(circles, comparison == !!comparison, off_one)
-  these <- arrange(these, desc(lift))
-  largest <- paste(sprintf("%s %.2f", head(these$topic, 3),
-                           head(these$lift, 3)), collapse = ", ")
-  smallest <- paste(sprintf("%s %.2f", tail(these$topic, 3),
-                            tail(these$lift, 3)), collapse = ", ")
-  baseline_rows <- rbind(baseline_rows,
-                         data.frame(comparison = comparison,
-                                    off_one = nrow(these),
-                                    largest = largest, smallest = smallest))
-}
-knitr::kable(baseline_rows, row.names = FALSE,
-             col.names = c("comparison", "topics off 1", "largest lifts",
-                           "smallest lifts"))
-```
-
-The one lift of the walk that holds against every baseline is
-*wrong-vengeance-err*:
-
-```{r wrong_vengeance}
-one_topic <- filter(circles, topic == "wrong-vengeance-err")
-one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
-                           "p_document")]
-knitr::kable(one_topic, digits = 3, row.names = FALSE)
-```
-
-Opened up lemma by lemma, the lift is not vengeance: the walk's excess over
-Sophocles is carried by χάρις, ἄξιος, μένω, πόνος, ἀσφαλής and ὠφελέω, the
-vocabulary of favour, worth, toil and safety, while the cluster's words of
-punishment are flat or down.
-
-```{r lemmata, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/hard_topic_lemmata_wrong-vengeance-err.png")
-```
-
-```{r excess}
-lemmata <- read.csv("results/hard/topic_lemmata_wrong-vengeance-err.csv",
-                    encoding = "UTF-8")
-lemmata <- arrange(lemmata, desc(excess_over_sophocles))
-top_lemmata <- head(lemmata, 12)
-top_lemmata <- top_lemmata[, c("lemma", "rate_walk", "rate_sophocles",
-                               "rate_tragedians", "rate_attic",
-                               "excess_over_sophocles")]
-caption <- paste("Rates per thousand topic lemmata: the twelve lemmata",
-                 "with the largest excess over Sophocles")
-knitr::kable(top_lemmata, digits = 2, row.names = FALSE, caption = caption)
-```
-
-Finally, does the walk write tragedy or its generator's Greek at large? The
-Jensen–Shannon divergence from the walk's topic profile to nine genres of
-authors of every period, with the same bootstraps; Sophocles beside it as
-the profile of a text that is tragedy:
-
-```{r genres, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/hard_genre_distance.png")
-```
-
-```{r genre_table}
-genres <- read.csv("results/hard/genre_distance.csv", encoding = "UTF-8")
-genres <- genres[, c("focus", "genre", "windows", "js_bits", "js_q05",
-                     "js_q95")]
-knitr::kable(genres, digits = 4, row.names = FALSE)
-genre_topics <- read.csv("results/hard/genre_topics.csv", encoding = "UTF-8")
-closer <- table(genre_topics$closer_to)
-cat("Topic by topic, the walk's rate is closer to tragedy's for",
-    closer[["tragedy"]], "topics and to epic's for", closer[["epic"]], "
-")
 ```

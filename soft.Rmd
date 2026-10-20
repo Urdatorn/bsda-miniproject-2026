@@ -27,6 +27,16 @@ library(ggplot2)
 results_dir <- params$results
 ```
 
+# The question
+
+The same question as the hard report asks, with soft topics: which topics
+does the judge-steered Markov walk put into the seventeen lost verses of
+P.Oxy. 5292 (vv. 13–29), and does that differ from what Sophocles writes
+elsewhere? Here a lemma belongs to every topic with some probability, so the
+posterior over a document's topic profile has no closed form and is
+amortized by a neural network. The sections follow the hard report one by
+one, so that the two can be read side by side.
+
 # The model
 
 A document is one whole restoration of the seventeen lost verses: its $N$
@@ -62,8 +72,16 @@ the real documents it is checked on 1000 held-out simulations: recovery
 $R^2$, 90 % interval coverage, and simulation-based calibration (SBC), whose
 rank histograms must be uniform if the posterior is calibrated.
 
-The GPU work is done by `scripts/soft_model.py`
-(`slurm/soft_model.slurm`); this document reads its output.
+# Data
+
+The GPU work is done by `scripts/soft_model.py` (`slurm/soft_model.slurm`),
+which reads the same dataset as the hard report
+(`Urdatorn/bsda-miniproject-2026`: the bags of content lemmata, the
+vocabulary with its cluster labels, the corpus of the three tragedians) and
+writes to `results/soft/` the topic-word matrix with its top lemmata
+(`phi.json`), the cells with their comparisons (`cells.json`, `cells.csv`)
+and the calibration checks (`sbc.csv`, `recovery.csv`). This document reads
+that output.
 
 ```{r load}
 phi <- fromJSON(file.path(results_dir, "phi.json"))
@@ -105,7 +123,15 @@ for (k in seq_len(K)) {
 }
 ```
 
-# Calibration of the amortized posterior
+# The posterior
+
+The amortized posterior is a network, so before it reads a real document it
+is checked on 1000 held-out simulated documents: how well the posterior
+mean recovers the true $\theta$ ($R^2$ per topic), whether the 90 %
+interval covers the truth 90 % of the time, and whether the ranks of the
+truth among the posterior draws are uniform (simulation-based calibration,
+with a Kolmogorov–Smirnov $p$-value per topic).
+
 
 ```{r checks}
 checks <- data.frame(topic = topic_names,
@@ -140,12 +166,29 @@ ggplot(recovery_shown, aes(x = true, y = post_mean)) +
   theme_minimal(8)
 ```
 
-# The cells
+
+The cells, and the model's table: one row per cell and topic.
 
 ```{r sizes}
 sizes <- unique(cells[, c("cell", "n_docs", "n_lemmata")])
 knitr::kable(sizes, row.names = FALSE,
              caption = "The cells: documents and content lemmata each")
+```
+
+# Sophocles' baseline
+
+```{r baseline, fig.height = 5}
+sophocles_rows <- filter(cells, cell == "sophocles")
+baseline_table <- data.frame(topic = factor(sophocles_rows$topic,
+                                            rev(topic_names[1:H])),
+                             mean = sophocles_rows$mean)
+ggplot(baseline_table, aes(x = topic, y = mean)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = NULL, y = "posterior mean of theta",
+       title = paste("Sophocles,", sophocles_rows$n_docs[1],
+                     "windows of seventeen trimeters")) +
+  theme_minimal(9)
 ```
 
 # Topics raised above Sophocles
@@ -171,7 +214,7 @@ for (cell_name in cell_names) {
 }
 ```
 
-# Lift of every seeded topic in every cell
+# Lift of every topic in every cell
 
 ```{r lifts, fig.height = 7}
 lifts <- filter(cells, cell != "sophocles")
@@ -188,7 +231,27 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   theme(legend.position = "bottom")
 ```
 
+# The largest lifts
+
+The five topics with the largest lift in every cell.
+
+```{r top}
+top_five <- NULL
+for (cell_name in cell_names) {
+  cell_rows <- arrange(filter(cells, cell == cell_name), desc(lift))
+  top_five <- rbind(top_five, head(cell_rows, 5))
+}
+top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95",
+                         "p_above_sophocles", "lift", "p_document")]
+knitr::kable(top_five, digits = 2, row.names = FALSE)
+```
+
 # Which seeded topic dominates
+
+A reading the soft model alone affords, since its posterior is over the
+whole simplex at once: for a random document of a cell, the probability
+that each seeded topic is the largest, and the mass left to the free
+topics.
 
 ```{r dominant, fig.height = 7}
 heat <- cells
