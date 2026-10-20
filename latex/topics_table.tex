@@ -1,9 +1,9 @@
 % The topics of the hard model: English gloss, the three label lemmata, their transliteration.
-% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \usepackage{booktabs} and \usepackage{tabularx}.
-\begin{table}[htbp]
+% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \usepackage{booktabs}; spans both columns of a two-column layout.
+\begin{table*}[htbp]
 \centering
 \footnotesize
-\begin{tabularx}{\textwidth}{XXXrr}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllrr}
 \toprule
 Topic & Label lemmata & Transliteration & Lemmata (\%) & Tragic tokens (\%) \\
 \midrule
@@ -42,10 +42,10 @@ river-plain-afar & ποταμός-πεδίον-ἄπωθεν & potamos-pedion-ap
 leaf-myrtle-olive & φύλλον-μυρσίνη-ἐλαία & phyllon-myrsinē-elaia & 1.1 & 0.3 \\
 contest-rivalry-wrestling & ἀγών-ἅμιλλα-πάλη & agōn-hamilla-palē & 0.4 & 0.2 \\
 \bottomrule
-\end{tabularx}
+\end{tabular*}
 \caption{The 34 unsupervised topics, in order of their mass in the three tragedians. A topic is named by the three
 non-cognate lemmata nearest its centroid in the word2vec space; the English glosses are the labels used in the
 analysis. The last columns give the cluster's share of the 2532 topic-bearing lemmata of the vocabulary and of their 53931
 tokens in the three tragedians; each column sums to 100.}
 \label{tab:topics}
-\end{table}
+\end{table*}
