@@ -1,21 +1,23 @@
 """Topic circle maps: is a cell's use of each topic unusual, and against whom?
 
-One circle per topic, placed at the centre of its lemmata in the lemma map's
-layout (lemma_map_coords.csv, UMAP of the word2vec vectors), so the circles
-sit where the topics sit on the lemma map.  A circle's area is the focus
-cell's share of the topic, its colour the log2 lift of that share against a
-baseline, and it is drawn in full colour with a black edge when the lift's
-90 % interval excludes 1 (otherwise faded).  Two figures:
+One circle per topic in a grid ordered by the focus cell's share of the
+topic, largest first.  A circle's area is that share, its colour the log2
+lift of the share against a baseline, and it is drawn in full colour with a
+black edge when the lift's 90 % interval excludes 1 (otherwise faded, the
+lift in brackets).  Two figures:
 
   topic_circles_walk.png       the walk against Sophocles, against Aeschylus
-                               and Euripides, and against Greek at large;
+                               and Euripides, and against Classical Attic;
   topic_circles_sophocles.png  Sophocles against Aeschylus and Euripides and
-                               against Greek at large: his own topics.
+                               against Classical Attic: his own topics.
 
 Shares are rates per thousand topic lemmata, pooled over the cell's
 documents.  The baselines are windows of 28 vocabulary lemmata
 (baseline_windows.parquet, scripts/window_baselines.py): Sophocles' and the
-other tragedians' extant trimeters, and every work of the OGA corpus.  The
+other tragedians' extant trimeters, and Classical Attic, the OGA works of
+the Attic authors before Alexander (ATTIC below: the three tragedians with
+their lyrics, Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the
+Attic orators and the sophists writing Attic).  The
 interval of a lift comes from two bootstraps: the walk resampled by chain
 (48 chains), a baseline resampled by window.  p_document is the chance that
 a random document of the focus cell has a larger share than a random window
@@ -31,6 +33,11 @@ import pyarrow.parquet as pq
 
 RNG = np.random.default_rng(917)
 BOOT = 2000
+# Classical Attic: Attic-dialect authors before Alexander, as OGA names them (Ionic and Doric authors, and
+# everything Hellenistic or later, are out: no Herodotus, Hippocrates, Pindar, Theocritus, Menander, Theophrastus)
+ATTIC = ["Aeschylus", "Sophocles", "Euripides", "Aristophanes", "Thucydides", "Xenophon", "Plato", "Aristotle",
+         "Antiphon", "Andocides", "Lysias", "Isocrates", "Isaeus", "Demosthenes", "Aeschines", "Lycurgus", "Hyperides",
+         "Dinarchus", "Gorgias of Leontini", "Critias", "Alcidamas", "Antiphon of Athens"]
 
 
 def walk_documents(data_dir, topic_of, K):
@@ -101,63 +108,47 @@ def compare(name, focus, base, focus_boot, base_boot, topics):
                          "p_document": p_document(focus, base)})
 
 
-def spread(centres, radius, span, steps=400):
-    """nudge overlapping circles apart (and their labels' room below them), keeping each near its place"""
-    pos = centres.copy()
-    room = radius + 0.055 * span               # the label sits under the circle
-    for _ in range(steps):
-        moved = False
-        for i in range(len(pos)):
-            for j in range(i + 1, len(pos)):
-                d = pos[j] - pos[i]
-                dist = np.hypot(*d)
-                need = max(radius[i] + radius[j], 0.82 * (room[i] + room[j]))
-                if dist < need:
-                    push = (need - dist) / 2 * (d / dist if dist > 0 else np.array([1.0, 0.0]))
-                    pos[i] -= push; pos[j] += push; moved = True
-        if not moved:
-            break
-    return pos
-
-
-def draw(panels, focus_name, centres, topics, path):
+def draw(panels, focus_name, topics, path, columns=12):
+    """one circle per topic in a grid ordered by the focus cell's share, largest first (row by row); one panel per baseline, stacked"""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.colors import TwoSlopeNorm
-    fig, axes = plt.subplots(1, len(panels), figsize=(7.4 * len(panels), 7.8), squeeze=False,
-                             layout="constrained")
     cmap = plt.get_cmap("RdBu_r")
     norm = TwoSlopeNorm(vcenter=0.0, vmin=-1.5, vmax=1.5)
-    span = max(np.ptp(centres[:, 0]), np.ptp(centres[:, 1]))
     share = panels[0][1]["rate_focus"].to_numpy()           # the focus cell's share, the same in every panel
-    radius = 0.07 * span * np.sqrt(share / share.max())
-    pos = spread(centres, radius, span)
-    for ax, (title, table) in zip(axes[0], panels):
+    order = np.argsort(-share)
+    rows = int(np.ceil(len(topics) / columns))
+    radius = 0.42 * np.sqrt(share / share.max())             # cell of the grid = 1 x 1.45, label under the circle
+    col_of = np.empty(len(topics)); row_of = np.empty(len(topics))
+    for rank, k in enumerate(order):
+        col_of[k] = rank % columns; row_of[k] = rank // columns
+    fig, axes = plt.subplots(len(panels), 1, figsize=(1.3 * columns + 0.4, (1.55 * rows + 0.9) * len(panels) + 0.8),
+                             squeeze=False, layout="constrained")
+    for ax, (title, table) in zip(axes[:, 0], panels):
         significant = ((table["lift_q05"] > 1) | (table["lift_q95"] < 1)).to_numpy()
         lift = table["lift"].to_numpy()
-        for k in np.argsort(-radius):
+        for k in range(len(topics)):
+            x, y = col_of[k], -1.45 * row_of[k]
             colour = cmap(norm(np.log2(lift[k])))
             if significant[k]:
-                ax.add_patch(plt.Circle(pos[k], radius[k], facecolor=colour, edgecolor="black", linewidth=1.1, zorder=2))
+                ax.add_patch(plt.Circle((x, y), radius[k], facecolor=colour, edgecolor="black", linewidth=1.1, zorder=2))
             else:
-                ax.add_patch(plt.Circle(pos[k], radius[k], facecolor=colour, alpha=0.3, edgecolor="none", zorder=1))
-        for k in range(len(topics)):
+                ax.add_patch(plt.Circle((x, y), radius[k], facecolor=colour, alpha=0.3, edgecolor="none", zorder=1))
             name = topics[k].replace("-", "\n", 1) if len(topics[k]) > 16 else topics[k]
-            label = f"{name}\n{lift[k]:.2f}×" if significant[k] else name
-            ax.text(pos[k, 0], pos[k, 1] - radius[k] - 0.008 * span, label, ha="center", va="top", fontsize=6.3,
-                    fontweight="bold" if significant[k] else "normal", color="black" if significant[k] else "#555555",
-                    linespacing=0.95, zorder=3)
-        ax.set_title(title, fontsize=11, pad=14)
-        ax.set_xlim(pos[:, 0].min() - 0.12 * span, pos[:, 0].max() + 0.12 * span)
-        ax.set_ylim(pos[:, 1].min() - 0.16 * span, pos[:, 1].max() + 0.12 * span)
+            label = f"{name}\n{lift[k]:.2f}×" if significant[k] else f"{name}\n({lift[k]:.2f}×)"
+            ax.text(x, y - 0.46, label, ha="center", va="top", fontsize=6.8, linespacing=0.95, zorder=3,
+                    fontweight="bold" if significant[k] else "normal", color="black" if significant[k] else "#666666")
+        ax.set_title(title, fontsize=11, pad=10)
+        ax.set_xlim(-0.6, columns - 0.4); ax.set_ylim(-1.45 * (rows - 1) - 1.0, 0.6)
         ax.set_aspect("equal"); ax.axis("off")
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap); sm.set_array([])
-    bar = fig.colorbar(sm, ax=axes[0].tolist(), orientation="horizontal", fraction=0.04, pad=0.01, aspect=60, shrink=0.6)
-    bar.set_label("log2 lift of the topic's share against the baseline; full colour, black edge and the lift printed: "
-                  "its 90 % interval excludes 1", fontsize=8)
+    bar = fig.colorbar(sm, ax=axes[:, 0].tolist(), orientation="horizontal", fraction=0.03, pad=0.01, aspect=60, shrink=0.6)
+    bar.set_label("log2 lift of the topic's share against the baseline; full colour and black edge: its 90 % interval "
+                  "excludes 1 (lift in brackets otherwise)", fontsize=8)
     bar.ax.tick_params(labelsize=8)
-    fig.suptitle(f"The topics of {focus_name}: circle area the share of the topic, placed as on the lemma map", fontsize=12, y=1.04)
+    fig.suptitle(f"The topics of {focus_name}, ordered by {focus_name}'s share of them (circle area), largest first",
+                 fontsize=12, y=1.02)
     fig.savefig(path, dpi=160, bbox_inches="tight")
     plt.close(fig)
 
@@ -181,30 +172,31 @@ def main():
     counts = {}
     counts["sophocles"] = windows.loc[windows.author == "sophocles", topics].to_numpy(dtype=np.int32)
     counts["tragedians"] = windows.loc[windows.author.isin(["aeschylus", "euripides"]), topics].to_numpy(dtype=np.int32)
-    counts["oga"] = windows.loc[windows.source == "oga", topics].to_numpy(dtype=np.int32)
+    counts["attic"] = windows.loc[(windows.source == "oga") & windows.author.isin(ATTIC), topics].to_numpy(dtype=np.int32)
     counts["walk"], chain_of = walk_documents(a.data, topic_of, K)
     for cell in counts:
         print(f"{cell}: {len(counts[cell])} documents, {counts[cell].sum()} topic lemmata", flush=True)
-    top_authors = windows[windows.source == "oga"].author.value_counts().head(8)
-    print("Greek at large, largest authors by windows: " + ", ".join(f"{k} {v}" for k, v in top_authors.items()), flush=True)
+    attic_authors = windows[(windows.source == "oga") & windows.author.isin(ATTIC)].author.value_counts()
+    print("Classical Attic, windows by author: " + ", ".join(f"{k} {v}" for k, v in attic_authors.items()), flush=True)
+    missing = [x for x in ATTIC if x not in attic_authors.index]
+    if missing:
+        print("  not in the windows: " + ", ".join(missing), flush=True)
 
-    boot = {cell: bootstrap_by_row(counts[cell]) for cell in ("sophocles", "tragedians", "oga")}
+    boot = {cell: bootstrap_by_row(counts[cell]) for cell in ("sophocles", "tragedians", "attic")}
     boot["walk"] = bootstrap_by_group(counts["walk"], chain_of)
     print("bootstraps done", flush=True)
 
-    baseline_name = {"sophocles": "Sophocles", "tragedians": "Aeschylus and Euripides", "oga": "Greek at large (OGA)"}
+    baseline_name = {"sophocles": "Sophocles", "tragedians": "Aeschylus and Euripides", "attic": "Classical Attic"}
     tables = {}
-    for focus, bases in (("walk", ("sophocles", "tragedians", "oga")), ("sophocles", ("tragedians", "oga"))):
+    for focus, bases in (("walk", ("sophocles", "tragedians", "attic")), ("sophocles", ("tragedians", "attic"))):
         for base in bases:
             tables[(focus, base)] = compare(f"{focus} vs {base}", counts[focus], counts[base], boot[focus], boot[base], topics)
     pd.concat(tables.values()).to_csv(os.path.join(a.out, "topic_circles.csv"), index=False, float_format="%.4f")
 
-    coords = pd.read_csv(os.path.join(a.out, "lemma_map_coords.csv"))
-    centres = coords.groupby("topic")[["x", "y"]].median().loc[topics].to_numpy()
-    draw([(f"against {baseline_name[b]}", tables[("walk", b)]) for b in ("sophocles", "tragedians", "oga")],
-         "the walk", centres, topics, os.path.join(a.out, "topic_circles_walk.png"))
-    draw([(f"against {baseline_name[b]}", tables[("sophocles", b)]) for b in ("tragedians", "oga")],
-         "Sophocles", centres, topics, os.path.join(a.out, "topic_circles_sophocles.png"))
+    draw([(f"against {baseline_name[b]}", tables[("walk", b)]) for b in ("sophocles", "tragedians", "attic")],
+         "the walk", topics, os.path.join(a.out, "topic_circles_walk.png"))
+    draw([(f"against {baseline_name[b]}", tables[("sophocles", b)]) for b in ("tragedians", "attic")],
+         "Sophocles", topics, os.path.join(a.out, "topic_circles_sophocles.png"))
     for (focus, base), t in tables.items():
         sig = t[(t.lift_q05 > 1) | (t.lift_q95 < 1)].sort_values("lift", ascending=False)
         print(f"{focus} vs {base}: {len(sig)} topics with an interval off 1; largest lifts "

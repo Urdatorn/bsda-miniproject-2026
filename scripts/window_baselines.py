@@ -17,6 +17,8 @@ Every window is stored as its counts over the topics (cluster_K40 of
 vocab.json): baseline_windows.parquet with `source` (oga or tragedians),
 `author`, `work`, `window` and one uint8 column per topic, plus
 `n_lemmata`.  Lemmata without a topic are counted in `n_lemmata` only.
+Beside it, baseline_lemma_counts.parquet counts every vocabulary lemma per
+author (`source`, `author`, `lemma_idx`, `count`), for lemma-level plots.
 
   python scripts/window_baselines.py --data data --oga <dir of parquet shards> --out data
 
@@ -75,8 +77,9 @@ def main():
     vocab = json.load(open(os.path.join(a.data, "vocab.json"), encoding="utf-8"))
     topics = sorted({r["cluster_K40"] for r in vocab if r["cluster_K40"]})
     topic_id = {t: k for k, t in enumerate(topics)}
-    lemma_topic = {r["lemma"]: (topic_id[r["cluster_K40"]] if r["cluster_K40"] else -1) for r in vocab}
+    lemma_index = {r["lemma"]: r["index"] for r in vocab}
     index_topic = {r["index"]: (topic_id[r["cluster_K40"]] if r["cluster_K40"] else -1) for r in vocab}
+    lemma_counts = defaultdict(lambda: np.zeros(len(vocab), dtype=np.int64))   # (source, author) -> counts over the vocabulary
     print(f"vocabulary {len(vocab)} lemmata, {len(topics)} topics, windows of {a.window}", flush=True)
 
     rows = []            # (source, author, work, window number, topic stream)
@@ -89,6 +92,7 @@ def main():
         for idx, cnt in zip(lines.lemma_idx, lines["count"]):
             for i, c in zip(idx, cnt):
                 stream.extend([index_topic[int(i)]] * int(c))
+                lemma_counts[("tragedians", author)][int(i)] += int(c)
         for w, win in enumerate(windows_of(stream, a.window)):
             rows.append(("tragedians", author, author, w, win))
         print(f"tragedians: {author} {len(stream)} vocabulary lemmata, {len(stream) // a.window} windows", flush=True)
@@ -104,7 +108,9 @@ def main():
         for author, work, conllu in zip(table["author"].to_pylist(), table["id"].to_pylist(), table["conllu"].to_pylist()):
             lemmata = content_lemmata(conllu or "")
             n_sent += 1; n_tok += len(lemmata)
-            streams[(author, work)].extend(lemma_topic[l] for l in lemmata if l in lemma_topic)
+            indices = [lemma_index[l] for l in lemmata if l in lemma_index]
+            streams[(author, work)].extend(index_topic[i] for i in indices)
+            np.add.at(lemma_counts[("oga", author)], indices, 1)
         print(f"[{time.time() - t0:7.1f}s] shard {s + 1}/{len(shards)} {os.path.basename(shard)}: {n_sent} sentences, "
               f"{n_tok} content lemmata, {len(streams)} works so far", flush=True)
     n_oga = 0
@@ -131,6 +137,18 @@ def main():
     path = os.path.join(a.out, "baseline_windows.parquet")
     pq.write_table(pa.table(table), path, compression="zstd")
     print(f"wrote {path}: {len(rows)} windows ({os.path.getsize(path) / 1e6:.1f} MB) in {time.time() - t0:.0f}s", flush=True)
+
+    # the lemma counts per author, sparse
+    source_col, author_col, idx_col, count_col = [], [], [], []
+    for (source, author), c in lemma_counts.items():
+        present = np.nonzero(c)[0]
+        source_col += [source] * len(present); author_col += [author] * len(present)
+        idx_col += present.tolist(); count_col += c[present].tolist()
+    path = os.path.join(a.out, "baseline_lemma_counts.parquet")
+    pq.write_table(pa.table({"source": pa.array(source_col), "author": pa.array(author_col),
+                             "lemma_idx": pa.array(idx_col, pa.int32()), "count": pa.array(count_col, pa.int64())}),
+                   path, compression="zstd")
+    print(f"wrote {path}: {len(idx_col)} author-lemma rows ({os.path.getsize(path) / 1e6:.1f} MB)", flush=True)
 
 
 if __name__ == "__main__":

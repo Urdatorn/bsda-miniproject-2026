@@ -38,7 +38,8 @@ The R Markdown reports download these files themselves if `data/` is missing.
 - `baseline_windows.parquet`: 279,414 windows of 28 consecutive vocabulary lemmata (the walk's mean document), as counts over the 34
   topics: the three tragedians' trimeters in order (2,465 windows) and every work of the Open Greek and Latin texts parsed by the
   same tagger ([Urdatorn/oga-conllu-stoicheia](https://huggingface.co/datasets/Urdatorn/oga-conllu-stoicheia), 276,949 windows,
-  1,825 works), built by `scripts/window_baselines.py`; windows never cross a work.
+  1,825 works), built by `scripts/window_baselines.py`; windows never cross a work. Beside it `baseline_lemma_counts.parquet` counts
+  every vocabulary lemma per author, for lemma-level plots.
 
 ## Documents and cells
 
@@ -114,20 +115,29 @@ Two interactive maps (`datamapplot`, self-contained HTML files in `results/analy
 
 ## Is the walk's profile unusual, and against whom? (`scripts/topic_circles.py`, `scripts/genre_distance.py`)
 
-The lemma map is crowded; `topic_circles_walk.png` shows the same thing with one circle per topic, placed at the centre of its lemmata in the
-lemma map's layout. A circle's area is the walk's share of the topic and its colour the log2 lift of that share against a baseline, with the
-lift printed and a black edge when its 90 % interval excludes 1 (the walk resampled by chain, the baseline by window), faded otherwise.
-Three panels, three baselines of 28-lemma windows: Sophocles, Aeschylus and Euripides, and Greek at large (the OGA corpus). Against
+The lemma map is crowded; `topic_circles_walk.png` shows the same thing with one circle per topic, in a grid ordered by the walk's share
+of the topic (the circle's area), largest first. A circle's colour is the log2 lift of that share against a baseline, with the lift printed
+and a black edge when its 90 % interval excludes 1 (the walk resampled by chain, the baseline by window), faded otherwise. Three panels,
+three baselines of 28-lemma windows: Sophocles, Aeschylus and Euripides, and Classical Attic, the OGA works of the Attic authors before
+Alexander (the three tragedians with their lyrics, Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the Attic orators and the sophists
+who wrote Attic: 28,882 windows, Aristotle 8,132 and Plato 5,301 the largest; the list is `ATTIC` in `scripts/topic_circles.py`). Against
 Sophocles 26 of the 34 topics have an interval off 1 (*fine-word-matter* 1.89, *wrong-vengeance-err* 1.64, *garment-adorn-gold* 1.52 up;
-*leaf-myrtle-olive* 0.37, *fire-flame-flash* 0.41 down); against Greek at large the tragic topics the walk inherits from its register
-dominate (*child-before-bestow* 4.27, *walk-behold-gaze* 4.13, *lament-pitiable-groan* 2.52). `topic_circles_sophocles.png` is the same
-figure with Sophocles as the focus, against the other two tragedians and against Greek at large: his own topics (*see-know-learn* and
-*crash-voice-shout* 1.50 over Aeschylus and Euripides, *walk-behold-gaze* 5.18 and *child-before-bestow* 4.86 over Greek at large,
-*Greek-sea-barbarian* 0.21 and *marriage-couch-bed* 0.42 under the other tragedians). All the numbers are in `topic_circles.csv`, with
-the document-level probability that a random walk document outdoes a random window.
+*leaf-myrtle-olive* 0.37, *fire-flame-flash* 0.41 down); against Classical Attic the tragic topics the walk inherits from its register
+dominate (*child-before-bestow* 3.28, *walk-behold-gaze* 2.79, *lament-pitiable-groan* 2.09), and *wrong-vengeance-err* is the lift that
+holds against every baseline (1.64, 1.53, 1.64). `topic_circles_sophocles.png` is the same figure with Sophocles as the focus, against the
+other two tragedians and against Classical Attic: his own topics (*see-know-learn* and *crash-voice-shout* 1.50 over Aeschylus and
+Euripides, *lament-pitiable-groan* 3.93 and *child-before-bestow* 3.73 over Classical Attic, *Greek-sea-barbarian* 0.21 and
+*marriage-couch-bed* 0.42 under the other tragedians). All the numbers are in `topic_circles.csv`, with the document-level probability
+that a random walk document outdoes a random window.
+
+`topic_lemmata_wrong-vengeance-err.png` (`scripts/topic_lemmata.py --topic ...`) opens that topic up: all 138 lemmata ordered by the walk's
+use, each with its rate in the walk, Sophocles, Aeschylus and Euripides and Classical Attic, and the thirty lemmata that contribute most to
+the walk's excess over Sophocles. The topic's rate per thousand topic lemmata is 94.6 in the walk against 57.5 in Sophocles, 61.7 in the
+other tragedians and 58.0 in Classical Attic; three quarters of the excess over Sophocles is χάρις, ἄξιος, μένω, πόνος, ἀσφαλής, ὠφελέω,
+σωτηρία, αἰτέω, εὐεργετέω, κερδαίνω, τιμωρέω, ζημία and ἐξαμαρτάνω, so the lift is favour, worth, toil and safety rather than vengeance.
 
 Does the walk write tragedy or does it write its generator's Greek at large? `genre_distance.py` pools the windows of nine genres of OGA
-authors (epic, tragedy = the three tragedians' trimeters, comedy, lyric, oratory, history, philosophy, medicine, scripture) and measures the
+authors of every period (epic, tragedy = the three tragedians' trimeters, comedy, lyric, oratory, history, philosophy, medicine, scripture) and measures the
 Jensen–Shannon divergence from the walk's topic profile to each, with the same two bootstraps. The walk is nearest tragedy (0.033 bits) and
 comedy (0.035), then oratory (0.054); epic is far (0.143), beaten by history, lyric and scripture. Sophocles' own profile, for comparison,
 is 0.014 from the other two tragedians and 0.086 from epic. Topic by topic, the walk's rate is closer to tragedy's than to epic's for 29 of
@@ -143,7 +153,7 @@ KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --data data --out re
 sbatch slurm/amortized_mixed_model.slurm                                                        # the same on a GH200 (Arrhenius)
 python scripts/lemma_map.py --data data --out results/analytic      # the interactive maps (datamapplot, umap-learn); topic_map.py likewise
 python scripts/window_baselines.py --data data --oga <OGA shards> --out data   # the baseline windows (two minutes; or slurm/window_baselines.slurm)
-python scripts/topic_circles.py --data data --out results/analytic             # the circle maps; genre_distance.py likewise
+python scripts/topic_circles.py --data data --out results/analytic             # the circle maps; genre_distance.py and topic_lemmata.py likewise
 ```
 
 ## Layout
@@ -152,11 +162,12 @@ python scripts/topic_circles.py --data data --out results/analytic             #
 analytic_model.Rmd, amortized_mixed_model.Rmd   one PDF report per model (xelatex, a font with polytonic Greek)
 scripts/            the GPU script of the amortized mixed model; topics_table.py writes the LaTeX table of the topics;
                     lemma_map.py and topic_map.py draw the interactive maps; window_baselines.py cuts the baseline windows,
-                    topic_circles.py and genre_distance.py compare the walk and Sophocles with them
+                    topic_circles.py, topic_lemmata.py and genre_distance.py compare the walk and Sophocles with them
 slurm/              the GPU job for the amortized mixed model, and one for the baseline windows
 results/amortized_mixed/     phi.json (topics), cells.{md,csv,json}, sbc.csv, recovery.csv, profile_draws.csv and theta_samples.csv
                              (posterior samples of the mean profiles and of single documents)
 results/analytic/     topics_K40.json (the clusters and their labels), topics_table.tex, posterior.csv, walk_stability.csv and
                       topic_variability.csv from the Rmd; lemma_map.{html,png,_coords.csv} and topic_map.{html,png,_coords.csv}
-                      topic_circles_{walk,sophocles}.png, topic_circles.csv, genre_distance.{csv,png}, genre_topics.csv
+                      topic_circles_{walk,sophocles}.png, topic_circles.csv, topic_lemmata_wrong-vengeance-err.{png,csv},
+                      genre_distance.{csv,png}, genre_topics.csv
 ```
