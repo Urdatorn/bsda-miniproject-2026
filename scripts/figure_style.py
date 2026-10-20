@@ -1,16 +1,18 @@
 """One look for every figure: the ICML 2025 two-column style.
 
 ICML sets 10 pt Times on a 6.75 in text width with 3.25 in columns, so a
-figure here is drawn at one of those two widths with a Times-like serif at
-7-9 pt, and drops into the paper without rescaling.  Times New Roman is used
-where it is installed (the author's machine); on the cluster Libertinus
-Serif from the TeX tree stands in, since it is the Times-like face there
-that carries polytonic Greek (Nimbus Roman, STIX and TeX Gyre Termes do
-not).  matplotlib falls back glyph by glyph along the family list.
+figure here is drawn at one of those two widths in Times New Roman at
+7-9 pt, and drops into the paper without rescaling.  The four Times faces
+ship in fonts/times.zip (they carry the full polytonic Greek block); apply()
+unpacks them next to the zip and registers them with matplotlib, so no
+system font is needed.  Should the zip be missing, Libertinus Serif from the
+TeX tree stands in, the only other Times-like face at hand with polytonic
+Greek (Nimbus Roman, STIX and TeX Gyre Termes do not have it); matplotlib
+falls back glyph by glyph along the family list.
 
   from figure_style import apply, TEXT_WIDTH, COLUMN_WIDTH, font_family
 """
-import glob, os
+import glob, os, zipfile
 
 import matplotlib
 from matplotlib import font_manager
@@ -18,7 +20,21 @@ from matplotlib import font_manager
 TEXT_WIDTH = 6.75        # inches, the full text width of ICML
 COLUMN_WIDTH = 3.25      # one column
 FAMILIES = ["Times New Roman", "Libertinus Serif", "DejaVu Serif"]
+FONT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "fonts")
 TEX_TREE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".tex", ".TinyTeX")
+
+
+def register_times():
+    """unpack fonts/times.zip (once) and add its four faces to matplotlib"""
+    archive = os.path.join(FONT_DIR, "times.zip")
+    if not os.path.exists(archive):
+        return
+    target = os.path.join(FONT_DIR, "times")
+    if not glob.glob(os.path.join(target, "*.ttf")):
+        with zipfile.ZipFile(archive) as z:
+            z.extractall(target)
+    for path in glob.glob(os.path.join(target, "**", "*.ttf"), recursive=True):
+        font_manager.fontManager.addfont(path)
 
 
 def register_libertinus():
@@ -38,6 +54,7 @@ def font_family():
 
 def apply():
     matplotlib.use("Agg")
+    register_times()
     register_libertinus()
     matplotlib.rcParams.update({
         "font.family": "serif", "font.serif": FAMILIES, "mathtext.fontset": "stix",

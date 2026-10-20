@@ -55,13 +55,12 @@ $\phi$ is not fitted on the text it is then compared with; each
 of the unsupervised clusters of the hard model seeding one topic with
 a strong word prior on all its lemmata, plus a few free topics.
 
-The cells are those of the hard model: the walk, one document per
+The documents are those of the hard report: the walk, one document per
 untilted snapshot, and Sophocles' extant trimeters in windows of seventeen,
-the reference. Every
-cell is read on two levels: its **mean profile**, the documents' posteriors
-averaged draw by draw, compared with Sophocles' by
-$P(\bar\theta_k^{\text{cell}} > \bar\theta_k^{\text{Soph}})$ and the lift of
-the means, and a **random document** against a random window,
+the baseline. The walk is read on two levels: its **mean profile**, the
+documents' posteriors averaged draw by draw, compared with Sophocles' by
+$P(\bar\theta_k^{\text{walk}} > \bar\theta_k^{\text{Soph}})$ and the lift
+of the means, and a **random document** against a random window,
 $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$. A topic is raised when
 the mean-profile probability is at least 0.9 and the lift at least 1.5.
 
@@ -83,29 +82,31 @@ which reads the same dataset as the hard report
 (`Urdatorn/bsda-miniproject-2026`: the bags of content lemmata, the
 vocabulary with its cluster labels, the corpus of the three tragedians) and
 writes to `results/soft/` the topic-word matrix with its top lemmata
-(`phi.json`), the cells with their comparisons (`cells.json`, `cells.csv`)
-and the calibration checks (`sbc.csv`, `recovery.csv`). This document reads
-that output.
+(`phi.json`, and `phi_matrix.npy` for the lemma map), the mean profiles of
+the walk and of Sophocles with the walk's lift (`profiles.csv`), the
+comparisons with the further baselines (`comparisons.csv`) and the
+calibration checks (`checks.csv`, `sbc.csv`, `recovery.csv`). This document
+reads that output.
 
-```{r load}
+```{r load, include = FALSE}
 phi <- fromJSON(file.path(results_dir, "phi.json"))
-result <- fromJSON(file.path(results_dir, "cells.json"))
-cells <- read.csv(file.path(results_dir, "cells.csv"), encoding = "UTF-8")
+profiles <- read.csv(file.path(results_dir, "profiles.csv"),
+                     encoding = "UTF-8")
+checks <- read.csv(file.path(results_dir, "checks.csv"), encoding = "UTF-8")
 sbc <- read.csv(file.path(results_dir, "sbc.csv"), encoding = "UTF-8")
 recovery <- read.csv(file.path(results_dir, "recovery.csv"),
                      encoding = "UTF-8")
 
 topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
-H <- length(result$cells$sophocles$p_dominant_seeded)   # seeded topics only
-cell_names <- c("walk")
-cells <- filter(cells, cell %in% c("sophocles", cell_names))
-cells$cell <- factor(cells$cell, levels = c("sophocles", cell_names))
-
-cat(H, "seeded topics and", K - H, "free topics;",
-    "vocabulary of", phi$vocab_size, "lemmata;",
-    "LDA log-likelihood per word", round(phi$ll_per_word, 3), "\n")
+H <- sum(profiles$source == "sophocles")          # seeded topics only
+profiles$source <- factor(profiles$source, levels = c("sophocles", "walk"))
+walk <- filter(profiles, source == "walk")
 ```
+
+`r H` seeded topics and `r K - H` free topics on a vocabulary of
+`r phi$vocab_size` lemmata; the LDA's log-likelihood per word is
+`r round(phi$ll_per_word, 3)`.
 
 # The topics
 
@@ -147,22 +148,19 @@ with a Kolmogorov–Smirnov $p$-value per topic).
 
 
 ```{r checks}
-checks <- data.frame(topic = topic_names,
-                     recovery_r2 = result$checks$recovery_r2,
-                     coverage90 = result$checks$coverage90,
-                     sbc_p = result$checks$sbc_p)
-knitr::kable(checks, digits = 2)
+knitr::kable(checks, digits = 2, row.names = FALSE)
 ```
 
 ```{r sbc, fig.height = 6}
 shown <- head(topic_names, params$show_topics)
 sbc_shown <- filter(sbc, topic %in% shown)
 sbc_shown$topic <- factor(sbc_shown$topic, levels = shown)
-ggplot(sbc_shown, aes(x = rank)) +
-  geom_histogram(bins = 20, fill = "grey60") +
+ggplot(sbc_shown, aes(x = bin, y = count)) +
+  geom_col(fill = "grey60", width = 1) +
   facet_wrap(~ topic, ncol = 4) +
   labs(title = "SBC rank histograms (uniform if calibrated)",
-       x = "rank of the true theta among the posterior draws", y = NULL)
+       x = "rank of the true theta among the posterior draws, twenty bins",
+       y = NULL)
 ```
 
 ```{r recovery, fig.height = 6}
@@ -178,18 +176,18 @@ ggplot(recovery_shown, aes(x = true, y = post_mean)) +
 ```
 
 
-The cells, and the model's table: one row per cell and topic.
+The two sets of documents.
 
 ```{r sizes}
-sizes <- unique(cells[, c("cell", "n_docs", "n_lemmata")])
+sizes <- unique(profiles[, c("source", "n_docs", "n_lemmata")])
 knitr::kable(sizes, row.names = FALSE,
-             caption = "The cells: documents and content lemmata each")
+             caption = "Documents, and content lemmata per document")
 ```
 
 # Sophocles' baseline
 
 ```{r baseline, fig.height = 5}
-sophocles_rows <- filter(cells, cell == "sophocles")
+sophocles_rows <- filter(profiles, source == "sophocles")
 baseline_table <- data.frame(topic = factor(sophocles_rows$topic,
                                             rev(topic_names[1:H])),
                              mean = sophocles_rows$mean)
@@ -208,32 +206,26 @@ lift of at least 1.5, with the lift, the posterior mean and, in brackets,
 the document-level probability.
 
 ```{r raised, results = "asis"}
-cells$raised <- !is.na(cells$lift) & cells$p_above_sophocles >= 0.9 &
-  cells$lift >= 1.5
-raised <- arrange(filter(cells, raised), cell, desc(lift))
-for (cell_name in cell_names) {
-  cell_raised <- filter(raised, cell == cell_name)
-  if (nrow(cell_raised) == 0) {
-    cat("- **", cell_name, "**: none\n", sep = "")
-    next
-  }
-  items <- sprintf("%s (%.1f×, %.2f [%.2f])", cell_raised$topic,
-                   cell_raised$lift, cell_raised$mean, cell_raised$p_document)
-  cat("- **", cell_name, "** (", cell_raised$n_docs[1], " documents): ",
-      paste(items, collapse = ", "), "\n", sep = "")
+walk$raised <- walk$p_above_sophocles >= 0.9 & walk$lift >= 1.5
+raised <- arrange(filter(walk, raised), desc(lift))
+if (nrow(raised) == 0) {
+  cat("None.\n")
+} else {
+  items <- sprintf("%s (%.1f×, %.2f [%.2f])", raised$topic, raised$lift,
+                   raised$mean, raised$p_document)
+  cat(paste(items, collapse = ", "), "\n")
 }
 ```
 
-# Lift of every topic in every cell
+# Lift of every topic
 
-```{r lifts, fig.height = 7}
-lifts <- filter(cells, cell != "sophocles")
+```{r lifts, fig.height = 5}
+lifts <- walk
 lifts$topic <- factor(lifts$topic, levels = rev(topic_names[1:H]))
 ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   geom_col() +
   geom_hline(yintercept = 1, linetype = "dashed") +
   coord_flip() +
-  facet_wrap(~ cell, ncol = 2) +
   scale_fill_manual(values = c("grey70", "firebrick"),
                     name = "raised: P >= 0.9\nand lift >= 1.5") +
   labs(x = NULL, y = "lift of the mean profile against Sophocles") +
@@ -242,16 +234,12 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
 
 # The largest lifts
 
-The five topics with the largest lift in every cell.
+The five topics with the largest lift.
 
 ```{r top}
-top_five <- NULL
-for (cell_name in cell_names) {
-  cell_rows <- arrange(filter(cells, cell == cell_name), desc(lift))
-  top_five <- rbind(top_five, head(cell_rows, 5))
-}
-top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95",
-                         "p_above_sophocles", "lift", "p_document")]
+top_five <- head(arrange(walk, desc(lift)), 5)
+top_five <- top_five[, c("topic", "mean", "q05", "q95", "p_above_sophocles",
+                         "lift", "p_document")]
 knitr::kable(top_five, digits = 2, row.names = FALSE)
 ```
 
@@ -260,8 +248,8 @@ knitr::kable(top_five, digits = 2, row.names = FALSE)
 The same two further baselines as in the hard report, Aeschylus and
 Euripides and Classical Attic (`data/attic_windows.parquet`, windows of 28
 lemmata of the Attic authors before Alexander), read here through the
-amortized posterior: every baseline window is a document, the cell's mean
-profile is compared with the walk's draw by draw, and a lift's 90 %
+amortized posterior: every baseline window is a document, the baseline's
+mean profile is compared with the walk's draw by draw, and a lift's 90 %
 interval is that of the ratio of the two mean profiles over the posterior
 draws, not a bootstrap. `scripts/soft_circles.py` draws the grids from
 `results/soft/comparisons.csv`.
@@ -315,30 +303,26 @@ knitr::kable(one_topic, digits = 3, row.names = FALSE)
 # Which seeded topic dominates
 
 A reading the soft model alone affords, since its posterior is over the
-whole simplex at once: for a random document of a cell, the probability
-that each seeded topic is the largest, and the mass left to the free
-topics.
+whole simplex at once: for a random document of the walk or of Sophocles,
+the probability that each seeded topic is the largest.
 
 ```{r dominant, fig.height = 7}
-heat <- cells
+heat <- profiles
 heat$topic <- factor(heat$topic, levels = rev(topic_names[1:H]))
-ggplot(heat, aes(x = cell, y = topic, fill = p_dominant)) +
+ggplot(heat, aes(x = source, y = topic, fill = p_dominant)) +
   geom_tile() +
   scale_fill_gradient(low = "white", high = "firebrick",
                       name = "P(largest\nseeded topic)") +
   labs(x = NULL, y = NULL,
-       title = "Which seeded topic dominates a random document of the cell")
+       title = "Which seeded topic dominates a random document")
 ```
 
-The five largest mean profiles in every cell.
+The five largest mean profiles of Sophocles and of the walk.
 
 ```{r mass}
-top_five <- NULL
-for (cell_name in c("sophocles", cell_names)) {
-  cell_rows <- arrange(filter(cells, cell == cell_name), desc(mean))
-  top_five <- rbind(top_five, head(cell_rows, 5))
-}
-top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95", "lift",
-                         "p_above_sophocles", "p_document")]
+columns <- c("source", "topic", "mean", "q05", "q95", "lift",
+             "p_above_sophocles", "p_document")
+top_five <- rbind(head(arrange(sophocles_rows, desc(mean)), 5)[, columns],
+                  head(arrange(walk, desc(mean)), 5)[, columns])
 knitr::kable(top_five, digits = 3, row.names = FALSE)
 ```

@@ -1,4 +1,4 @@
-"""Topic circle maps: is a cell's use of each topic unusual, and against whom?
+"""Topic circle maps: is a set of documents' use of each topic unusual, and against whom?
 
 One circle per topic in a grid ordered by the focus cell's share of the
 topic, largest first.  A circle's area is that share, its colour the log2
@@ -21,7 +21,7 @@ their lyrics, Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the
 Attic orators and the sophists writing Attic).  The
 interval of a lift comes from two bootstraps: the walk resampled by chain
 (48 chains), a baseline resampled by window.  p_document is the chance that
-a random document of the focus cell has a larger share than a random window
+a random document of the focus set has a larger share than a random window
 of the baseline.  Everything is written to topic_circles.csv.
 
   python scripts/topic_circles.py --data data --out results/hard --figures figures
@@ -110,7 +110,7 @@ def compare(name, focus, base, focus_boot, base_boot, topics):
 
 
 def draw(table, title, topics, path, columns=9):
-    """one circle per topic in a grid ordered by the focus cell's share, largest first (row by row), one text-width figure"""
+    """one circle per topic in a grid ordered by the focus set's share, largest first (row by row), one text-width figure"""
     import matplotlib.pyplot as plt
     from matplotlib.colors import TwoSlopeNorm
     from figure_style import apply, TEXT_WIDTH

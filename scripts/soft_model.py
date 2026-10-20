@@ -8,12 +8,12 @@ vocabulary (the clusters of the hard model, each seeded with all its
 lemmata), plus --free unseeded topics.  A document is one whole restoration of
 the seventeen lost verses: its N content lemmata, however many there are, drawn
 from the mixture sum_k theta_k phi_k with theta ~ Dirichlet(1) on the simplex.
-The quantity of interest is p(theta | document) for every cell.  phi is
+The quantity of interest is p(theta | document) for every document.  phi is
 fitted on Aeschylus and Euripides only, so that Sophocles' windows, the
 baseline, are test documents like the restorations and phi is not fitted on
 the very text it is then compared with.
 
-The cells.  The walk is the object: one document per untilted snapshot (one
+The documents.  The walk is the object: one document per untilted snapshot (one
 chain at one step, all seventeen verses).  Sophocles' extant trimeters in
 windows of seventeen are the reference, the same shape as the lacuna.  Only restored text enters a
 document; the surviving letters of a damaged verse are never counted.
@@ -26,15 +26,16 @@ extra summary.  A coupling flow learns theta in additive log-ratio coordinates
 from --sims simulated documents whose lengths are drawn from the real
 documents' lengths, and is checked on 1000 held-out simulations: recovery R²,
 90 % interval coverage and simulation-based calibration (rank histograms).
-Every cell is read on two levels, as in the hard model: its mean profile
+The walk is read on two levels, as in the hard model: its mean profile
 (the documents' posteriors averaged draw by draw), compared with Sophocles'
-by P(mean_k^cell > mean_k^Soph) and the lift of the means, and a random
+by P(mean_k^walk > mean_k^Soph) and the lift of the means, and a random
 document against a random window of Sophocles, P(theta_k^doc > theta_k^window).
 
 Usage (GPU recommended; KERAS_BACKEND=torch):
   python scripts/soft_model.py --data data --out results/soft
-Writes phi.json (topics) and phi_matrix.npy (K x V), sbc.csv, recovery.csv,
-cells.{json,csv}, and comparisons.csv: the walk against Sophocles, against
+Writes phi.json (topics) and phi_matrix.npy (K x V), checks.csv, sbc.csv
+(rank histograms), recovery.csv, profiles.csv (the mean profiles of the walk
+and of Sophocles, with the walk's lift), and comparisons.csv: the walk against Sophocles, against
 Aeschylus and Euripides and against Classical Attic (data/attic_windows.parquet,
 scripts/window_baselines.py), and Sophocles against the latter two, with the
 lift's 90 % interval over the posterior draws of the two mean profiles.
@@ -91,7 +92,7 @@ def load(data_dir):
     if os.path.exists(attic_path):
         docs["attic"] = row_lemmata(pq.read_table(attic_path))
     else:
-        print(f"no {attic_path}: the Classical Attic cell is skipped (scripts/window_baselines.py writes it)", flush=True)
+        print(f"no {attic_path}: the Classical Attic baseline is skipped (scripts/window_baselines.py writes it)", flush=True)
     docs = {name: [d for d in ds if d] for name, ds in docs.items()}                  # a document needs at least one lemma
     return [r["lemma"] for r in vocab], [r["cluster_K40"] for r in vocab], docs, tragic
 
@@ -209,23 +210,26 @@ def main():
     # ---- checks on held-out simulations: SBC ranks, recovery, coverage
     th_true = alr_inv(held["inference_variables"].astype(np.float64)); post = posterior(held["summary_variables"], held["summary_mask"])
     ranks = (post < th_true[:, None, :]).sum(1)
-    with open(f"{a.out}/sbc.csv", "w") as f:
-        f.write("topic,rank\n"); f.writelines(f"{names[k]},{r}\n" for k in range(K) for r in ranks[:, k])
+    with open(f"{a.out}/sbc.csv", "w") as f:                                      # rank histograms, twenty bins per topic
+        f.write("topic,bin,count\n")
+        for k in range(K):
+            counts = np.histogram(ranks[:, k], bins=20, range=(0, a.post_draws + 1))[0]
+            f.writelines(f"{names[k]},{b + 1},{c}\n" for b, c in enumerate(counts))
     pm = post.mean(1); r2 = [1 - ((pm[:, k] - th_true[:, k]) ** 2).sum() / ((th_true[:, k] - th_true[:, k].mean()) ** 2).sum() for k in range(K)]
     cover = [float(((np.quantile(post[:, :, k], 0.05, 1) <= th_true[:, k]) & (th_true[:, k] <= np.quantile(post[:, :, k], 0.95, 1))).mean()) for k in range(K)]
     with open(f"{a.out}/recovery.csv", "w") as f:
         f.write("topic,true,post_mean,q05,q95\n")
         for k in range(K):
-            for i in range(300): f.write(f"{names[k]},{th_true[i, k]:.4f},{pm[i, k]:.4f},{np.quantile(post[i, :, k], 0.05):.4f},{np.quantile(post[i, :, k], 0.95):.4f}\n")
+            for i in range(100): f.write(f"{names[k]},{th_true[i, k]:.4f},{pm[i, k]:.4f},{np.quantile(post[i, :, k], 0.05):.4f},{np.quantile(post[i, :, k], 0.95):.4f}\n")
     from scipy.stats import chisquare
     sbc_p = [float(chisquare(np.histogram(ranks[:, k], bins=10, range=(0, a.post_draws + 1))[0]).pvalue) for k in range(K)]
     print("recovery R² by topic: " + " ".join(f"{names[k]} {r2[k]:.2f}" for k in range(K)), flush=True)
     print("90 % interval coverage: " + " ".join(f"{names[k]} {cover[k]:.2f}" for k in range(K)), flush=True)
     print("SBC uniformity p-values: " + " ".join(f"{names[k]} {sbc_p[k]:.2f}" for k in range(K)), flush=True)
 
-    # ---- the real documents, cell by cell
+    # ---- the real documents, set by set
     def summarise(word_lists, base=None):
-        """base: the Sophocles summary. Returns the cell's summary with its draws kept for comparisons."""
+        """base: the Sophocles summary. Returns the set's summary with its draws kept for comparisons."""
         X, M = pad(word_lists); P3 = posterior(X, M)                                   # (docs, draws, K)
         mean_draws = P3.mean(0); P = P3.reshape(-1, K); seeded = P[:, :H]
         s = {"n_docs": len(word_lists), "n_lemmata": float(np.mean([len(w) for w in word_lists])),
@@ -238,24 +242,24 @@ def main():
             B = base["_document_draws"][rng.integers(0, len(base["_document_draws"]), len(P))]
             s["p_document"] = (P > B).mean(0).tolist()
         return s
-    cells = {"sophocles": summarise(docs["sophocles"])}
+    profiles = {"sophocles": summarise(docs["sophocles"])}
     for name in ("walk", "tragedians", "attic"):
         if name in docs:
-            cells[name] = summarise(docs[name], cells["sophocles"]); print(f"  {name} read: {cells[name]['n_docs']} documents", flush=True)
+            profiles[name] = summarise(docs[name], profiles["sophocles"]); print(f"  {name} read: {profiles[name]['n_docs']} documents", flush=True)
 
     # the comparisons behind the circle grids: focus against baseline, seeded topics only, the lift's interval over
     # the posterior draws of the two mean profiles (paired by draw index) and the document-level probability
     def compare(focus, base, name):
-        F, Bm = cells[focus]["_mean_draws"][:, :H], cells[base]["_mean_draws"][:, :H]
+        F, Bm = profiles[focus]["_mean_draws"][:, :H], profiles[base]["_mean_draws"][:, :H]
         ratio = F / Bm
-        P, Q = cells[focus]["_document_draws"][:, :H], cells[base]["_document_draws"][:, :H]
+        P, Q = profiles[focus]["_document_draws"][:, :H], profiles[base]["_document_draws"][:, :H]
         Q = Q[rng.integers(0, len(Q), len(P))]
         return [{"topic": names[k], "comparison": name, "rate_focus": F.mean(0)[k], "rate_baseline": Bm.mean(0)[k],
                  "lift": F.mean(0)[k] / Bm.mean(0)[k], "lift_q05": np.quantile(ratio[:, k], 0.05), "lift_q95": np.quantile(ratio[:, k], 0.95),
                  "p_above": (F[:, k] > Bm[:, k]).mean(), "p_document": (P[:, k] > Q[:, k]).mean()} for k in range(H)]
     comparisons = []
     for focus, base in (("walk", "sophocles"), ("walk", "tragedians"), ("walk", "attic"), ("sophocles", "tragedians"), ("sophocles", "attic")):
-        if focus in cells and base in cells: comparisons += compare(focus, base, f"{focus} vs {base}")
+        if focus in profiles and base in profiles: comparisons += compare(focus, base, f"{focus} vs {base}")
     with open(f"{a.out}/comparisons.csv", "w") as f:
         f.write("topic,comparison,rate_focus,rate_baseline,lift,lift_q05,lift_q95,p_above,p_document\n")
         for r in comparisons:
@@ -264,20 +268,20 @@ def main():
         rows = sorted((r for r in comparisons if r["comparison"] == name and (r["lift_q05"] > 1 or r["lift_q95"] < 1)), key=lambda r: -r["lift"])
         print(f"  {name}: {len(rows)} topics with an interval off 1; largest " + ", ".join(f"{r['topic']} {r['lift']:.2f}" for r in rows[:3])
               + "; smallest " + ", ".join(f"{r['topic']} {r['lift']:.2f}" for r in rows[-3:]), flush=True)
-    res = {"names": names, "cells": {name: {k: v for k, v in s.items() if not k.startswith("_")} for name, s in cells.items()},
-           "checks": {"recovery_r2": r2, "coverage90": cover, "sbc_p": sbc_p}}
-    json.dump(res, open(f"{a.out}/cells.json", "w"), indent=1)
-    with open(f"{a.out}/cells.csv", "w") as f:
-        f.write("cell,topic,n_docs,n_lemmata,mean,q05,q95,p_dominant,p_above_sophocles,lift,p_document\n")
-        for name, s in cells.items():
+    with open(f"{a.out}/checks.csv", "w") as f:
+        f.write("topic,recovery_r2,coverage90,sbc_p\n")
+        f.writelines(f"{names[k]},{r2[k]:.4f},{cover[k]:.4f},{sbc_p[k]:.4f}\n" for k in range(K))
+    with open(f"{a.out}/profiles.csv", "w") as f:
+        f.write("source,topic,n_docs,n_lemmata,mean,q05,q95,p_dominant,p_above_sophocles,lift,p_document\n")
+        for name, s in profiles.items():
             for j in range(H):
                 f.write(f"{name},{names[j]},{s['n_docs']},{s['n_lemmata']:.1f},{s['mean'][j]:.4f},{s['q05'][j]:.4f},{s['q95'][j]:.4f},{s['p_dominant_seeded'][j]:.4f},"
                         + (f"{s['p_above_sophocles'][j]:.4f},{s['lift'][j]:.3f},{s['p_document'][j]:.4f}" if "lift" in s else ",,") + "\n")
     raised = {name: [names[k] for k in sorted((k for k in range(H) if s["p_above_sophocles"][k] >= 0.9 and s["lift"][k] >= 1.5),
-                                              key=lambda k: -s["lift"][k])] for name, s in cells.items() if "lift" in s}
+                                              key=lambda k: -s["lift"][k])] for name, s in profiles.items() if "lift" in s}
     print(f"{H} seeded and {a.free} free topics on {V} lemmata; phi on {len(tragic)} windows of Aeschylus and Euripides; "
           f"recovery R² {min(r2):.2f}-{max(r2):.2f}, coverage {min(cover):.2f}-{max(cover):.2f}, SBC p {min(sbc_p):.2f}-{max(sbc_p):.2f}", flush=True)
-    for name, s in cells.items():
+    for name, s in profiles.items():
         if "lift" in s:
             top3 = sorted(range(H), key=lambda k: -s["lift"][k])[:3]
             print(f"  {name}: raised {raised[name] or 'none'}; largest lifts " + ", ".join(f"{names[k]} {s['lift'][k]:.2f}" for k in top3), flush=True)

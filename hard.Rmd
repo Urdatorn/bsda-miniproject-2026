@@ -69,21 +69,20 @@ Dirichlet is conjugate to the multinomial, so the posterior is exact,
 
 $$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\kappa \mathbf m + \mathbf n),$$
 
-and needs no sampler beyond `rgamma`. A **cell** is a set of restorations
-of the passage. Two posteriors are read from it. The posterior of a
-**random document** of the cell is the equal mixture of its documents'
-posteriors: its spread is the spread between restorations plus the
-Dirichlet uncertainty of each. The posterior of the cell's **mean profile**
-is the average of the documents' posteriors, draw by draw: it says what the
-cell puts into the passage on average, and with thousands of restorations
-it is sharp. The cells are
+and needs no sampler beyond `rgamma`. Two sets of documents are compared:
 
-- **walk**: every untilted snapshot of the walk, one document each;
-- **sophocles**, the baseline: every window of seventeen consecutive extant
+- the **walk**: every untilted snapshot of the walk, one document each;
+- **Sophocles**, the baseline: every window of seventeen consecutive extant
   trimeters of Sophocles, one document each, the same shape as the lacuna.
 
-A cell is compared with the baseline on both levels:
-$P(\bar\theta_k^{\text{cell}} > \bar\theta_k^{\text{Soph}})$ for the mean
+Two posteriors are read from each set. The posterior of a **random
+document** is the equal mixture of the documents' posteriors: its spread is
+the spread between restorations plus the Dirichlet uncertainty of each. The
+posterior of the **mean profile** is the average of the documents'
+posteriors, draw by draw: it says what the walk puts into the passage on
+average, and with thousands of restorations it is sharp. The walk is
+compared with Sophocles on both levels:
+$P(\bar\theta_k^{\text{walk}} > \bar\theta_k^{\text{Soph}})$ for the mean
 profiles over paired draws, with the lift of the means, and
 $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$ for a random document
 against a random window of Sophocles, which measures how much the two
@@ -96,10 +95,10 @@ the surviving letters of a damaged verse are never counted.
 
 The dataset `Urdatorn/bsda-miniproject-2026` on the Hugging Face Hub: one bag
 of content lemmata per restored verse, the vocabulary with its cluster labels,
-and the corpus of the three tragedians. The chunk below downloads the three
-files (20 MB) into `data/` the first time the report is knitted.
+and the corpus of the three tragedians. The three files (20 MB) are
+downloaded into `data/` the first time the report is knitted.
 
-```{r download}
+```{r download, include = FALSE}
 hub <- "https://huggingface.co/datasets/Urdatorn/bsda-miniproject-2026"
 dir.create(params$data, showWarnings = FALSE, recursive = TRUE)
 for (file_name in c("vocab.json", "corpus.parquet", "imputations.parquet")) {
@@ -234,12 +233,12 @@ posterior_draws <- function(document) {
   rdirichlet(draws, prior + counts)
 }
 
-# A cell's two posteriors. `document_draws` stacks the draws of all its
-# documents: a random document of the cell. `mean_draws` averages the
-# documents' draws, one average per draw index: the cell's mean profile.
-# If a baseline (Sophocles) is given, the cell is compared with it on both
+# The two posteriors of a set of documents. `document_draws` stacks the
+# draws of all the documents: a random document. `mean_draws` averages the
+# documents' draws, one average per draw index: the mean profile. If a
+# baseline (Sophocles) is given, the set is compared with it on both
 # levels, draw by draw.
-summarise_cell <- function(documents, baseline = NULL) {
+summarise_documents <- function(documents, baseline = NULL) {
   n_docs <- length(documents)
   document_draws <- matrix(0, nrow = draws * n_docs, ncol = K)
   for (i in seq_len(n_docs)) {
@@ -268,15 +267,15 @@ summarise_cell <- function(documents, baseline = NULL) {
 }
 ```
 
-The cells, and the model's table: one row per cell and topic.
+The two sets of documents, and the model's table: one row per topic.
 
-```{r cells}
+```{r documents}
 # Sophocles' extant trimeters in windows of seventeen, the baseline
 sophocles <- filter(corpus, source == "sophocles")
 sophocles <- arrange(sophocles, line)
 window <- (seq_len(nrow(sophocles)) - 1) %/% 17
 sophocles_documents <- make_documents(sophocles, window)
-baseline <- summarise_cell(sophocles_documents)
+baseline <- summarise_documents(sophocles_documents)
 
 # Only untilted snapshots are used (the tilt flag is empty, NA, for the
 # restorers that were never tilted)
@@ -290,40 +289,28 @@ walk$chain_id <- ifelse(is.na(walk$chain), walk$chain_set,
                         paste(walk$chain_set, walk$chain))
 walk$snapshot <- paste(walk$chain_id, walk$iteration)
 walk_documents <- make_documents(walk, walk$snapshot)
+walk_posterior <- summarise_documents(walk_documents, baseline)
 
-cells <- list()
-cells[["walk"]] <- summarise_cell(walk_documents, baseline)
-
-# One row per cell and topic, the model's table
-rows <- NULL
-for (cell_name in names(cells)) {
-  cell <- cells[[cell_name]]
-  cell_rows <- data.frame(cell = cell_name,
-                          topic = topic_names,
-                          n_docs = cell$n_docs,
-                          n_lemmata = cell$n_lemmata,
-                          mean = cell$mean,
-                          q05 = cell$q05,
-                          q95 = cell$q95,
-                          p_above_sophocles = cell$p_above,
-                          lift = cell$lift,
-                          p_document = cell$p_document)
-  rows <- rbind(rows, cell_rows)
-}
+# One row per topic, the model's table
+rows <- data.frame(topic = topic_names,
+                   mean = walk_posterior$mean,
+                   q05 = walk_posterior$q05,
+                   q95 = walk_posterior$q95,
+                   p_above_sophocles = walk_posterior$p_above,
+                   lift = walk_posterior$lift,
+                   p_document = walk_posterior$p_document)
 rows$raised <- rows$p_above_sophocles >= 0.9 & rows$lift >= 1.5
-for (column in c("n_lemmata", "mean", "q05", "q95", "p_above_sophocles",
-                 "lift", "p_document")) {
+for (column in c("mean", "q05", "q95", "p_above_sophocles", "lift",
+                 "p_document")) {
   rows[[column]] <- round(rows[[column]], 4)
 }
 
-sizes <- data.frame(cell = c("sophocles", names(cells)),
-                    documents = c(baseline$n_docs,
-                                  sapply(cells, function(c) c$n_docs)),
+sizes <- data.frame(source = c("sophocles", "walk"),
+                    documents = c(baseline$n_docs, walk_posterior$n_docs),
                     lemmata_per_document = c(baseline$n_lemmata,
-                                             sapply(cells,
-                                                    function(c) c$n_lemmata)))
+                                             walk_posterior$n_lemmata))
 knitr::kable(sizes, digits = 1, row.names = FALSE,
-             caption = "The cells: documents and topic-bearing lemmata each")
+             caption = "Documents, and topic-bearing lemmata per document")
 ```
 
 # Sophocles' baseline
@@ -347,33 +334,25 @@ and, in brackets, the document-level probability
 $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$.
 
 ```{r raised, results = "asis"}
-raised <- filter(rows, raised)
-raised <- arrange(raised, cell, desc(lift))
-for (cell_name in names(cells)) {
-  cell_raised <- filter(raised, cell == cell_name)
-  if (nrow(cell_raised) == 0) {
-    cat("- **", cell_name, "**: none\n", sep = "")
-    next
-  }
-  items <- sprintf("%s (%.1f×, %.2f [%.2f])", cell_raised$topic,
-                   cell_raised$lift, cell_raised$mean,
-                   cell_raised$p_document)
-  cat("- **", cell_name, "** (", cell_raised$n_docs[1], " documents): ",
-      paste(items, collapse = ", "), "\n", sep = "")
+raised <- arrange(filter(rows, raised), desc(lift))
+if (nrow(raised) == 0) {
+  cat("None.\n")
+} else {
+  items <- sprintf("%s (%.1f×, %.2f [%.2f])", raised$topic, raised$lift,
+                   raised$mean, raised$p_document)
+  cat(paste(items, collapse = ", "), "\n")
 }
 ```
 
-# Lift of every topic in every cell
+# Lift of every topic
 
-```{r lifts, fig.height = 7}
+```{r lifts, fig.height = 5}
 lifts <- rows
-lifts$cell <- factor(lifts$cell, levels = names(cells))
 lifts$topic <- factor(lifts$topic, levels = rev(topic_names))
 ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   geom_col() +
   geom_hline(yintercept = 1, linetype = "dashed") +
   coord_flip() +
-  facet_wrap(~ cell, ncol = 2) +
   scale_fill_manual(values = c("grey70", "firebrick"),
                     name = "raised: P >= 0.9\nand lift >= 1.5") +
   labs(x = NULL, y = "lift of the posterior mean against Sophocles") +
@@ -382,16 +361,12 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
 
 # The largest lifts
 
-The five topics with the largest lift in every cell.
+The five topics with the largest lift.
 
 ```{r top}
-top_five <- NULL
-for (cell_name in names(cells)) {
-  cell_rows <- arrange(filter(rows, cell == cell_name), desc(lift))
-  top_five <- rbind(top_five, head(cell_rows, 5))
-}
-top_five <- top_five[, c("cell", "topic", "mean", "q05", "q95",
-                         "p_above_sophocles", "lift", "p_document")]
+top_five <- head(arrange(rows, desc(lift)), 5)
+top_five <- top_five[, c("topic", "mean", "q05", "q95", "p_above_sophocles",
+                         "lift", "p_document")]
 knitr::kable(top_five, digits = 2, row.names = FALSE)
 ```
 
@@ -405,7 +380,7 @@ texts parsed by the same tagger (the tragedians with their lyrics,
 Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the Attic orators and
 the sophists who wrote Attic, 28,882 windows). Sophocles is cut the same
 way. The shares here are plain rates per thousand topic lemmata, pooled
-over a cell's documents; a lift's 90 % interval comes from resampling the
+over the documents of each set; a lift's 90 % interval comes from resampling the
 walk by chain and a baseline by window. The figures are drawn by
 `scripts/topic_circles.py`, `scripts/topic_lemmata.py` and
 `scripts/genre_distance.py` from `data/baseline_windows.parquet`
@@ -518,7 +493,7 @@ How much does a topic's share move from one document to the next, and does
 that variability itself differ between topics? For every topic, the share
 of a document's lemmata it takes is computed in every document, and its
 standard deviation across documents is compared with the standard deviation
-a multinomial of the same mean share and the cell's mean length would
+a multinomial of the same mean share and the set's mean length would
 produce by sampling alone, $\sqrt{p(1-p)/N}$. Their ratio is the excess
 variability: 1 means a topic varies no more than coin-tossing would, 2
 means its real spread is twice that. The spread of these numbers across
@@ -543,7 +518,7 @@ topic_variability <- function(documents, label) {
   share_mean <- colMeans(shares)
   share_sd <- apply(shares, 2, sd)
   sampling_sd <- sqrt(share_mean * (1 - share_mean) / mean_length)
-  data.frame(cell = label, topic = topic_names, mean = share_mean,
+  data.frame(source = label, topic = topic_names, mean = share_mean,
              sd = share_sd, sampling_sd = sampling_sd,
              excess = share_sd / sampling_sd)
 }
@@ -554,8 +529,8 @@ for (column in c("mean", "sd", "sampling_sd", "excess")) {
 }
 
 # One row per topic: Sophocles and the walk side by side
-sophocles_var <- filter(variability, cell == "sophocles")
-walk_var <- filter(variability, cell == "walk")
+sophocles_var <- filter(variability, source == "sophocles")
+walk_var <- filter(variability, source == "walk")
 side_by_side <- data.frame(topic = topic_names,
                            sophocles_mean = sophocles_var$mean,
                            sophocles_sd = sophocles_var$sd,
@@ -568,22 +543,22 @@ knitr::kable(side_by_side, digits = 3, row.names = FALSE)
 ```
 
 ```{r variability_summary, results = "asis"}
-# The spread of the variability across topics, for each cell
-for (cell_name in c("sophocles", "walk")) {
-  cell_var <- filter(variability, cell == cell_name)
+# The spread of the variability across topics, for Sophocles and the walk
+for (source_name in c("sophocles", "walk")) {
+  these <- filter(variability, source == source_name)
   cat(sprintf(paste("- **%s**: the between-document sd of a topic's share",
                     "ranges from %.3f to %.3f (median %.3f); its coefficient",
                     "of variation across topics is %.2f. The excess over",
                     "sampling ranges from %.2f to %.2f (median %.2f).\n"),
-              cell_name, min(cell_var$sd), max(cell_var$sd),
-              median(cell_var$sd), sd(cell_var$sd) / mean(cell_var$sd),
-              min(cell_var$excess), max(cell_var$excess),
-              median(cell_var$excess)))
+              source_name, min(these$sd), max(these$sd),
+              median(these$sd), sd(these$sd) / mean(these$sd),
+              min(these$excess), max(these$excess),
+              median(these$excess)))
 }
 ```
 
 ```{r variability_plot, fig.height = 4}
-ggplot(variability, aes(x = mean, y = sd, colour = cell)) +
+ggplot(variability, aes(x = mean, y = sd, colour = source)) +
   geom_point() +
   geom_line(aes(y = sampling_sd), linetype = "dashed") +
   labs(x = "mean share of the topic", y = "sd of the share across documents",
@@ -596,9 +571,10 @@ ggplot(variability, aes(x = mean, y = sd, colour = cell)) +
 A reviewer may object that the walk's topics only reflect the region of the
 restoration space that the chains happened to visit. Two checks answer that.
 First, does the lift of a topic drift as the walk proceeds? The snapshots are
-grouped into windows of steps, every window is a cell, and the slope of its
-lift against the step is the rate of change. Second, do the 48 chains
-agree? Each chain's snapshots form a series of topic shares, and the
+grouped into windows of steps, every window is summarised like the whole
+walk, and the slope of its lift against the step is the rate of change.
+Second, do the 48 chains agree? Each chain's snapshots form a series of
+topic shares, and the
 Gelman–Rubin $\hat R$ (BDA3 §11.4) compares the spread between chains with the
 spread within them: $\hat R$ near 1 means a chain's share does not depend on
 which chain it is.
@@ -617,17 +593,17 @@ walk_lemmata$step <- walk$iteration[walk_row]
 
 ```{r drift}
 # The lift of every topic in each window of steps: the window's snapshots
-# are its documents, compared with Sophocles exactly as the walk cell is
+# are its documents, compared with Sophocles exactly as the whole walk is
 lift_in_windows <- function(lemmata, breaks) {
   windows <- NULL
   for (i in seq_len(length(breaks) - 1)) {
     in_window <- lemmata$step > breaks[i] & lemmata$step <= breaks[i + 1]
     documents <- split(lemmata$topic[in_window], lemmata$snapshot[in_window])
-    cell <- summarise_cell(documents, baseline)
+    window_posterior <- summarise_documents(documents, baseline)
     window_rows <- data.frame(step = (breaks[i] + breaks[i + 1]) / 2,
                               topic = topic_names,
-                              n_docs = cell$n_docs,
-                              lift = cell$lift)
+                              n_docs = window_posterior$n_docs,
+                              lift = window_posterior$lift)
     windows <- rbind(windows, window_rows)
   }
   windows
@@ -706,8 +682,7 @@ for (i in seq_len(K)) {
 }
 
 # One table: the lift of the walk, the drift and the chain agreement
-walk_rows <- filter(rows, cell == "walk")
-stability$lift <- walk_rows$lift[match(stability$topic, walk_rows$topic)]
+stability$lift <- rows$lift[match(stability$topic, rows$topic)]
 stability$slope_per_1000 <- slopes$slope_per_1000
 stability <- stability[, c("topic", "lift", "slope_per_1000", "rhat",
                            "chain_lift_q05", "chain_lift_q95")]

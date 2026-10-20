@@ -3,7 +3,12 @@
 transliteration, and the cluster's share of the topic-bearing lemmata and of
 their tokens in the three tragedians.
 
-Usage: python scripts/topics_table.py results/hard/topics_K40.json latex/topics_table.tex
+The topics are read from the vocabulary of the dataset (data/vocab.json: every
+lemma with its cluster label, the cluster's three label lemmata and the lemma's
+token count in the three tragedians), the same file the hard report builds its
+own topics table from.
+
+Usage: python scripts/topics_table.py data/vocab.json latex/topics_table.tex
 """
 import json, sys, unicodedata
 
@@ -35,8 +40,15 @@ def transliterate(word):
     return "".join(out)
 
 
-def main(topics_path, out_path):
-    topics = json.load(open(topics_path, encoding="utf-8"))["topics"]
+def main(vocab_path, out_path):
+    vocab = json.load(open(vocab_path, encoding="utf-8"))
+    by_label = {}
+    for entry in vocab:
+        label = entry["cluster_K40"]
+        if label is None: continue
+        t = by_label.setdefault(label, {"label": label, "lemmata": entry["cluster_K40_lemmata"], "size": 0, "tragic_tokens": 0})
+        t["size"] += 1; t["tragic_tokens"] += entry["tragic_count"]
+    topics = sorted(by_label.values(), key=lambda t: -t["tragic_tokens"])     # in order of their mass in the tragedians
     n_lemmata, n_tokens = sum(t["size"] for t in topics), sum(t["tragic_tokens"] for t in topics)
     lines = ["% The topics of the hard model: English gloss, the three label lemmata, their transliteration.",
              "% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \\usepackage{booktabs}; spans both columns of a two-column layout.",

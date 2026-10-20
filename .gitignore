@@ -2,7 +2,6 @@ data/
 __pycache__/
 *.pyc
 .logs/
-# the sensitivity run keeps only its cells.* in the repo
-results/amortized_mixed_phi_all/*
-!results/amortized_mixed_phi_all/cells.*
+# figure_style.py unpacks fonts/times.zip here
+fonts/times/
 .DS_Store
