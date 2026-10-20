@@ -35,6 +35,10 @@ The R Markdown reports download these files themselves if `data/` is missing.
 - `imputations.parquet`: 631,974 rows, one per restored verse. `verse` 13–29, `restorer` ∈ {stoicheia, candidates, walk}, the walk's
   `chain_set`, `chain`, `iteration` and `style_tilted` flag, the `text`, and the bag as `lemma_idx` + `count` over `vocab.json`.
 - `corpus.parquet`: one row per extant trimeter of Sophocles, Aeschylus and Euripides, plus the intact papyrus lines and Henry's text.
+- `baseline_windows.parquet`: 279,414 windows of 28 consecutive vocabulary lemmata (the walk's mean document), as counts over the 34
+  topics: the three tragedians' trimeters in order (2,465 windows) and every work of the Open Greek and Latin texts parsed by the
+  same tagger ([Urdatorn/oga-conllu-stoicheia](https://huggingface.co/datasets/Urdatorn/oga-conllu-stoicheia), 276,949 windows,
+  1,825 works), built by `scripts/window_baselines.py`; windows never cross a work.
 
 ## Documents and cells
 
@@ -95,12 +99,6 @@ share across the chains, written to `results/analytic/walk_stability.csv`. Drift
 $\hat R \le 1.04$. (With the earlier rule sets in the walk, *ship-sail-hull* had $\hat R = 1.61$: one v1 chain set had frozen Henry's
 κῦμα, which is why the walk is now the final rule set alone.)
 
-Both reports also draw the posterior on the 2-simplex of the three topics the walk lifts most (the view of Blei, Ng and Jordan's
-figure 2): for the walk, Henry and Sophocles' windows, the posterior of the cell's mean profile restricted to that triangle, drawn as
-a kernel density of the posterior draws (the analytic model's own, the saved `profile_draws.csv` in the amortized one) with each cell
-scaled to a peak of one. The walk and Sophocles are sharp peaks close together, because similar lifts leave the ratios of the three
-topics unchanged; Henry, one document, is a broad hump, drawn as a wireframe so that it does not hide the two peaks.
-
 ## Maps
 
 Two interactive maps (`datamapplot`, self-contained HTML files in `results/analytic/`, a static PNG beside each):
@@ -114,6 +112,28 @@ Two interactive maps (`datamapplot`, self-contained HTML files in `results/analy
   profiles over the 34 topics (Hellinger distance), coloured by dominant topic, the Greek text on hover and searchable. Documents of
   twenty lemmata are mixtures, so this map has no clear regions: it is kept for browsing the restorations, not as evidence.
 
+## Is the walk's profile unusual, and against whom? (`scripts/topic_circles.py`, `scripts/genre_distance.py`)
+
+The lemma map is crowded; `topic_circles_walk.png` shows the same thing with one circle per topic, placed at the centre of its lemmata in the
+lemma map's layout. A circle's area is the walk's share of the topic and its colour the log2 lift of that share against a baseline, with the
+lift printed and a black edge when its 90 % interval excludes 1 (the walk resampled by chain, the baseline by window), faded otherwise.
+Three panels, three baselines of 28-lemma windows: Sophocles, Aeschylus and Euripides, and Greek at large (the OGA corpus). Against
+Sophocles 26 of the 34 topics have an interval off 1 (*fine-word-matter* 1.89, *wrong-vengeance-err* 1.64, *garment-adorn-gold* 1.52 up;
+*leaf-myrtle-olive* 0.37, *fire-flame-flash* 0.41 down); against Greek at large the tragic topics the walk inherits from its register
+dominate (*child-before-bestow* 4.27, *walk-behold-gaze* 4.13, *lament-pitiable-groan* 2.52). `topic_circles_sophocles.png` is the same
+figure with Sophocles as the focus, against the other two tragedians and against Greek at large: his own topics (*see-know-learn* and
+*crash-voice-shout* 1.50 over Aeschylus and Euripides, *walk-behold-gaze* 5.18 and *child-before-bestow* 4.86 over Greek at large,
+*Greek-sea-barbarian* 0.21 and *marriage-couch-bed* 0.42 under the other tragedians). All the numbers are in `topic_circles.csv`, with
+the document-level probability that a random walk document outdoes a random window.
+
+Does the walk write tragedy or does it write its generator's Greek at large? `genre_distance.py` pools the windows of nine genres of OGA
+authors (epic, tragedy = the three tragedians' trimeters, comedy, lyric, oratory, history, philosophy, medicine, scripture) and measures the
+Jensen–Shannon divergence from the walk's topic profile to each, with the same two bootstraps. The walk is nearest tragedy (0.033 bits) and
+comedy (0.035), then oratory (0.054); epic is far (0.143), beaten by history, lyric and scripture. Sophocles' own profile, for comparison,
+is 0.014 from the other two tragedians and 0.086 from epic. Topic by topic, the walk's rate is closer to tragedy's than to epic's for 29 of
+the 34 topics (`genre_topics.csv`; the exceptions are *begin-happen-necessity*, *murder-slayer-kill*, *walk-behold-gaze*, *within-wall-door* and
+*contest-rivalry-wrestling*). `genre_distance.png` draws both.
+
 ## Run
 
 ```sh
@@ -122,6 +142,8 @@ Rscript -e 'rmarkdown::render("amortized_mixed_model.Rmd")'                     
 KERAS_BACKEND=torch python scripts/amortized_mixed_model.py --data data --out results/amortized_mixed   # a GPU hour; CPU dry run with --sims 3000 --epochs 2
 sbatch slurm/amortized_mixed_model.slurm                                                        # the same on a GH200 (Arrhenius)
 python scripts/lemma_map.py --data data --out results/analytic      # the interactive maps (datamapplot, umap-learn); topic_map.py likewise
+python scripts/window_baselines.py --data data --oga <OGA shards> --out data   # the baseline windows (two minutes; or slurm/window_baselines.slurm)
+python scripts/topic_circles.py --data data --out results/analytic             # the circle maps; genre_distance.py likewise
 ```
 
 ## Layout
@@ -129,10 +151,12 @@ python scripts/lemma_map.py --data data --out results/analytic      # the intera
 ```
 analytic_model.Rmd, amortized_mixed_model.Rmd   one PDF report per model (xelatex, a font with polytonic Greek)
 scripts/            the GPU script of the amortized mixed model; topics_table.py writes the LaTeX table of the topics;
-                    lemma_map.py and topic_map.py draw the interactive maps
-slurm/              the GPU job for the amortized mixed model
+                    lemma_map.py and topic_map.py draw the interactive maps; window_baselines.py cuts the baseline windows,
+                    topic_circles.py and genre_distance.py compare the walk and Sophocles with them
+slurm/              the GPU job for the amortized mixed model, and one for the baseline windows
 results/amortized_mixed/     phi.json (topics), cells.{md,csv,json}, sbc.csv, recovery.csv, profile_draws.csv and theta_samples.csv
-                             (posterior samples for the simplex plots)
+                             (posterior samples of the mean profiles and of single documents)
 results/analytic/     topics_K40.json (the clusters and their labels), topics_table.tex, posterior.csv, walk_stability.csv and
                       topic_variability.csv from the Rmd; lemma_map.{html,png,_coords.csv} and topic_map.{html,png,_coords.csv}
+                      topic_circles_{walk,sophocles}.png, topic_circles.csv, genre_distance.{csv,png}, genre_topics.csv
 ```
