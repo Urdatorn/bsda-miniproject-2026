@@ -7,7 +7,7 @@ A point's size is how often the walk uses the lemma.
 
   python scripts/lemma_map.py --data data --out figures
 
-writes hard_lemma_map.png and, when the soft model's results/soft/phi_matrix.npy
+writes hard_lemma_map.png and, when the soft model's results/soft/phi_matrix.csv.gz
 exists, soft_lemma_map.png on the same layout: every lemma coloured by the
 topic that gives it the most probability under the soft model's phi (the
 seeded topic with the largest phi[k, w], or a free topic), so that the
@@ -37,7 +37,7 @@ def main():
     ap.add_argument("--neighbors", type=int, default=15)
     ap.add_argument("--min-dist", type=float, default=0.05)
     ap.add_argument("--seed", type=int, default=917)
-    ap.add_argument("--soft", default="results/soft", help="the soft model's results (phi.json, phi_matrix.npy); skipped if absent")
+    ap.add_argument("--soft", default="results/soft", help="the soft model's results (phi.json, phi_matrix.csv.gz); skipped if absent")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
 
@@ -78,11 +78,11 @@ def main():
     print(f"wrote {a.out}/hard_lemma_map.png", flush=True)
 
     # the soft map: the same layout, every lemma coloured by its soft topic
-    phi_path = os.path.join(a.soft, "phi_matrix.npy")
+    phi_path = os.path.join(a.soft, "phi_matrix.csv.gz")
     if not os.path.exists(phi_path):
         print(f"no {phi_path}: the soft map is skipped", flush=True); return
-    phi = np.load(phi_path)                                                   # (K, V), rows sum to one
-    names = json.load(open(os.path.join(a.soft, "phi.json"), encoding="utf-8"))["names"]
+    phi_table = pd.read_csv(phi_path, index_col=0)                           # (K, V), rows sum to one
+    names = list(phi_table.index); phi = phi_table.to_numpy()
     responsibility = phi[:, index] / phi[:, index].sum(0, keepdims=True)      # P(topic | lemma) with a flat prior over topics
     soft_labels = np.array([names[k] for k in responsibility.argmax(0)])
     moved = soft_labels != labels

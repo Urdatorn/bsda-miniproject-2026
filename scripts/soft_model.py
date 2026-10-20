@@ -33,16 +33,24 @@ document against a random window of Sophocles, P(theta_k^doc > theta_k^window).
 
 Usage (GPU recommended; KERAS_BACKEND=torch):
   python scripts/soft_model.py --data data --out results/soft
-Writes phi.json (topics) and phi_matrix.npy (K x V), checks.csv, sbc.csv
-(rank histograms), recovery.csv, profiles.csv (the mean profiles of the walk
-and of Sophocles, with the walk's lift), and comparisons.csv: the walk against Sophocles, against
+Writes phi.json (topics) and phi_matrix.csv.gz (K x V, read by the lemma map
+and by the report's exact-posterior check), soft_flow.keras (the trained
+approximator, kept on the Hugging Face dataset, not in git; load it with
+keras.saving.load_model after importing this module, which registers
+MaskedDeepSet), checks.csv, sbc.csv (rank histograms), recovery.csv,
+exact_documents.json (--exact-docs documents of the walk and of Sophocles with
+the flow's posterior summaries, for the report's comparison with NUTS in
+rstan), profiles.csv (the mean profiles of the walk and of Sophocles, with the
+walk's lift), and comparisons.csv: the walk against Sophocles, against
 Aeschylus and Euripides and against Classical Attic (data/attic_windows.parquet,
 scripts/window_baselines.py), and Sophocles against the latter two, with the
 lift's 90 % interval over the posterior draws of the two mean profiles.
 """
-import argparse, json, os, time, unicodedata
+import argparse, gzip, json, os, time, unicodedata
 from collections import Counter, defaultdict
 import numpy as np, pyarrow.parquet as pq
+os.environ.setdefault("KERAS_BACKEND", "torch")
+import keras, bayesflow as bf
 
 FIRST, LAST = 13, 29
 WINDOW = LAST - FIRST + 1          # seventeen verses
@@ -99,6 +107,28 @@ def load(data_dir):
 
 # --- the model ---
 
+@keras.saving.register_keras_serializable(package="soft")
+class MaskedDeepSet(bf.networks.SummaryNetwork):
+    """a DeepSet that pools over the real elements of a padded set, with log N as an extra summary"""
+    def __init__(self, summary_dim=32, embed_dim=64, **kw):
+        super().__init__(**kw)
+        self.summary_dim, self.embed_dim = summary_dim, embed_dim
+        self.embed = keras.Sequential([keras.layers.Dense(embed_dim, activation="silu"), keras.layers.Dense(embed_dim, activation="silu")])
+        self.head = keras.Sequential([keras.layers.Dense(64, activation="silu"), keras.layers.Dense(summary_dim)])
+
+    def call(self, x, mask=None, **kwargs):
+        if mask is None: mask = keras.ops.ones_like(x[..., :1])
+        mask = keras.ops.reshape(keras.ops.cast(mask, x.dtype), (keras.ops.shape(x)[0], keras.ops.shape(x)[1], 1))
+        h = self.embed(x) * mask
+        n = keras.ops.maximum(keras.ops.sum(mask, axis=1), 1.0)                     # (batch, 1)
+        mean = keras.ops.sum(h, axis=1) / n
+        largest = keras.ops.max(h + (mask - 1.0) * 1e4, axis=1)
+        return self.head(keras.ops.concatenate([mean, largest, keras.ops.log(n)], axis=-1))
+
+    def get_config(self):
+        return {**super().get_config(), "summary_dim": self.summary_dim, "embed_dim": self.embed_dim}
+
+
 def alr(theta): return np.log(theta[..., :-1] / theta[..., -1:])
 
 
@@ -116,9 +146,10 @@ def main():
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--post-draws", type=int, default=300)
     ap.add_argument("--max-docs", type=int, default=0, help="walk snapshots read, sampled at random if more (0 = every snapshot)")
+    ap.add_argument("--exact-docs", type=int, default=20, help="documents of the walk and of Sophocles each, saved for the report's NUTS check")
     ap.add_argument("--seed", type=int, default=917)
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
-    os.environ.setdefault("KERAS_BACKEND", "torch"); rng = np.random.default_rng(a.seed)
+    rng = np.random.default_rng(a.seed)
     vocab, cluster, docs, tragic = load(a.data); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
     if a.max_docs and len(docs["walk"]) > a.max_docs: docs["walk"] = [docs["walk"][i] for i in sorted(rng.choice(len(docs["walk"]), a.max_docs, replace=False))]
     lengths = {name: np.array([len(d) for d in ds]) for name, ds in docs.items()}
@@ -150,13 +181,14 @@ def main():
         for w, i in wid.items():
             if w in order: phi[k, i] = d[order[w]]
     phi /= phi.sum(1, keepdims=True); logphi = np.log(phi).T.astype(np.float32)          # (V, K)
-    np.save(f"{a.out}/phi_matrix.npy", phi.astype(np.float32))                            # for the soft lemma map
+    with gzip.open(f"{a.out}/phi_matrix.csv.gz", "wt", encoding="utf-8") as f:          # K rows, one column per lemma
+        f.write("topic," + ",".join(vocab) + "\n")
+        for k in range(K): f.write(names[k] + "," + ",".join(f"{v:.6g}" for v in phi[k]) + "\n")
     top = {names[k]: [w for w, _ in lda.get_topic_words(k, top_n=15)] for k in range(K)}
     json.dump({"names": names, "top_words": top, "ll_per_word": lda.ll_per_word, "seeds_found": found, "vocab_size": V}, open(f"{a.out}/phi.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     for k in range(K): print(f"  {names[k]:18s} " + " ".join(top[names[k]][:10]), flush=True)
 
     # ---- simulator and amortized posterior
-    import keras, bayesflow as bf
     keras.utils.set_random_seed(a.seed)
 
     def pad(word_lists):
@@ -170,22 +202,6 @@ def main():
         theta = rng.dirichlet(np.ones(K), S); N = rng.choice(length_pool, S)
         X, M = pad([rng.choice(V, N[s], p=theta[s] @ phi).tolist() for s in range(S)])
         return {"inference_variables": alr(theta).astype(np.float32), "summary_variables": X, "summary_mask": M}
-
-    class MaskedDeepSet(bf.networks.SummaryNetwork):
-        """a DeepSet that pools over the real elements of a padded set, with log N as an extra summary"""
-        def __init__(self, summary_dim=32, embed_dim=64, **kw):
-            super().__init__(**kw)
-            self.embed = keras.Sequential([keras.layers.Dense(embed_dim, activation="silu"), keras.layers.Dense(embed_dim, activation="silu")])
-            self.head = keras.Sequential([keras.layers.Dense(64, activation="silu"), keras.layers.Dense(summary_dim)])
-
-        def call(self, x, mask=None, **kwargs):
-            if mask is None: mask = keras.ops.ones_like(x[..., :1])
-            mask = keras.ops.reshape(keras.ops.cast(mask, x.dtype), (keras.ops.shape(x)[0], keras.ops.shape(x)[1], 1))
-            h = self.embed(x) * mask
-            n = keras.ops.maximum(keras.ops.sum(mask, axis=1), 1.0)                     # (batch, 1)
-            mean = keras.ops.sum(h, axis=1) / n
-            largest = keras.ops.max(h + (mask - 1.0) * 1e4, axis=1)
-            return self.head(keras.ops.concatenate([mean, largest, keras.ops.log(n)], axis=-1))
 
     sims = simulate(a.sims); held = simulate(1000)
     approx = bf.approximators.ContinuousApproximator(
@@ -201,11 +217,23 @@ def main():
     hist = approx.fit(dataset=ds, validation_data=vs, epochs=a.epochs, verbose=0, callbacks=[log, keras.callbacks.EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)])
     print(f"flow trained: {len(hist.history['loss'])} epochs, validation loss {np.nanmin(hist.history.get('val_loss', [np.nan])):.3f}", flush=True)
 
-    def posterior(X, M, draws=a.post_draws):
+    def posterior(X, M, draws=a.post_draws, model=None):
         """padded documents -> theta draws (docs, draws, K)"""
-        out = approx.sample(conditions={"summary_variables": X, "summary_mask": M}, num_samples=draws)
+        out = (model or approx).sample(conditions={"summary_variables": X, "summary_mask": M}, num_samples=draws)
         z = out["inference_variables"] if isinstance(out, dict) else out
         return alr_inv(np.asarray(z, dtype=np.float64))
+
+    # the trained approximator, for the dataset; reloaded at once and checked against the live one on held-out documents
+    try:
+        path = f"{a.out}/soft_flow.keras"; approx.save(path)
+        reloaded = keras.saving.load_model(path)
+        X, M = held["summary_variables"][:64], held["summary_mask"][:64]
+        live, again = posterior(X, M, 2000), posterior(X, M, 2000, model=reloaded)
+        gap = (np.abs(live.mean(1) - again.mean(1)) / np.maximum(live.std(1), 1e-6)).max()   # in units of the posterior sd
+        print(f"saved {path} ({os.path.getsize(path) / 1e6:.1f} MB); reloaded, largest difference of a posterior mean over 64 documents "
+              f"and 2000 draws: {gap:.3f} posterior sd" + (" (Monte Carlo noise: about 0.1 expected)" if gap < 0.3 else " (TOO LARGE: the saved network differs)"), flush=True)
+    except Exception as e:
+        print(f"could not save and reload the approximator ({type(e).__name__}: {e}); the run goes on without it", flush=True)
 
     # ---- checks on held-out simulations: SBC ranks, recovery, coverage
     th_true = alr_inv(held["inference_variables"].astype(np.float64)); post = posterior(held["summary_variables"], held["summary_mask"])
@@ -242,6 +270,18 @@ def main():
             B = base["_document_draws"][rng.integers(0, len(base["_document_draws"]), len(P))]
             s["p_document"] = (P > B).mean(0).tolist()
         return s
+    # ---- a few documents of each set with the flow's posterior, for the report's comparison with NUTS (rstan)
+    exact = []
+    for name in ("walk", "sophocles"):
+        chosen = sorted(rng.choice(len(docs[name]), min(a.exact_docs, len(docs[name])), replace=False))
+        X, M = pad([docs[name][i] for i in chosen]); P3 = posterior(X, M)
+        for j, i in enumerate(chosen):
+            exact.append({"source": name, "index": int(i), "lemma_idx": [int(w) for w in docs[name][i]],
+                          "flow_mean": P3[j].mean(0).round(5).tolist(), "flow_sd": P3[j].std(0).round(5).tolist(),
+                          "flow_q05": np.quantile(P3[j], 0.05, 0).round(5).tolist(), "flow_q95": np.quantile(P3[j], 0.95, 0).round(5).tolist()})
+    json.dump({"names": names, "draws": a.post_draws, "documents": exact}, open(f"{a.out}/exact_documents.json", "w"), indent=None)
+    print(f"  {len(exact)} documents saved for the exact-posterior check", flush=True)
+
     profiles = {"sophocles": summarise(docs["sophocles"])}
     for name in ("walk", "tragedians", "attic"):
         if name in docs:

@@ -13,6 +13,8 @@ geometry: margin=2cm
 params:
   results: "results/soft"
   show_topics: 12
+  exact_docs: 40
+  exact_iter: 1500
 ---
 
 ```{r setup, include = FALSE}
@@ -24,6 +26,8 @@ if (requireNamespace("ragg", quietly = TRUE)) {
 library(dplyr)      # filter(), arrange()
 library(jsonlite)   # reads the json files
 library(ggplot2)
+library(rstan)      # the exact posterior, for the check of the amortized one
+rstan_options(auto_write = TRUE)
 # The figures follow the ICML two-column style: Times at 8-9 pt on a 6.75 in
 # text width, so that they drop into the paper as they are
 theme_set(theme_minimal(base_size = 8, base_family = "Times New Roman"))
@@ -82,11 +86,14 @@ which reads the same dataset as the hard report
 (`Urdatorn/bsda-miniproject-2026`: the bags of content lemmata, the
 vocabulary with its cluster labels, the corpus of the three tragedians) and
 writes to `results/soft/` the topic-word matrix with its top lemmata
-(`phi.json`, and `phi_matrix.npy` for the lemma map), the mean profiles of
-the walk and of Sophocles with the walk's lift (`profiles.csv`), the
-comparisons with the further baselines (`comparisons.csv`) and the
-calibration checks (`checks.csv`, `sbc.csv`, `recovery.csv`). This document
-reads that output.
+(`phi.json`, and the whole matrix `phi_matrix.csv.gz`), the mean profiles
+of the walk and of Sophocles with the walk's lift (`profiles.csv`), the
+comparisons with the further baselines (`comparisons.csv`), the
+calibration checks (`checks.csv`, `sbc.csv`, `recovery.csv`) and forty
+documents with their amortized posterior for the check against NUTS below
+(`exact_documents.json`). The trained network itself (`soft_flow.keras`) is
+kept on the dataset, not in the repository. This document reads that
+output.
 
 ```{r load, include = FALSE}
 phi <- fromJSON(file.path(results_dir, "phi.json"))
@@ -102,6 +109,20 @@ K <- length(topic_names)                          # seeded + free topics
 H <- sum(profiles$source == "sophocles")          # seeded topics only
 profiles$source <- factor(profiles$source, levels = c("sophocles", "walk"))
 walk <- filter(profiles, source == "walk")
+
+# The parts of the output a run writes last; the sections that need them
+# are skipped, with a note, until it has
+have_comparisons <- file.exists(file.path(results_dir, "comparisons.csv"))
+have_exact <- file.exists(file.path(results_dir, "exact_documents.json")) &&
+  file.exists(file.path(results_dir, "phi_matrix.csv.gz"))
+figure <- function(paths) {
+  drawn <- paths[file.exists(paths)]
+  if (length(drawn) == 0) {
+    cat("(figure not drawn yet:", paste(paths, collapse = ", "), ")")
+  } else {
+    knitr::include_graphics(drawn)
+  }
+}
 ```
 
 `r H` seeded topics and `r K - H` free topics on a vocabulary of
@@ -134,7 +155,7 @@ This is what soft topics buy: a word can belong elsewhere than its cluster
 put it.
 
 ```{r soft_lemma_map, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/soft_lemma_map.png")
+figure("figures/soft_lemma_map.png")
 ```
 
 # The posterior
@@ -173,6 +194,126 @@ ggplot(recovery_shown, aes(x = true, y = post_mean)) +
   facet_wrap(~ topic, ncol = 4) +
   labs(title = "Recovery on held-out simulations (mean and 90 % interval)",
        x = "true theta", y = "posterior")
+```
+
+## Against the exact posterior
+
+The checks above are on simulated documents, and the flow's training loss
+was still falling when its schedule ended, so a calibrated posterior could
+still be a needlessly wide one. The decisive check is on real documents:
+with $\phi$ fixed, the posterior of one document is the low-dimensional
+density
+
+$$p(\theta \mid w_{1:N}) \propto \prod_{n=1}^{N} \sum_{k=1}^{K}
+  \theta_k\, \phi_{k w_n}, \qquad \theta \sim \mathrm{Dirichlet}(\mathbf 1),$$
+
+which NUTS samples exactly in a few seconds. Twenty snapshots of the walk
+and twenty windows of Sophocles, drawn at random by the GPU script, are
+sampled here with `rstan`, and their exact posterior is set beside the
+flow's for every topic: the difference of the means, the ratio of the
+standard deviations, and whether the flow's 90 % interval contains the
+exact mean. (The chunks of this section run once
+`exact_documents.json` and `phi_matrix.csv.gz` are in the results.)
+
+```{r stan_model, eval = have_exact}
+# The model: K topics, a document of N lemmata, the log of phi for each
+# lemma of the document (row n is the lemma's log probability under every
+# topic). The Dirichlet(1) prior is flat on the simplex, so only the
+# likelihood is added.
+stan_code <- "
+data {
+  int<lower=1> K;
+  int<lower=1> N;
+  matrix[N, K] log_phi;
+}
+parameters {
+  simplex[K] theta;
+}
+model {
+  vector[K] log_theta = log(theta);
+  for (n in 1:N) {
+    target += log_sum_exp(log_theta + log_phi[n]');
+  }
+}
+"
+exact_model <- stan_model(model_code = stan_code)
+```
+
+```{r exact, eval = have_exact, cache = TRUE}
+phi_matrix <- read.csv(gzfile(file.path(results_dir, "phi_matrix.csv.gz")),
+                       row.names = 1, check.names = FALSE,
+                       encoding = "UTF-8")
+phi_matrix <- as.matrix(phi_matrix)                  # K topics by V lemmata
+exact_set <- fromJSON(file.path(results_dir, "exact_documents.json"),
+                      simplifyVector = FALSE)
+documents <- head(exact_set$documents, params$exact_docs)
+
+# One row per document and topic: the flow's summary and the exact one
+exact <- NULL
+for (d in seq_along(documents)) {
+  document <- documents[[d]]
+  lemmata <- unlist(document$lemma_idx) + 1          # R counts from 1
+  stan_data <- list(K = K, N = length(lemmata),
+                    log_phi = t(log(phi_matrix[, lemmata])))
+  fit <- sampling(exact_model, data = stan_data, chains = 4,
+                  iter = params$exact_iter, warmup = 500, refresh = 0,
+                  seed = 917)
+  theta <- extract(fit, "theta")$theta               # draws by K
+  rhat <- max(summary(fit)$summary[, "Rhat"], na.rm = TRUE)
+  exact <- rbind(exact, data.frame(
+    document = d, source = document$source, n_lemmata = length(lemmata),
+    topic = topic_names,
+    flow_mean = unlist(document$flow_mean), flow_sd = unlist(document$flow_sd),
+    flow_q05 = unlist(document$flow_q05), flow_q95 = unlist(document$flow_q95),
+    exact_mean = colMeans(theta), exact_sd = apply(theta, 2, sd),
+    exact_q05 = apply(theta, 2, quantile, probs = 0.05),
+    exact_q95 = apply(theta, 2, quantile, probs = 0.95),
+    rhat = rhat))
+}
+exact$covered <- exact$flow_q05 <= exact$exact_mean &
+  exact$exact_mean <= exact$flow_q95
+exact$sd_ratio <- exact$flow_sd / exact$exact_sd
+exact$z <- (exact$flow_mean - exact$exact_mean) / exact$exact_sd
+```
+
+Per set of documents: the mean absolute difference of the posterior means in
+units of the exact posterior's standard deviation, the mean ratio of the
+flow's standard deviation to the exact one (1 is right, above 1 is a flow
+that hedges), the share of exact means inside the flow's 90 % interval
+(0.9 if the flow is exact), and the largest $\hat R$ of any NUTS fit.
+
+```{r exact_table, eval = have_exact}
+exact_summary <- exact %>%
+  group_by(source) %>%
+  summarise(documents = n_distinct(document),
+            mean_abs_z = mean(abs(z)),
+            sd_ratio = mean(sd_ratio),
+            covered = mean(covered),
+            max_rhat = max(rhat))
+knitr::kable(exact_summary, digits = 3)
+```
+
+```{r exact_plot, eval = have_exact, fig.height = 4}
+ggplot(exact, aes(x = exact_mean, y = flow_mean)) +
+  geom_abline(colour = "grey50") +
+  geom_linerange(aes(ymin = flow_q05, ymax = flow_q95), colour = "grey80") +
+  geom_errorbarh(aes(xmin = exact_q05, xmax = exact_q95), height = 0,
+                 colour = "grey80") +
+  geom_point(size = 0.5) +
+  facet_wrap(~ source) +
+  labs(title = "Amortized against exact posterior, every topic and document",
+       x = "exact posterior mean (NUTS), with its 90 % interval",
+       y = "amortized posterior mean, with its 90 % interval")
+```
+
+The topics where the two disagree most, by the absolute difference of
+means in units of the exact standard deviation:
+
+```{r exact_worst, eval = have_exact}
+worst <- head(arrange(exact, desc(abs(z))), 8)
+worst <- worst[, c("document", "source", "n_lemmata", "topic", "exact_mean",
+                   "flow_mean", "exact_sd", "flow_sd", "z")]
+knitr::kable(worst, digits = 3, row.names = FALSE)
 ```
 
 
@@ -255,20 +396,20 @@ draws, not a bootstrap. `scripts/soft_circles.py` draws the grids from
 `results/soft/comparisons.csv`.
 
 ```{r soft_circles_walk, echo = FALSE, out.width = "100%"}
-knitr::include_graphics(c("figures/soft_circles_walk_vs_sophocles.png",
-                          "figures/soft_circles_walk_vs_tragedians.png",
-                          "figures/soft_circles_walk_vs_attic.png"))
+figure(c("figures/soft_circles_walk_vs_sophocles.png",
+         "figures/soft_circles_walk_vs_tragedians.png",
+         "figures/soft_circles_walk_vs_attic.png"))
 ```
 
 Sophocles as the focus, against the other two tragedians and against
 Classical Attic:
 
 ```{r soft_circles_sophocles, echo = FALSE, out.width = "100%"}
-knitr::include_graphics(c("figures/soft_circles_sophocles_vs_tragedians.png",
-                          "figures/soft_circles_sophocles_vs_attic.png"))
+figure(c("figures/soft_circles_sophocles_vs_tragedians.png",
+         "figures/soft_circles_sophocles_vs_attic.png"))
 ```
 
-```{r soft_baselines_table}
+```{r soft_baselines_table, eval = have_comparisons}
 comparisons <- read.csv(file.path(results_dir, "comparisons.csv"),
                         encoding = "UTF-8")
 comparisons$off_one <- comparisons$lift_q05 > 1 | comparisons$lift_q95 < 1
@@ -293,7 +434,7 @@ knitr::kable(baseline_rows, row.names = FALSE,
 The topic the hard report singles out, *wrong-vengeance-err*, under the
 soft model:
 
-```{r soft_wrong_vengeance}
+```{r soft_wrong_vengeance, eval = have_comparisons}
 one_topic <- filter(comparisons, topic == "wrong-vengeance-err")
 one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
                            "p_document")]

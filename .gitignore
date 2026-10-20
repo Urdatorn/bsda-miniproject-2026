@@ -5,3 +5,5 @@ __pycache__/
 # figure_style.py unpacks fonts/times.zip here
 fonts/times/
 .DS_Store
+# the trained flow is kept on the Hugging Face dataset, not in git
+results/soft/soft_flow.keras
