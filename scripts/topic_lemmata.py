@@ -13,9 +13,10 @@ that the lift of the topic is read as a list of words.  The counts come
 from imputations.parquet (the walk) and baseline_lemma_counts.parquet
 (scripts/window_baselines.py).
 
-  python scripts/topic_lemmata.py --data data --out results/analytic --topic wrong-vengeance-err
+  python scripts/topic_lemmata.py --data data --out results/hard --figures figures --topic wrong-vengeance-err
 
-writes topic_lemmata_<topic>.png and topic_lemmata_<topic>.csv.
+writes topic_lemmata_<topic>.csv there and hard_topic_lemmata_<topic>.png to the
+figures folder.
 """
 import argparse, json, os
 from collections import defaultdict
@@ -33,10 +34,11 @@ COLOURS = {"walk": "#4e79a7", "sophocles": "#59a14f", "tragedians": "#f28e2b", "
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default="data")
-    ap.add_argument("--out", default="results/analytic")
+    ap.add_argument("--out", default="results/hard", help="where the table goes")
+    ap.add_argument("--figures", default="figures", help="where the figure goes")
     ap.add_argument("--topic", default="wrong-vengeance-err")
     a = ap.parse_args()
-    os.makedirs(a.out, exist_ok=True)
+    os.makedirs(a.out, exist_ok=True); os.makedirs(a.figures, exist_ok=True)
 
     vocab = json.load(open(os.path.join(a.data, "vocab.json"), encoding="utf-8"))
     topic_of = {r["index"]: r["cluster_K40"] for r in vocab if r["cluster_K40"]}
@@ -112,8 +114,8 @@ def main():
     fig.suptitle(f"The lemmata of {a.topic}: {CELLS['walk']} {total['walk']:.1f}, Sophocles {total['sophocles']:.1f}, "
                  f"Aeschylus and Euripides {total['tragedians']:.1f}, Classical Attic {total['attic']:.1f} per thousand topic lemmata",
                  fontsize=11)
-    fig.savefig(os.path.join(a.out, f"topic_lemmata_{a.topic}.png"), dpi=160, bbox_inches="tight")
-    print(f"wrote {a.out}/topic_lemmata_{a.topic}.png and .csv", flush=True)
+    fig.savefig(os.path.join(a.figures, f"hard_topic_lemmata_{a.topic}.png"), dpi=160, bbox_inches="tight")
+    print(f"wrote {a.figures}/hard_topic_lemmata_{a.topic}.png and {a.out}/topic_lemmata_{a.topic}.csv", flush=True)
 
 
 if __name__ == "__main__":

@@ -14,9 +14,10 @@ tragedy's.  Sophocles is run as a second focus, against the genres with
 tragedy reduced to Aeschylus and Euripides, as the reference of a text that
 is tragedy.
 
-  python scripts/genre_distance.py --data data --out results/analytic
+  python scripts/genre_distance.py --data data --out results/hard --figures figures
 
-writes genre_distance.csv, genre_topics.csv and genre_distance.png.
+writes genre_distance.csv and genre_topics.csv there, and hard_genre_distance.png
+to the figures folder.
 """
 import argparse, json, os
 
@@ -68,10 +69,11 @@ def hellinger(p, q):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default="data")
-    ap.add_argument("--out", default="results/analytic")
+    ap.add_argument("--out", default="results/hard", help="where the tables go")
+    ap.add_argument("--figures", default="figures", help="where the figure goes")
     ap.add_argument("--baselines", default=None)
     a = ap.parse_args()
-    os.makedirs(a.out, exist_ok=True)
+    os.makedirs(a.out, exist_ok=True); os.makedirs(a.figures, exist_ok=True)
 
     vocab = json.load(open(os.path.join(a.data, "vocab.json"), encoding="utf-8"))
     topics = sorted({r["cluster_K40"] for r in vocab if r["cluster_K40"]})
@@ -149,8 +151,8 @@ def main():
         ax.tick_params(axis="x", labelsize=8)
     fig.suptitle("Which genre's topic profile is the walk's nearest? (bars: 90 % bootstrap intervals)", fontsize=11)
     fig.tight_layout()
-    fig.savefig(os.path.join(a.out, "genre_distance.png"), dpi=160, bbox_inches="tight")
-    print(f"wrote {a.out}/genre_distance.csv, genre_topics.csv, genre_distance.png", flush=True)
+    fig.savefig(os.path.join(a.figures, "hard_genre_distance.png"), dpi=160, bbox_inches="tight")
+    print(f"wrote {a.out}/genre_distance.csv, genre_topics.csv and {a.figures}/hard_genre_distance.png", flush=True)
 
 
 if __name__ == "__main__":

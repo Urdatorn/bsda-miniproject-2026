@@ -11,9 +11,9 @@ alternative colouring shows the walk's rate against Sophocles' (log2 ratio,
 blue where the walk under-uses a word, red where it over-uses it).  The
 search box finds a lemma.
 
-  python scripts/lemma_map.py --data data --out results/analytic
+  python scripts/lemma_map.py --data data --out figures
 
-writes lemma_map.html (self-contained) and lemma_map.png.
+writes hard_lemma_map.html (self-contained) and hard_lemma_map.png.
 """
 import argparse, html, json, os
 from collections import defaultdict
@@ -34,11 +34,10 @@ def lemma_counts(table):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default="data")
-    ap.add_argument("--out", default="results/analytic")
+    ap.add_argument("--out", default="figures")
     ap.add_argument("--neighbors", type=int, default=15)
     ap.add_argument("--min-dist", type=float, default=0.05)
     ap.add_argument("--seed", type=int, default=917)
-    ap.add_argument("--reuse-coords", action="store_true", help="reuse the saved layout instead of running UMAP again")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
 
@@ -60,18 +59,11 @@ def main():
     print(f"{len(rows)} topic-bearing lemmata with a vector; topic lemmata counted: " +
           ", ".join(f"{cell} {total[cell]}" for cell in total), flush=True)
 
-    coords_path = os.path.join(a.out, "lemma_map_coords.csv")
-    if a.reuse_coords and os.path.exists(coords_path):
-        coords = pd.read_csv(coords_path)[["x", "y"]].to_numpy()
-    else:
-        import umap
-        reducer = umap.UMAP(n_neighbors=a.neighbors, min_dist=a.min_dist, metric="cosine", random_state=a.seed)
-        coords = reducer.fit_transform(vectors[index])
-        print("UMAP done", flush=True)
+    import umap
+    reducer = umap.UMAP(n_neighbors=a.neighbors, min_dist=a.min_dist, metric="cosine", random_state=a.seed)
+    coords = reducer.fit_transform(vectors[index])
+    print("UMAP done", flush=True)
     log_ratio = np.log2((rate["walk"] + 0.05) / (rate["sophocles"] + 0.05))
-    pd.DataFrame({"lemma": lemmata, "topic": labels, "x": coords[:, 0], "y": coords[:, 1],
-                  "rate_sophocles": rate["sophocles"], "rate_walk": rate["walk"],
-                  "log2_walk_over_sophocles": log_ratio}).to_csv(coords_path, index=False)
 
     import datamapplot
     import datamapplot.create_plots
@@ -103,14 +95,14 @@ def main():
         colormap_rawdata=[log_ratio],
         colormap_metadata=[{"field": "ratio", "description": "walk against Sophocles (log2 rate ratio)", "kind": "continuous", "cmap": "RdBu_r"}],
         point_radius_max_pixels=14, initial_zoom_fraction=0.95)
-    plot.save(os.path.join(a.out, "lemma_map.html"))
-    print(f"wrote {a.out}/lemma_map.html ({os.path.getsize(os.path.join(a.out, 'lemma_map.html')) / 1e6:.1f} MB)", flush=True)
+    plot.save(os.path.join(a.out, "hard_lemma_map.html"))
+    print(f"wrote {a.out}/hard_lemma_map.html ({os.path.getsize(os.path.join(a.out, 'hard_lemma_map.html')) / 1e6:.1f} MB)", flush=True)
 
     fig, ax = datamapplot.create_plot(coords, labels, label_font_size=7, label_wrap_width=14, marker_size_array=sizes * 2,
                                       title="The topic vocabulary", sub_title="lemmata placed by word2vec, coloured by topic, sized by the walk's use",
                                       figsize=(12, 12))
-    fig.savefig(os.path.join(a.out, "lemma_map.png"), dpi=150, bbox_inches="tight")
-    print(f"wrote {a.out}/lemma_map.png", flush=True)
+    fig.savefig(os.path.join(a.out, "hard_lemma_map.png"), dpi=150, bbox_inches="tight")
+    print(f"wrote {a.out}/hard_lemma_map.png", flush=True)
 
 
 if __name__ == "__main__":

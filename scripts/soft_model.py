@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-"""The amortized mixed model: seeded topics with soft topic-word distributions, amortized posterior.
+"""The soft model: seeded topics with soft topic-word distributions, amortized posterior.
 
 Generative model (a seeded LDA, BDA3 §22.3 as a Dirichlet-multinomial mixture):
 the topic-word distributions phi (K x V) are fitted once with tomotopy on
 tragedy, with one topic seeded per unsupervised cluster of the
-vocabulary (the clusters of the analytic model, each seeded with all its
+vocabulary (the clusters of the hard model, each seeded with all its
 lemmata), plus --free unseeded topics.  A document is one whole restoration of
 the seventeen lost verses: its N content lemmata, however many there are, drawn
 from the mixture sum_k theta_k phi_k with theta ~ Dirichlet(1) on the simplex.
-The quantity of interest is p(theta | document) for every cell.  By default
-(--phi-corpus others) phi is fitted on Aeschylus and Euripides only, so that
-Sophocles' windows, the baseline, are test documents like the restorations
-and phi is not fitted on the very text it is then compared with; --phi-corpus
-all fits it on all three tragedians as a sensitivity check.
+The quantity of interest is p(theta | document) for every cell.  phi is
+fitted on Aeschylus and Euripides only, so that Sophocles' windows, the
+baseline, are test documents like the restorations and phi is not fitted on
+the very text it is then compared with.
 
 The cells.  The walk is the object: one document per untilted snapshot (one
-chain at one step, all seventeen verses).  Henry's seventeen verses are one
-document.  Sophocles' extant trimeters in windows of seventeen are the
-reference, the same shape as the lacuna.  Only restored text enters a
+chain at one step, all seventeen verses).  Sophocles' extant trimeters in
+windows of seventeen are the reference, the same shape as the lacuna.  Only restored text enters a
 document; the surviving letters of a damaged verse are never counted.
 
 Amortization (BayesFlow).  A word enters the likelihood only through its K
@@ -28,13 +26,13 @@ extra summary.  A coupling flow learns theta in additive log-ratio coordinates
 from --sims simulated documents whose lengths are drawn from the real
 documents' lengths, and is checked on 1000 held-out simulations: recovery R²,
 90 % interval coverage and simulation-based calibration (rank histograms).
-Every cell is read on two levels, as in the analytic model: its mean profile
+Every cell is read on two levels, as in the hard model: its mean profile
 (the documents' posteriors averaged draw by draw), compared with Sophocles'
 by P(mean_k^cell > mean_k^Soph) and the lift of the means, and a random
 document against a random window of Sophocles, P(theta_k^doc > theta_k^window).
 
 Usage (GPU recommended; KERAS_BACKEND=torch):
-  python scripts/amortized_mixed_model.py --data data --out results/amortized_mixed
+  python scripts/soft_model.py --data data --out results/soft
 Writes phi.json (topics), sbc.csv, recovery.csv, cells.{json,md,csv}.
 """
 import argparse, json, os, time, unicodedata
@@ -64,9 +62,9 @@ def windows(rows, size=WINDOW):
     return [sum(rows[i:i + size], []) for i in range(0, len(rows) - size + 1, size)]
 
 
-def load(data_dir, phi_corpus="others"):
+def load(data_dir):
     """vocab (the lemmata, index = column of a bag), cluster (the topic of each lemma or None),
-    docs: {"sophocles": windows, "walk": snapshots, "henry": [one document]}, and the tragic windows for the LDA"""
+    docs: {"sophocles": windows, "walk": snapshots}, and the windows of Aeschylus and Euripides for the LDA"""
     vocab = json.load(open(os.path.join(data_dir, "vocab.json"), encoding="utf-8"))
     corpus = pq.read_table(os.path.join(data_dir, "corpus.parquet"))
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet"))
@@ -75,8 +73,7 @@ def load(data_dir, phi_corpus="others"):
     for author in TRAGEDIANS:
         author_windows = windows(row_lemmata(in_line_order(corpus.filter(src == author))))
         if author == "sophocles": docs["sophocles"] = author_windows
-        if author != "sophocles" or phi_corpus == "all": tragic += author_windows
-    docs["henry"] = [sum(row_lemmata(in_line_order(corpus.filter(src == "henry"))), [])]
+        if author != "sophocles": tragic += author_windows
     restorer = np.array(imp["restorer"].to_pylist())
     tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
     walk = imp.filter((restorer == "walk") & ~tilted)
@@ -99,7 +96,7 @@ def alr_inv(z):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/amortized_mixed")
+    ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/soft")
     ap.add_argument("--free", type=int, default=4, help="unseeded topics beside the seeded topics")
     ap.add_argument("--seed-strength", type=float, default=200.0, help="prior weight of a seed word on its topic")
     ap.add_argument("--iters", type=int, default=1000, help="Gibbs iterations for phi")
@@ -107,17 +104,14 @@ def main():
     ap.add_argument("--epochs", type=int, default=60)
     ap.add_argument("--post-draws", type=int, default=300)
     ap.add_argument("--max-docs", type=int, default=0, help="walk snapshots read, sampled at random if more (0 = every snapshot)")
-    ap.add_argument("--phi-corpus", choices=["others", "all"], default="others",
-                    help="tragedy phi is fitted on: Aeschylus and Euripides only (Sophocles stays a test corpus) or all three")
     ap.add_argument("--seed", type=int, default=917)
-    ap.add_argument("--theta-samples", type=int, default=5000, help="document-level posterior draws saved per cell for the simplex plots")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     os.environ.setdefault("KERAS_BACKEND", "torch"); rng = np.random.default_rng(a.seed)
-    vocab, cluster, docs, tragic = load(a.data, a.phi_corpus); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
+    vocab, cluster, docs, tragic = load(a.data); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
     if a.max_docs and len(docs["walk"]) > a.max_docs: docs["walk"] = [docs["walk"][i] for i in sorted(rng.choice(len(docs["walk"]), a.max_docs, replace=False))]
     lengths = {name: np.array([len(d) for d in ds]) for name, ds in docs.items()}
     print(f"vocabulary {V} lemmata; documents: " + "; ".join(f"{name} {len(ds)} (mean {lengths[name].mean():.1f} lemmata, max {lengths[name].max()})" for name, ds in docs.items())
-          + f"; {len(tragic)} tragic windows for the LDA (phi corpus: {a.phi_corpus})", flush=True)
+          + f"; {len(tragic)} windows of Aeschylus and Euripides for the LDA", flush=True)
     n_max = int(max(l.max() for l in lengths.values()))
     length_pool = np.concatenate(list(lengths.values()))                              # the simulator draws N from the real documents' lengths
 
@@ -233,7 +227,7 @@ def main():
             s["p_document"] = (P > B).mean(0).tolist()
         return s
     cells = {"sophocles": summarise(docs["sophocles"])}
-    for name in ("walk", "henry"):
+    for name in ("walk",):
         cells[name] = summarise(docs[name], cells["sophocles"]); print(f"  {name} read: {cells[name]['n_docs']} documents", flush=True)
     res = {"names": names, "cells": {name: {k: v for k, v in s.items() if not k.startswith("_")} for name, s in cells.items()},
            "checks": {"recovery_r2": r2, "coverage90": cover, "sbc_p": sbc_p}}
@@ -244,40 +238,14 @@ def main():
             for j in range(H):
                 f.write(f"{name},{names[j]},{s['n_docs']},{s['n_lemmata']:.1f},{s['mean'][j]:.4f},{s['q05'][j]:.4f},{s['q95'][j]:.4f},{s['p_dominant_seeded'][j]:.4f},"
                         + (f"{s['p_above_sophocles'][j]:.4f},{s['lift'][j]:.3f},{s['p_document'][j]:.4f}" if "lift" in s else ",,") + "\n")
-    # posterior samples for the simplex plots: the mean profile's draws, and theta of a random document at a random draw
-    header = "cell,draw," + ",".join(names[:H]) + "\n"
-    with open(f"{a.out}/profile_draws.csv", "w") as f:
-        f.write(header)
-        for name, s in cells.items():
-            for d, row in enumerate(s["_mean_draws"][:, :H]):
-                f.write(f"{name},{d}," + ",".join(f"{v:.5f}" for v in row) + "\n")
-    with open(f"{a.out}/theta_samples.csv", "w") as f:
-        f.write(header)
-        for name, s in cells.items():
-            P = s["_document_draws"]; pick = np.sort(rng.choice(len(P), min(len(P), a.theta_samples), replace=False))
-            for d, i in enumerate(pick):
-                f.write(f"{name},{d}," + ",".join(f"{v:.5f}" for v in P[i, :H]) + "\n")
-    print(f"wrote profile_draws.csv and theta_samples.csv", flush=True)
-    md = ["# Amortized mixed model: seeded LDA, amortized posterior (BayesFlow)\n",
-          f"Seeded LDA with {H} seeded topics (the clusters) and {a.free} free topics on a vocabulary of {V} content lemmata; a document is one whole restoration "
-          f"of the seventeen verses ({length_pool.min()}-{n_max} lemmata); prior theta ~ Dirichlet(1); phi fitted on "
-          + ("Aeschylus and Euripides only, Sophocles being a test corpus" if a.phi_corpus == "others" else "all three tragedians")
-          + f" ({len(tragic)} windows). Posterior from a coupling flow trained on {a.sims} simulated documents; "
-          "on 1000 held-out simulations: recovery R² " + ", ".join(f"{names[k]} {r2[k]:.2f}" for k in range(H)) + "; 90 % coverage " + ", ".join(f"{cover[k]:.2f}" for k in range(H))
-          + "; SBC p " + ", ".join(f"{sbc_p[k]:.2f}" for k in range(H)) + ".\n",
-          "## Topics raised above Sophocles\n", "Seeded topics whose mean profile is above Sophocles' with P >= 0.9 and lift >= 1.5 (lift, posterior mean [document-level P]).\n",
-          "| cell | documents | lemmata each | topics raised |", "|---|---|---|---|"]
+    raised = {name: [names[k] for k in sorted((k for k in range(H) if s["p_above_sophocles"][k] >= 0.9 and s["lift"][k] >= 1.5),
+                                              key=lambda k: -s["lift"][k])] for name, s in cells.items() if "lift" in s}
+    print(f"{H} seeded and {a.free} free topics on {V} lemmata; phi on {len(tragic)} windows of Aeschylus and Euripides; "
+          f"recovery R² {min(r2):.2f}-{max(r2):.2f}, coverage {min(cover):.2f}-{max(cover):.2f}, SBC p {min(sbc_p):.2f}-{max(sbc_p):.2f}", flush=True)
     for name, s in cells.items():
         if "lift" in s:
-            up = sorted((k for k in range(H) if s["p_above_sophocles"][k] >= 0.9 and s["lift"][k] >= 1.5), key=lambda k: -s["lift"][k])
-            md.append(f"| {name} | {s['n_docs']} | {s['n_lemmata']:.1f} | " + ", ".join(f"**{names[k]}** ({s['lift'][k]:.1f}×, {s['mean'][k]:.2f} [{s['p_document'][k]:.2f}])" for k in up) + " |")
-    md += ["\n## Dominant seeded topic\n", "Each cell: P(this seeded topic is the largest of the seeded topics) over the cell's documents and posterior draws; last column the mean mass on the free topics.\n",
-           "| cell | " + " | ".join(names[:H]) + " | free |", "|---|" + "---|" * (H + 1)]
-    for name, s in cells.items(): md.append(f"| {name} | " + " | ".join(f"{p:.2f}" for p in s["p_dominant_seeded"]) + f" | {s['free_mass']:.2f} |")
-    md += ["\nMean profile per seeded topic [5 %, 95 %]:\n", "| cell | " + " | ".join(names[:H]) + " |", "|---|" + "---|" * H]
-    for name, s in cells.items(): md.append(f"| {name} | " + " | ".join(f"{m:.3f} [{lo:.3f}, {hi:.3f}]" for m, lo, hi in zip(s["mean"][:H], s["q05"][:H], s["q95"][:H])) + " |")
-    md += ["\nTopics (top lemmata):\n"] + [f"- **{k}**: " + ", ".join(w) for k, w in top.items()]
-    open(f"{a.out}/cells.md", "w", encoding="utf-8").write("\n".join(md) + "\n"); print("\n".join(md[:12]), flush=True)
+            top3 = sorted(range(H), key=lambda k: -s["lift"][k])[:3]
+            print(f"  {name}: raised {raised[name] or 'none'}; largest lifts " + ", ".join(f"{names[k]} {s['lift'][k]:.2f}" for k in top3), flush=True)
     print(f"wrote {a.out}", flush=True)
 
 

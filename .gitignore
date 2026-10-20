@@ -5,3 +5,4 @@ __pycache__/
 # the sensitivity run keeps only its cells.* in the repo
 results/amortized_mixed_phi_all/*
 !results/amortized_mixed_phi_all/cells.*
+.DS_Store

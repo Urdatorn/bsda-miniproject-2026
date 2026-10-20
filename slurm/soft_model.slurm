@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=bsda-amortized
+#SBATCH --job-name=bsda-soft
 #SBATCH --account=naiss2026-3-353-gpu
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
@@ -11,9 +11,9 @@
 #SBATCH --output=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026/.logs/%x-%j.out
 #SBATCH --error=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026/.logs/%x-%j.err
 
-# The amortized mixed model (seeded LDA + BayesFlow) on a GH200.  Compute nodes have no network: run
+# The soft model (seeded LDA + BayesFlow) on a GH200.  Compute nodes have no network: run
 # `hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir data` first.
-#   sbatch slurm/amortized_mixed_model.slurm
+#   sbatch slurm/soft_model.slurm
 set -Eeuo pipefail
 trap 'status=$?; echo "[$(date --iso-8601=seconds)] FATAL line=${LINENO} command=${BASH_COMMAND} status=${status}" >&2; exit "$status"' ERR
 repo=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026
@@ -22,5 +22,5 @@ export HF_HUB_OFFLINE=1 PYTHONUNBUFFERED=1 KERAS_BACKEND=torch
 cd "$repo"; mkdir -p .logs
 module purge; module load GPU/Python/3.13.5-bare-gcc-2025b-eb
 echo "[$(date --iso-8601=seconds)] host=$(hostname) job=${SLURM_JOB_ID} revision=$(git rev-parse HEAD) args=$*"
-srun --kill-on-bad-exit=1 "$python" -u scripts/amortized_mixed_model.py "$@"
+srun --kill-on-bad-exit=1 "$python" -u scripts/soft_model.py "$@"
 echo "[$(date --iso-8601=seconds)] completed"

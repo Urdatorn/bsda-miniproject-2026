@@ -6,9 +6,9 @@ lift of the share against a baseline, and it is drawn in full colour with a
 black edge when the lift's 90 % interval excludes 1 (otherwise faded, the
 lift in brackets).  Two figures:
 
-  topic_circles_walk.png       the walk against Sophocles, against Aeschylus
+  hard_topic_circles.png       the walk against Sophocles, against Aeschylus
                                and Euripides, and against Classical Attic;
-  topic_circles_sophocles.png  Sophocles against Aeschylus and Euripides and
+  hard_topic_circles_sophocles.png  Sophocles against Aeschylus and Euripides and
                                against Classical Attic: his own topics.
 
 Shares are rates per thousand topic lemmata, pooled over the cell's
@@ -23,7 +23,7 @@ interval of a lift comes from two bootstraps: the walk resampled by chain
 a random document of the focus cell has a larger share than a random window
 of the baseline.  Everything is written to topic_circles.csv.
 
-  python scripts/topic_circles.py --data data --out results/analytic
+  python scripts/topic_circles.py --data data --out results/hard --figures figures
 """
 import argparse, json, os
 
@@ -156,10 +156,11 @@ def draw(panels, focus_name, topics, path, columns=12):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default="data")
-    ap.add_argument("--out", default="results/analytic")
+    ap.add_argument("--out", default="results/hard", help="where the tables go")
+    ap.add_argument("--figures", default="figures", help="where the figures go")
     ap.add_argument("--baselines", default=None, help="baseline_windows.parquet (default: in --data)")
     a = ap.parse_args()
-    os.makedirs(a.out, exist_ok=True)
+    os.makedirs(a.out, exist_ok=True); os.makedirs(a.figures, exist_ok=True)
 
     vocab = json.load(open(os.path.join(a.data, "vocab.json"), encoding="utf-8"))
     topics = sorted({r["cluster_K40"] for r in vocab if r["cluster_K40"]})
@@ -194,15 +195,15 @@ def main():
     pd.concat(tables.values()).to_csv(os.path.join(a.out, "topic_circles.csv"), index=False, float_format="%.4f")
 
     draw([(f"against {baseline_name[b]}", tables[("walk", b)]) for b in ("sophocles", "tragedians", "attic")],
-         "the walk", topics, os.path.join(a.out, "topic_circles_walk.png"))
+         "the walk", topics, os.path.join(a.figures, "hard_topic_circles.png"))
     draw([(f"against {baseline_name[b]}", tables[("sophocles", b)]) for b in ("tragedians", "attic")],
-         "Sophocles", topics, os.path.join(a.out, "topic_circles_sophocles.png"))
+         "Sophocles", topics, os.path.join(a.figures, "hard_topic_circles_sophocles.png"))
     for (focus, base), t in tables.items():
         sig = t[(t.lift_q05 > 1) | (t.lift_q95 < 1)].sort_values("lift", ascending=False)
         print(f"{focus} vs {base}: {len(sig)} topics with an interval off 1; largest lifts "
               + ", ".join(f"{r.topic} {r.lift:.2f}" for r in sig.head(4).itertuples())
               + "; smallest " + ", ".join(f"{r.topic} {r.lift:.2f}" for r in sig.tail(3).itertuples()), flush=True)
-    print(f"wrote {a.out}/topic_circles_walk.png, topic_circles_sophocles.png, topic_circles.csv", flush=True)
+    print(f"wrote {a.figures}/hard_topic_circles.png, hard_topic_circles_sophocles.png and {a.out}/topic_circles.csv", flush=True)
 
 
 if __name__ == "__main__":

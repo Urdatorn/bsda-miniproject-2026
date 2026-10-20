@@ -1,5 +1,5 @@
 ---
-title: "The amortized mixed model: soft topics, amortized posterior"
+title: "The soft model: soft topics, amortized posterior"
 author: "Albin Thörn Cleland"
 date: "`r Sys.Date()`"
 output:
@@ -11,7 +11,7 @@ mainfont: Times New Roman
 fontsize: 10pt
 geometry: margin=2cm
 params:
-  results: "results/amortized_mixed"
+  results: "results/soft"
   show_topics: 12
 ---
 
@@ -38,12 +38,12 @@ $p(\theta \mid \text{document})$ has no closed form. $\phi$ is fitted once on
 Aeschylus and Euripides by a seeded latent Dirichlet allocation (tomotopy),
 so that Sophocles, the baseline, is a test corpus like the restorations and
 $\phi$ is not fitted on the text it is then compared with; each
-of the unsupervised clusters of the analytic model seeding one topic with
+of the unsupervised clusters of the hard model seeding one topic with
 a strong word prior on all its lemmata, plus a few free topics.
 
-The cells are those of the analytic model: the walk, one document per
-untilted snapshot; Henry's seventeen verses, one document; and Sophocles'
-extant trimeters in windows of seventeen, the reference. Every
+The cells are those of the hard model: the walk, one document per
+untilted snapshot, and Sophocles' extant trimeters in windows of seventeen,
+the reference. Every
 cell is read on two levels: its **mean profile**, the documents' posteriors
 averaged draw by draw, compared with Sophocles' by
 $P(\bar\theta_k^{\text{cell}} > \bar\theta_k^{\text{Soph}})$ and the lift of
@@ -62,8 +62,8 @@ the real documents it is checked on 1000 held-out simulations: recovery
 $R^2$, 90 % interval coverage, and simulation-based calibration (SBC), whose
 rank histograms must be uniform if the posterior is calibrated.
 
-The GPU work is done by `scripts/amortized_mixed_model.py`
-(`slurm/amortized_mixed_model.slurm`); this document reads its output.
+The GPU work is done by `scripts/soft_model.py`
+(`slurm/soft_model.slurm`); this document reads its output.
 
 ```{r load}
 phi <- fromJSON(file.path(results_dir, "phi.json"))
@@ -76,7 +76,7 @@ recovery <- read.csv(file.path(results_dir, "recovery.csv"),
 topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
 H <- length(result$cells$sophocles$p_dominant_seeded)   # seeded topics only
-cell_names <- c("walk", "henry")
+cell_names <- c("walk")
 cells <- filter(cells, cell %in% c("sophocles", cell_names))
 cells$cell <- factor(cells$cell, levels = c("sophocles", cell_names))
 

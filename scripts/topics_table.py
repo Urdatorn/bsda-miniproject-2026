@@ -3,7 +3,7 @@
 transliteration, and the cluster's share of the topic-bearing lemmata and of
 their tokens in the three tragedians.
 
-Usage: python scripts/topics_table.py results/analytic/topics_K40.json results/analytic/topics_table.tex
+Usage: python scripts/topics_table.py results/hard/topics_K40.json latex/topics_table.tex
 """
 import json, sys, unicodedata
 
@@ -38,7 +38,7 @@ def transliterate(word):
 def main(topics_path, out_path):
     topics = json.load(open(topics_path, encoding="utf-8"))["topics"]
     n_lemmata, n_tokens = sum(t["size"] for t in topics), sum(t["tragic_tokens"] for t in topics)
-    lines = ["% The topics of the analytic model: English gloss, the three label lemmata, their transliteration.",
+    lines = ["% The topics of the hard model: English gloss, the three label lemmata, their transliteration.",
              "% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \\usepackage{booktabs} and \\usepackage{tabularx}.",
              "\\begin{table}[htbp]", "\\centering", "\\footnotesize", "\\begin{tabularx}{\\textwidth}{XXXrr}", "\\toprule",
              "Topic & Label lemmata & Transliteration & Lemmata (\\%) & Tragic tokens (\\%) \\\\", "\\midrule"]

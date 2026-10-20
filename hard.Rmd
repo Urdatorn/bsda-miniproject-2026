@@ -1,5 +1,5 @@
 ---
-title: "The analytic model: hard topics, exact posterior"
+title: "The hard model: hard topics, exact posterior"
 author: "Albin Thörn Cleland"
 date: "`r Sys.Date()`"
 output:
@@ -12,7 +12,6 @@ fontsize: 10pt
 geometry: margin=2cm
 params:
   data: "data"
-  out: "results/analytic"
   kappa: 1
   draws: 100
   seed: 917
@@ -29,16 +28,17 @@ library(dplyr)      # filter(), arrange(), bind_rows()
 library(jsonlite)   # reads vocab.json
 library(ggplot2)
 set.seed(params$seed)
-dir.create(params$out, showWarnings = FALSE, recursive = TRUE)
 ```
 
 # The question
 
 P.Oxy. 5292 preserves twelve intact trimeters of Sophocles' *Tereus* and
 seventeen damaged ones (vv. 13–29). The judge-steered Markov walk restores
-the seventeen verses together, as one passage, and so does W. B. Henry.
-Which topics does the walk put into the lost passage, does that differ from
-what Sophocles writes elsewhere, and how does Henry compare?
+the seventeen verses together, as one passage. Which topics does the walk
+put into the lost passage, and does that differ from what Sophocles writes
+elsewhere? (W. B. Henry's restoration of the same verses is in the data,
+but a single text is not compared with the mean of thousands: it is left
+out.)
 
 # The model
 
@@ -75,7 +75,6 @@ cell puts into the passage on average, and with thousands of restorations
 it is sharp. The cells are
 
 - **walk**: every untilted snapshot of the walk, one document each;
-- **henry**: Henry's seventeen verses, one document;
 - **sophocles**, the baseline: every window of seventeen consecutive extant
   trimeters of Sophocles, one document each, the same shape as the lacuna.
 
@@ -87,8 +86,7 @@ against a random window of Sophocles, which measures how much the two
 populations overlap. A topic counts as **raised** when the mean-profile
 probability is at least 0.9 and the lift at least 1.5. Only the restored
 text enters a document:
-the surviving letters of a damaged verse are never counted, for Henry as for
-the walk.
+the surviving letters of a damaged verse are never counted.
 
 # Data
 
@@ -243,15 +241,10 @@ walk$chain_id <- ifelse(is.na(walk$chain), walk$chain_set,
 walk$snapshot <- paste(walk$chain_id, walk$iteration)
 walk_documents <- make_documents(walk, walk$snapshot)
 
-# Henry's seventeen restored verses, one document
-henry <- filter(corpus, source == "henry")
-henry_documents <- make_documents(henry, rep("henry", nrow(henry)))
-
 cells <- list()
 cells[["walk"]] <- summarise_cell(walk_documents, baseline)
-cells[["henry"]] <- summarise_cell(henry_documents, baseline)
 
-# One row per cell and topic, saved as the model's table
+# One row per cell and topic, the model's table
 rows <- NULL
 for (cell_name in names(cells)) {
   cell <- cells[[cell_name]]
@@ -272,7 +265,6 @@ for (column in c("n_lemmata", "mean", "q05", "q95", "p_above_sophocles",
                  "lift", "p_document")) {
   rows[[column]] <- round(rows[[column]], 4)
 }
-write.csv(rows, file.path(params$out, "posterior.csv"), row.names = FALSE)
 
 sizes <- data.frame(cell = c("sophocles", names(cells)),
                     documents = c(baseline$n_docs,
@@ -395,8 +387,6 @@ variability <- rbind(topic_variability(sophocles_documents, "sophocles"),
 for (column in c("mean", "sd", "sampling_sd", "excess")) {
   variability[[column]] <- round(variability[[column]], 4)
 }
-write.csv(variability, file.path(params$out, "topic_variability.csv"),
-          row.names = FALSE)
 
 # One row per topic: Sophocles and the walk side by side
 sophocles_var <- filter(variability, cell == "sophocles")
@@ -559,8 +549,6 @@ stability$slope_per_1000 <- slopes$slope_per_1000
 stability <- stability[, c("topic", "lift", "slope_per_1000", "rhat",
                            "chain_lift_q05", "chain_lift_q95")]
 stability <- arrange(stability, desc(rhat))
-write.csv(stability, file.path(params$out, "walk_stability.csv"),
-          row.names = FALSE)
 knitr::kable(stability, digits = 3, row.names = FALSE)
 ```
 
@@ -573,4 +561,112 @@ sentence <- paste("Over the common range the median absolute slope is %.3f",
 cat(sprintf(sentence, median(abs(stability$slope_per_1000)), steepest_topic,
             max(abs(stability$slope_per_1000)), stability$rhat[1],
             stability$topic[1], stability$rhat[2], stability$topic[2]), "\n")
+```
+
+# Beyond Sophocles: three baselines
+
+Is the walk's profile unusual, and against whom? Two further baselines are
+cut from other text into windows of 28 vocabulary lemmata, the length of
+the walk's mean document: Aeschylus and Euripides, and Classical Attic,
+the works of the Attic authors before Alexander in the Open Greek and Latin
+texts parsed by the same tagger (the tragedians with their lyrics,
+Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the Attic orators and
+the sophists who wrote Attic, 28,882 windows). Sophocles is cut the same
+way. The shares here are plain rates per thousand topic lemmata, pooled
+over a cell's documents; a lift's 90 % interval comes from resampling the
+walk by chain and a baseline by window. The figures are drawn by
+`scripts/topic_circles.py`, `scripts/topic_lemmata.py` and
+`scripts/genre_distance.py` from `data/baseline_windows.parquet`
+(`scripts/window_baselines.py`); their tables are in `results/hard/`.
+
+One circle per topic, ordered by the walk's share of it (the area), coloured
+by the log2 lift against each baseline, in full colour with the lift printed
+where the interval excludes 1:
+
+```{r circles_walk, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_topic_circles.png")
+```
+
+The same with Sophocles as the focus, against the other two tragedians and
+against Classical Attic, so that his own topics are visible beside the
+walk's:
+
+```{r circles_sophocles, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_topic_circles_sophocles.png")
+```
+
+```{r baselines_table}
+circles <- read.csv("results/hard/topic_circles.csv", encoding = "UTF-8")
+circles$off_one <- circles$lift_q05 > 1 | circles$lift_q95 < 1
+# For every comparison: how many topics have an interval off 1, and the
+# three largest and three smallest lifts among them
+baseline_rows <- NULL
+for (comparison in unique(circles$comparison)) {
+  these <- filter(circles, comparison == !!comparison, off_one)
+  these <- arrange(these, desc(lift))
+  largest <- paste(sprintf("%s %.2f", head(these$topic, 3),
+                           head(these$lift, 3)), collapse = ", ")
+  smallest <- paste(sprintf("%s %.2f", tail(these$topic, 3),
+                            tail(these$lift, 3)), collapse = ", ")
+  baseline_rows <- rbind(baseline_rows,
+                         data.frame(comparison = comparison,
+                                    off_one = nrow(these),
+                                    largest = largest, smallest = smallest))
+}
+knitr::kable(baseline_rows, row.names = FALSE,
+             col.names = c("comparison", "topics off 1", "largest lifts",
+                           "smallest lifts"))
+```
+
+The one lift of the walk that holds against every baseline is
+*wrong-vengeance-err*:
+
+```{r wrong_vengeance}
+one_topic <- filter(circles, topic == "wrong-vengeance-err")
+one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
+                           "p_document")]
+knitr::kable(one_topic, digits = 3, row.names = FALSE)
+```
+
+Opened up lemma by lemma, the lift is not vengeance: the walk's excess over
+Sophocles is carried by χάρις, ἄξιος, μένω, πόνος, ἀσφαλής and ὠφελέω, the
+vocabulary of favour, worth, toil and safety, while the cluster's words of
+punishment are flat or down.
+
+```{r lemmata, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_topic_lemmata_wrong-vengeance-err.png")
+```
+
+```{r excess}
+lemmata <- read.csv("results/hard/topic_lemmata_wrong-vengeance-err.csv",
+                    encoding = "UTF-8")
+lemmata <- arrange(lemmata, desc(excess_over_sophocles))
+top_lemmata <- head(lemmata, 12)
+top_lemmata <- top_lemmata[, c("lemma", "rate_walk", "rate_sophocles",
+                               "rate_tragedians", "rate_attic",
+                               "excess_over_sophocles")]
+caption <- paste("Rates per thousand topic lemmata: the twelve lemmata",
+                 "with the largest excess over Sophocles")
+knitr::kable(top_lemmata, digits = 2, row.names = FALSE, caption = caption)
+```
+
+Finally, does the walk write tragedy or its generator's Greek at large? The
+Jensen–Shannon divergence from the walk's topic profile to nine genres of
+authors of every period, with the same bootstraps; Sophocles beside it as
+the profile of a text that is tragedy:
+
+```{r genres, echo = FALSE, out.width = "100%"}
+knitr::include_graphics("figures/hard_genre_distance.png")
+```
+
+```{r genre_table}
+genres <- read.csv("results/hard/genre_distance.csv", encoding = "UTF-8")
+genres <- genres[, c("focus", "genre", "windows", "js_bits", "js_q05",
+                     "js_q95")]
+knitr::kable(genres, digits = 4, row.names = FALSE)
+genre_topics <- read.csv("results/hard/genre_topics.csv", encoding = "UTF-8")
+closer <- table(genre_topics$closer_to)
+cat("Topic by topic, the walk's rate is closer to tragedy's for",
+    closer[["tragedy"]], "topics and to epic's for", closer[["epic"]], "
+")
 ```
