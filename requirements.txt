@@ -1,10 +1,9 @@
 numpy
 scipy
 pyarrow
+pandas
 tomotopy
-bayesflow>=2.0
-keras>=3
-torch
+cmdstanpy
 huggingface_hub
 datamapplot
 umap-learn

@@ -4,6 +4,9 @@ __pycache__/
 .logs/
 # figure_style.py unpacks fonts/times.zip here
 fonts/times/
+# the compiled Stan program and every document's draws (the draws go to the Hugging Face dataset)
+lda_given_phi
+lda_given_phi.hpp
+lda_given_phi.rds
+results/soft/theta_draws.npz
 .DS_Store
-# the trained flow is kept on the Hugging Face dataset, not in git
-results/soft/soft_flow.keras
