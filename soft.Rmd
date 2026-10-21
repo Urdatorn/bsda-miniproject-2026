@@ -1,5 +1,5 @@
 ---
-title: "The soft model: soft topics, exact posterior by NUTS"
+title: "The soft model: soft topics, exact HMC posterior"
 author: "Albin Thörn Cleland"
 date: "`r Sys.Date()`"
 output:

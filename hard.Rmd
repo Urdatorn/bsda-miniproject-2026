@@ -1,5 +1,5 @@
 ---
-title: "The hard model: hard topics, exact posterior"
+title: "The hard model: hard topics, exact analytic posterior"
 author: "Albin Thörn Cleland"
 date: "`r Sys.Date()`"
 output:
