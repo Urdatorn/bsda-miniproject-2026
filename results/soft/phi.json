@@ -34,10 +34,10 @@
   "river-plain-afar",
   "leaf-myrtle-olive",
   "contest-rivalry-wrestling",
-  "free 0",
-  "free 1",
-  "free 2",
-  "free 3"
+  "child-father-house",
+  "god-mortal-first",
+  "evil-word-friend",
+  "hand-city-earth"
  ],
  "top_words": {
   "persuade-man-king": [
@@ -618,7 +618,7 @@
    "θεομαχέω",
    "ἀναβοάω"
   ],
-  "free 0": [
+  "child-father-house": [
    "παῖς",
    "πατήρ",
    "δόμος",
@@ -635,7 +635,7 @@
    "βίος",
    "φύω"
   ],
-  "free 1": [
+  "god-mortal-first": [
    "θεός",
    "βροτός",
    "πρῶτος",
@@ -652,7 +652,7 @@
    "καλέω",
    "φρονέω"
   ],
-  "free 2": [
+  "evil-word-friend": [
    "κακός",
    "λόγος",
    "φίλος",
@@ -669,7 +669,7 @@
    "φεύγω",
    "ἐχθρός"
   ],
-  "free 3": [
+  "hand-city-earth": [
    "χείρ",
    "πόλις",
    "χθών",

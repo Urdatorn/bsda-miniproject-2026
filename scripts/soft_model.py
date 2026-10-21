@@ -35,7 +35,7 @@ P(theta_k^doc > theta_k^window).
 
 Usage (a GH200 node for its cores; CMDSTAN must point at the aarch64 CmdStan):
   python scripts/soft_model.py --data data --out results/soft
-Writes phi.json (topics) and phi_matrix.csv.gz (K x V, read by the report and
+Writes phi.json (topics; a free topic is named by the glosses of its three top lemmata) and phi_matrix.csv.gz (K x V, read by the report and
 the lemma map), diagnostics.csv.gz (one row per document), check_documents.json
 (two documents with their posterior summary, refitted with rstan in the
 report), profiles.csv (the mean profiles of the walk and of Sophocles, with the
@@ -104,6 +104,14 @@ def load(data_dir):
 
 
 # --- the exact posterior of one document: NUTS on lda_given_phi.stan, in a pool of CmdStan processes ---
+# English glosses for naming the free topics (extend when a new lemma turns up)
+GLOSS = {"παῖς": "child", "πατήρ": "father", "δόμος": "house", "θεός": "god", "βροτός": "mortal", "πρῶτος": "first",
+         "κακός": "evil", "λόγος": "word", "φίλος": "friend", "χείρ": "hand", "πόλις": "city", "χθών": "earth",
+         "θνῄσκω": "die", "γυνή": "woman", "τέκνον": "child", "μήτηρ": "mother", "κτείνω": "kill", "οἶκος": "home",
+         "σοφός": "wise", "χάρις": "grace", "πείθω": "persuade", "ἄγω": "lead", "δίκη": "justice", "ὄμμα": "eye",
+         "ἀνήρ": "man", "καλός": "fine", "δράω": "do", "ξένος": "stranger", "τύχη": "fortune", "ὁράω": "see",
+         "γῆ": "land", "νεκρός": "corpse", "στρατός": "army", "δόρυ": "spear", "πούς": "foot"}
+
 WORKER = {}
 
 
@@ -168,7 +176,7 @@ def main():
     import tomotopy as tp
     mass = Counter(cluster[w] for d in tragic for w in d if cluster[w])            # one seeded topic per cluster, in order of tragic mass
     seeds = {c: [vocab[i] for i in range(V) if cluster[i] == c] for c, _ in mass.most_common()}
-    H = len(seeds); K = H + a.free; names = list(seeds) + [f"free {j}" for j in range(a.free)]
+    H = len(seeds); K = H + a.free; names = list(seeds) + [f"free {j}" for j in range(a.free)]   # renamed below
     print(f"{H} seeded topics (the clusters) + {a.free} free", flush=True)
     lda = tp.LDAModel(tw=tp.TermWeight.ONE, k=K, alpha=0.1, eta=0.01, seed=a.seed)
     for d in tragic: lda.add_doc([vocab[i] for i in d])
@@ -187,6 +195,14 @@ def main():
         for w, i in wid.items():
             if w in order: phi[k, i] = d[order[w]]
     phi /= phi.sum(1, keepdims=True); logphi = np.log(phi).T                               # (V, K)
+    # a free topic is named by the English glosses of its three most probable
+    # lemmata, as a seeded topic is named by its cluster's label lemmata
+    for j in range(a.free):
+        words = [w for w, _ in lda.get_topic_words(H + j, top_n=3)]
+        missing = [w for w in words if w not in GLOSS]
+        if missing: print(f"  no English gloss for {' '.join(missing)}: add it to GLOSS in soft_model.py", flush=True)
+        names[H + j] = "-".join(GLOSS.get(w, w) for w in words)
+    assert len(set(names)) == K, "two topics got the same name"
     with gzip.open(f"{a.out}/phi_matrix.csv.gz", "wt", encoding="utf-8") as f:          # K rows, one column per lemma
         f.write("topic," + ",".join(vocab) + "\n")
         for k in range(K): f.write(names[k] + "," + ",".join(f"{v:.6g}" for v in phi[k]) + "\n")
