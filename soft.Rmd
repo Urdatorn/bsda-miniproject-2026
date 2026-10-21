@@ -12,6 +12,7 @@ fontsize: 10pt
 geometry: margin=2cm
 params:
   results: "results/soft"
+  data: "data"
   check_iter: 2000
 ---
 
@@ -134,16 +135,38 @@ made yet.
 
 ```{r load, include = FALSE}
 hub <- "https://huggingface.co/datasets/Urdatorn/bsda-miniproject-2026"
-for (file_name in c("phi.json", "phi_matrix.csv.gz")) {
-  local_path <- file.path(results_dir, file_name)
-  if (!file.exists(local_path) && dir.exists(results_dir)) {
-    url <- paste(hub, "resolve/main/soft", file_name, sep = "/")
-    try(download.file(url, local_path, mode = "wb", quiet = TRUE))
+fetch <- function(file_name, remote, local_path) {
+  url <- paste(c(hub, "resolve/main", remote, file_name), collapse = "/")
+  try(download.file(url, local_path, mode = "wb", quiet = TRUE))
+}
+fetch_phi <- function() {
+  for (file_name in c("phi.json", "phi_matrix.csv.gz")) {
+    fetch(file_name, "soft", file.path(results_dir, file_name))
   }
+}
+if (dir.exists(results_dir) &&
+    !file.exists(file.path(results_dir, "phi_matrix.csv.gz"))) {
+  fetch_phi()
+}
+# A phi left over from an earlier run (the vocabulary has changed since)
+# is caught by its vocabulary size and replaced by the dataset's copy
+dir.create(params$data, showWarnings = FALSE, recursive = TRUE)
+vocab_path <- file.path(params$data, "vocab.json")
+if (!file.exists(vocab_path)) fetch("vocab.json", NULL, vocab_path)
+V <- nrow(fromJSON(vocab_path))
+phi_path <- file.path(results_dir, "phi.json")
+if (file.exists(phi_path) && fromJSON(phi_path)$vocab_size != V) {
+  fetch_phi()
 }
 needed <- c("phi.json", "phi_matrix.csv.gz", "diagnostics.csv.gz",
             "check_documents.json", "profiles.csv", "comparisons.csv")
 missing <- needed[!file.exists(file.path(results_dir, needed))]
+if (length(missing) == 0 && fromJSON(phi_path)$vocab_size != V) {
+  cat("The phi in", results_dir, "is from another vocabulary (",
+      fromJSON(phi_path)$vocab_size, "lemmata, the dataset has", V,
+      ") and the dataset's copy could not be fetched.\n")
+  knitr::knit_exit()
+}
 if (length(missing) > 0) {
   cat("The soft model's run has not been made yet: missing",
       paste(missing, collapse = ", "), "\n")
