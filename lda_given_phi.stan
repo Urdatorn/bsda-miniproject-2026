@@ -1,10 +1,10 @@
 data {
-    int<lower=1> N;
+  int<lower=1> N;
   int<lower=1> K; 
   matrix[N, K] logphi; // log phi[:, w_n] for each lemma
 }
 parameters { 
-    simplex[K] theta; // lives in R^{K-1}
+  simplex[K] theta; // lives in R^{K-1}
 }
 model {
   // prior
