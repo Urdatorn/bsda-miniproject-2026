@@ -17,15 +17,15 @@ params:
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
-# The figure device: ragg where it is installed (it draws PNGs without an
-# X11 display and finds the system's Times New Roman), otherwise cairo_pdf,
-# which finds the font too. R's plain pdf device knows only its built-in
-# Times and refuses any other family, so that is the last resort.
+# The figure device: cairo_pdf draws vector figures and finds the system's
+# Times New Roman; without cairo, ragg draws PNGs at 300 dpi (sharp, no X11
+# display needed). R's plain pdf device knows only its built-in Times and
+# refuses any other family, so that is the last resort.
 figure_font <- "Times New Roman"
-if (requireNamespace("ragg", quietly = TRUE)) {
-  knitr::opts_chunk$set(dev = "ragg_png")
-} else if (isTRUE(capabilities("cairo"))) {
+if (isTRUE(capabilities("cairo"))) {
   knitr::opts_chunk$set(dev = "cairo_pdf")
+} else if (requireNamespace("ragg", quietly = TRUE)) {
+  knitr::opts_chunk$set(dev = "ragg_png", dpi = 300)
 } else {
   figure_font <- "Times"
 }
@@ -33,10 +33,12 @@ library(dplyr)      # filter(), arrange()
 library(jsonlite)   # reads the json files
 library(ggplot2)
 library(rstan)      # refits two documents here, with Stan's diagnostics
+library(bayesplot)  # the diagnostic plots: R-hat, ESS, traces
 rstan_options(auto_write = TRUE)
 # The figures follow the ICML two-column style: Times at 8-9 pt on a 6.75 in
 # text width, so that they drop into the paper as they are
 theme_set(theme_minimal(base_size = 8, base_family = figure_font))
+bayesplot_theme_set(theme_minimal(base_size = 8, base_family = figure_font))
 knitr::opts_chunk$set(fig.width = 6.75)
 results_dir <- params$results
 ```
@@ -198,16 +200,15 @@ knitr::kable(diagnostics_table, digits = 3,
              caption = "Stan's diagnostics, counted over the documents")
 ```
 
-```{r diagnostics_plot, fig.height = 3}
-diagnostics$source <- factor(diagnostics$source,
-                             levels = unique(diagnostics$source))
-ggplot(diagnostics, aes(x = min_ess_bulk, y = max_rhat)) +
-  geom_point(size = 0.3, alpha = 0.3) +
-  geom_hline(yintercept = 1.01, linetype = "dashed") +
-  geom_vline(xintercept = 400, linetype = "dashed") +
-  facet_wrap(~ source, ncol = 4) +
-  labs(title = "Every document's worst topic: bulk ESS and R-hat",
-       x = "smallest bulk ESS over the topics", y = "largest split R-hat")
+The same diagnostics as bayesplot draws them, one value per document: its
+largest $\hat R$ over the topics, and its smallest bulk effective sample
+size as a share of the 2000 draws.
+
+```{r diagnostics_plot, fig.height = 2.6}
+mcmc_rhat_hist(diagnostics$max_rhat) +
+  labs(title = "Largest split R-hat over the topics, one per document")
+mcmc_neff_hist(diagnostics$min_ess_bulk / 2000) +
+  labs(title = "Smallest bulk ESS over the topics, one per document")
 ```
 
 ## Two documents refitted here
@@ -252,10 +253,10 @@ for (document in check_set$documents) {
       "largest R-hat over all topics ",
       sprintf("%.3f", max(fit_summary[, "Rhat"])), ".\n\n", sep = "")
   print(knitr::kable(side_by_side, digits = 3, row.names = FALSE))
-  print(traceplot(fit, pars = paste0("theta[", largest, "]")) +
+  print(mcmc_trace(fit, pars = paste0("theta[", largest, "]"),
+                   facet_args = list(ncol = 5)) +
           labs(title = paste("Chains of the five largest topics,",
                              document$source)) +
-          theme_minimal(base_size = 8, base_family = figure_font) +
           theme(legend.position = "bottom"))
 }
 ```

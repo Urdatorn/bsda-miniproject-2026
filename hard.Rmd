@@ -19,15 +19,15 @@ params:
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
-# The figure device: ragg where it is installed (it draws PNGs without an
-# X11 display and finds the system's Times New Roman), otherwise cairo_pdf,
-# which finds the font too. R's plain pdf device knows only its built-in
-# Times and refuses any other family, so that is the last resort.
+# The figure device: cairo_pdf draws vector figures and finds the system's
+# Times New Roman; without cairo, ragg draws PNGs at 300 dpi (sharp, no X11
+# display needed). R's plain pdf device knows only its built-in Times and
+# refuses any other family, so that is the last resort.
 figure_font <- "Times New Roman"
-if (requireNamespace("ragg", quietly = TRUE)) {
-  knitr::opts_chunk$set(dev = "ragg_png")
-} else if (isTRUE(capabilities("cairo"))) {
+if (isTRUE(capabilities("cairo"))) {
   knitr::opts_chunk$set(dev = "cairo_pdf")
+} else if (requireNamespace("ragg", quietly = TRUE)) {
+  knitr::opts_chunk$set(dev = "ragg_png", dpi = 300)
 } else {
   figure_font <- "Times"
 }
