@@ -644,8 +644,9 @@ ggplot(variability, aes(x = mean, y = sd, colour = source)) +
 
 ## Where the walk went
 
-A reviewer may object that the imputations' topics only reflect the region of the
-restoration space that the chains happened to visit. Two checks answer that.
+A reviewer may object that the imputations' topics only reflect the region
+of the restoration space that the chains happened to visit. Two checks
+answer that.
 First, does the lift of a topic drift as the walk proceeds? The snapshots are
 grouped into windows of steps, every window is summarised like all the
 imputations, and the slope of its lift against the step is the rate of change.
