@@ -179,6 +179,10 @@ diagnostics <- read.csv(gzfile(file.path(results_dir, "diagnostics.csv.gz")))
 comparisons <- read.csv(file.path(results_dir, "comparisons.csv"),
                         encoding = "UTF-8")
 
+phi_matrix <- read.csv(gzfile(file.path(results_dir, "phi_matrix.csv.gz")),
+                       row.names = 1, check.names = FALSE,
+                       encoding = "UTF-8")
+phi_matrix <- as.matrix(phi_matrix)                  # K topics by V lemmata
 topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
 H <- sum(profiles$source == "sophocles")          # seeded topics only
@@ -221,13 +225,34 @@ for (k in seq_len(K)) {
 }
 ```
 
-The vocabulary on the hard model's map, every lemma coloured instead by the
-topic that gives it most probability under $\phi$ (`scripts/lemma_map.py`).
-This is what soft topics buy: a word can belong elsewhere than its cluster
-put it.
+What soft topics buy: a word can belong elsewhere than its cluster put it.
+For every lemma, $\phi_{k,w}$ normalised over the topics is the probability
+of topic $k$ given the word (a flat prior over topics); where the most
+probable topic is not the lemma's cluster, the lemma has moved. The table
+lists the movers the tragedians use most, with the probability of the
+cluster and of the new topic.
 
-```{r soft_lemma_map, echo = FALSE, out.width = "100%"}
-figure("figures/soft_lemma_map.png")
+```{r moved_lemmata}
+vocab <- fromJSON(vocab_path)
+with_topic <- vocab[!is.na(vocab$cluster_K40), ]
+responsibility <- phi_matrix[, with_topic$lemma]
+responsibility <- sweep(responsibility, 2, colSums(responsibility), "/")
+soft_topic <- rownames(phi_matrix)[apply(responsibility, 2, which.max)]
+moved <- with_topic$cluster_K40 != soft_topic
+to_free <- moved & !(soft_topic %in% topic_names[1:H])
+cat(sum(moved), "of", nrow(with_topic), "clustered lemmata move,",
+    sum(to_free), "of them to a free topic.\n")
+movers <- data.frame(lemma = with_topic$lemma,
+                     tragic_tokens = with_topic$tragic_count,
+                     cluster = with_topic$cluster_K40,
+                     p_cluster = responsibility[cbind(
+                       match(with_topic$cluster_K40, rownames(phi_matrix)),
+                       seq_len(nrow(with_topic)))],
+                     soft_topic = soft_topic,
+                     p_soft = apply(responsibility, 2, max))[moved, ]
+movers <- head(arrange(movers, desc(tragic_tokens)), 30)
+knitr::kable(movers, digits = 2, row.names = FALSE,
+             caption = "The thirty most frequent lemmata that move")
 ```
 
 # The posterior
@@ -273,10 +298,6 @@ summary (from 100 kept draws) is set beside the fresh one (from
 
 ```{r check_model}
 check_model <- stan_model("lda_given_phi.stan")
-phi_matrix <- read.csv(gzfile(file.path(results_dir, "phi_matrix.csv.gz")),
-                       row.names = 1, check.names = FALSE,
-                       encoding = "UTF-8")
-phi_matrix <- as.matrix(phi_matrix)                  # K topics by V lemmata
 check_set <- fromJSON(file.path(results_dir, "check_documents.json"),
                       simplifyVector = FALSE)
 ```

@@ -193,16 +193,7 @@ knitr::kable(topics_table, row.names = FALSE,
                            "tragic tokens"))
 ```
 
-The vocabulary on the map it was clustered in: every topic-bearing lemma
-placed by UMAP from its word2vec vector and coloured by its topic, a
-point's size the imputations' use of the word, a label's size the
-imputations' share of the topic (`scripts/lemma_map.py`).
-
-```{r lemma_map, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/hard_lemma_map.png")
-```
-
-And the documents themselves: every imputation and every Sophoclean
+The documents themselves: every imputation and every Sophoclean
 window placed by UMAP from its profile over the 34 topics (Hellinger
 distance), coloured by its dominant topic (`scripts/topic_map.py`).
 Documents of a few dozen
