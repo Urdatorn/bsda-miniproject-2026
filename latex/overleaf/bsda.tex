@@ -1,0 +1,399 @@
+%%%%%%%% ICML 2025 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+% STRICT 4-PAGE LIMIT!!
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+\usepackage{tabularx}
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2025} with \usepackage[nohyperref]{icml2025} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+% \usepackage{icml2025}
+
+% If accepted, instead use the following line for the camera-ready submission:
+\usepackage[accepted]{icml2025}
+
+
+%--------------------------------------
+% FONT SETUP FOR XeLaTeX WITH ANCIENT GREEK
+%--------------------------------------
+\usepackage{fontspec} % for XeLaTeX
+\setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase] % English font
+
+% Main fonts
+\setmainfont{NewComputerModern10}                % main text
+%\setmonofont{DejaVu Sans Mono}[Scale=0.8]       % monospace
+
+% Ancient Greek font
+\newfontfamily\greekfont[%
+    Path=fonts/,
+    UprightFont = *,        % main upright style
+    BoldFont = GFSDidotBold.otf,
+    ItalicFont = GFSDidotItalic.otf,
+    Script = Greek,         % necessary for polyglossia
+    Scale = MatchLowercase
+]{GFSDidot.otf}
+\newfontfamily\greekfontsf[%
+    Path=fonts/,
+    UprightFont = *,        % main upright style
+    BoldFont = GFSDidotBold.otf,
+    ItalicFont = GFSDidotItalic.otf,
+    Script = Greek,         % necessary for polyglossia
+    Scale = MatchLowercase
+]{GFSDidot.otf}
+\newfontfamily\kadmosu[
+    Path = fonts/,            
+    Extension = .ttf,         
+    UprightFont = KadmosU
+]{KadmosU}
+
+% Polyglossia
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+\setotherlanguage[variant=ancient]{greek}
+
+%--------------------------------------
+% END FONT SETUP FOR XeLaTeX
+%--------------------------------------
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Papyrus Imputation Topics}
+
+% Mina custom-spaket
+\usepackage{epigraph}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Modelling the Topics of Machine-Generated Imputations for an Ancient Greek Papyrus}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2025
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Albin Thörn Cleland}{yyy}
+% \icmlauthor{Firstname2 Lastname2}{equal,yyy,comp}
+% \icmlauthor{Firstname3 Lastname3}{comp}
+% \icmlauthor{Firstname4 Lastname4}{sch}
+% \icmlauthor{Firstname5 Lastname5}{yyy}
+% \icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
+% \icmlauthor{Firstname7 Lastname7}{comp}
+%\icmlauthor{}{sch}
+% \icmlauthor{Firstname8 Lastname8}{sch}
+% \icmlauthor{Firstname8 Lastname8}{yyy,comp}
+%\icmlauthor{}{sch}
+%\icmlauthor{}{sch}
+\end{icmlauthorlist}
+
+\icmlaffiliation{yyy}{Swedish Graduate School of Digital Philology, Centre for Languages and Literature, The Joint Faculties of Humanities and Theology, Lund University, Lund, Sweden}
+% \icmlaffiliation{comp}{Company Name, Location, Country}
+% \icmlaffiliation{sch}{School of ZZZ, Institute of WWW, Location, Country}
+
+\icmlcorrespondingauthor{Albin Thörn Cleland}{albin.thorn\_cleland@klass.lu.se}
+% \icmlcorrespondingauthor{Firstname2 Lastname2}{first2.last2@www.uk}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Multiple Imputation, Bayesian Data Analysis, Stan, NLP, Digital Philology, Ancient Greek, Papyrology, Text Restoration}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+% \printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\begin{abstract}
+We conduct the first large-scale evaluation of machine-generated imputations for a damaged Ancient Greek papyrus. A large number of conjectures are generated by a non-ergodic ``Metropolis-in-Gibbs'' random walk through the space of formally possible restorations. Even though the complete space is formally too large to explore due to combinatorial explosion, the joint restrictions of verse and semantic context make it plausible that topic modelling a large sample is still valuable information regarding the lost true topic. As a baseline, we estimate the analytic posterior Dirichlet distribution of unmixed topics. We then fit an amortized latent Dirichlet allocation model and sample from the posterior assuming \textit{mixed} topics, which is the more realistic assumption. 
+\end{abstract}
+
+\section{Introduction}
+\label{introduction}
+
+Conjectural text criticism is one of the most methodologically controversial parts of classical philology, but also one of the most well-established.\footnote{See \citet{olson2020tereus} for a recent critique of what the author sees as the shaky methodological foundation of conjectural text criticism.} Since Hellenistic times, scholars have made informed conjectures as to what the lacunae of damaged or corrupted texts could have said, conjectures that are sometimes vindicated or falsified by newly found papyri. Large masked-language models (MLM) like \citet{cullhed2026stoicheiacharacterlevelmaskeddiffusion} hold the promise to let scholars avoid criticisms of subjectivity and anachronism by shifting the basic method from the ingenuity of individual editors (what \citet{conte2013ope} calls \textit{ope ingenii}) to statistical treatments of large arrays of machine generated conjectures. With this radical change of method, the research question changes from ``is this particular reconstruction probable'' to ``how probable is it that the true reconstruction is somewhere among these $N$ machine reconstructions'', given very large-dimensional stylometric feature vectors for them and a set of strongly informative priors regarding the distribution of characteristics of the extant corpus. 
+
+As a case study, we use the famous papyrus \textit{P.Oxy 5292} first published in \citet{slattery2016tereus} (see \autoref{poxy5292}), which preserves a fragmentary continuation of a preserved quote from Sophocles' otherwise lost play \textit{Tereus}, a staging of the myth of Philomela. 
+
+% \epigraph{[I]dentifying the point at which "same" turns into "different" is a fundamentally subjective enterprise.}{Olson, \emph{Methodological Reflections on the Text and Action of Sophocles' \emph{Tereus}}, p.\ 184}
+% \epigraph{Some people ask "Who is to be the official guesser of priors?" and "Won't different people get different results?." The answers are "No one," and "Yes."}{Mosteller and Wallace, p.\ 303}
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centerline{\includegraphics[width=\linewidth]{figures/POxy5292.jpg}}
+\caption{P.Oxy 5292 \cite{slattery2016tereus}. The first three lines of the right column overlap with the end of a section of Sophocles' \textit{Tereus} preserved by Stobaeus, which is how we know the context of the otherwise lost lines that follow.}
+\label{poxy5292}
+\end{center}
+\vskip -0.2in
+\end{figure}
+
+\section{Data}
+\label{data}
+
+% When referring to the data $y$, we will use the notational convention $y = (y_{obs}, y_{miss})$, where $y_{obs}$ is the text preserved in the papyrus and $y_{obs}$ is the imputation. 
+
+The data for the topic modelling workflow consists of a bag-of-lemmata matrix computed from a large dataset of imputations. The random walk that generated the imputations has aspects akin to both Gibbs and Metropolis Markov Chain Monte Carlo sampling, and the reader interested in a detailed description of it is referred to \autoref{walk}.
+
+\section{Models and methods}
+\label{models}
+
+\subsection{Analytic Dirichlet-multinomial with unmixed topics}
+
+Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters
+(word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; two
+rare-lemma clusters and four function-word clusters dropped, leaving 34). Each
+cluster is named by the English glosses of
+the three non-cognate lemmata nearest its centroid, for example \textit{lament-pitiable-groan} or
+\textit{marriage-couch-bed} (see \cref{tab:topics}). A \textbf{document} is $N$ consecutive topic-bearing lemmata of a
+stream, and its topic counts are
+
+\[\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta), \qquad
+  \theta \sim \mathrm{Dirichlet}(\alpha \mathbf 1).\]
+
+The Dirichlet is conjugate to the multinomial, so the posterior is exact,
+
+\[\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\alpha \mathbf 1 + \mathbf n).\]
+
+To sample from this posterior in R it is enough to draw from \texttt{rgamma} and normalise. A \textbf{cell} (one lacuna, one restorer) is
+the equal mixture of its documents' posteriors: its spread is the spread
+between restorations plus the Dirichlet uncertainty of each. Sophocles' extant
+trimeters are treated the same way, and a cell is compared with them by
+$P(\theta_k^{\text{cell}} > \theta_k^{\text{Soph}})$ over paired draws and by
+the lift of the posterior means.
+
+\subsection{Amortized latent Dirichlet allocation with mixed topics}
+
+TBA
+
+\section{Results}
+\label{results}
+
+Results for the analytic topic model is visualized in \autoref{heatmap}.
+
+
+\section{Conclusions}
+\label{conclusions}
+
+
+\section{Acknowledgements}
+
+This experiment was carried out under the aegis of a long-term research program launched in 2024 by Eric Cullhed and titled \textit{Dionysus Recomposed. A Modular Approach to Restoring Ancient Tragic Fragments with Machine Learning}, as an application and refinement of \citet{cullhed2026stoicheiacharacterlevelmaskeddiffusion}. Using the \textit{Tereus} fragment as a pilot test was suggested by Cullhed.
+
+\bibliography{bsda}
+\bibliographystyle{icml2025}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+
+\section{Heatmap of posterior mean relative to Sophocles}
+\label{heatmap}
+
+In the heatmap below, the y-axis contains the topics, named after the two lemmata closest to the word2vec centroid. The x-axis has the papyrus line numbers, and for each number three different restoration methods. 
+
+\includegraphics[width=1\linewidth]{figures/lift_heatmap.pdf}
+
+
+\section{Input to Stoicheia}
+
+Stoicheia is the first imputation model for papyri that does not require inputting the exact number of characters missing. Instead one can input a desired span. In our case, a plausible span can easily be estimated using the mean length of equivalent verse lines in Sophocles' preserved plays, for which see \autoref{tab:trimeter-lengths}.
+
+\begin{table*}[htbp]
+  \centering
+  \label{tab:trimeter-lengths}
+  \begin{tabular}{lrrrrrc}
+    \toprule
+    Author    & $n$    & Mean  & SD   & Min & Max & Central 95\,\% \\
+    \midrule
+    Aeschylus &  1\,780 & 30.75 & 2.21 & 23 & 40 & 26--35 \\
+    \textbf{Sophocles} &  7\,545 & 30.05 & 2.07 & 22 & 38 & 26--34 \\
+    Euripides & 18\,198 & 30.36 & 2.09 & 23 & 40 & 26--35 \\
+    \midrule
+    Pooled    & 27\,523 & 30.30 & 2.10 & 22 & 40 & 26--35 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Letters per verse line of iambic trimeter in the three tragedians.}
+\end{table*}
+
+The content of the prompt sent to Stoicheia to infer an imputation then looks like the below: 
+
+\label{tereus}
+    \begin{verbatim}
+    νυνδουδενειμιχωρισαλλαπολλακισ
+    εβλεψαταυτηιτηνγυναικειανφυσιν
+    ωσουδενεσμεναινεαιμενενπατροσ
+    ηδιστονοιμαιζωμενανθρωπωνβιον
+    τερπνωσγαραειπαιδασανοιατρεφει
+    οτανδεσηβηνεξικωμεθεμφρονεσ
+    ωθουμεθεξωκαιδιεμπολωμεθα
+    θεωνπατρωιωντωντεφυσαντωναπο
+    αιμενξενουσπροσανδρασαιδεβαρβαρουσ
+    αιδεισαηθηδωμαθαιδεπιρροθα
+    καιταυτεπειδανευφρονηζευξηιμια
+    χρεωνεπαινεινκαιδοκεινκαλωσεχειν
+    νομωιμεν[22±4]
+    ειδεκτοιου[20±4]
+    ιδοιμικαι[21±4]
+    τογαρποθ[22±4]
+    αλλευτελ[22±4]
+    χρηστηνφ[22±4]
+    δεσποινα[22±4]
+    θελωντι[23±4]
+    ουκουνδ[23±4]
+    λογωνμε[23±4]
+    ορκονγαρ[22±4]
+    φρασεινα[22±4]
+    λεξασα[24±4]
+    κοινον[24±4]
+    ειρπονμ[23±4]
+    αλλεξαγρασ[20±4]
+    οσημινερ[22±4]
+    \end{verbatim}
+
+\newpage
+\section{Metropolis-in-Gibbs non-ergodic random walk}\label{walk}
+
+At each step, the character-level diffusion model Stoicheia \citep{cullhed2026stoicheiacharacterlevelmaskeddiffusion} is making a proposal to a small word span, which is accepted with probability $\operatorname{min}(1, r)$, where the acceptance ratio $r$ depends on both deterministic orthographic, linguistic and stylistic checks based on the known author's use, and the qualitative judgement of an open-source chatbot LLM.
+
+\newpage
+\section{The 34 unsupervised \texttt{word2vec} topics}
+
+\begin{table*}[htbp]
+\centering
+\footnotesize
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lllrr}
+\toprule
+Topic & Label lemmata & Transliteration & Lemmata (\%) & Tragic tokens (\%) \\
+\midrule
+persuade-man-king & πείθω-ἀνήρ-βασιλεύς & peithō-anēr-basileus & 4.0 & 7.7 \\
+see-know-learn & ὁράω-γιγνώσκω-μανθάνω & horaō-gignōskō-manthanō & 4.1 & 6.4 \\
+wrong-vengeance-err & ἀδικέω-τιμωρία-ἐξαμαρτάνω & adikeō-timōria-examartanō & 5.5 & 6.1 \\
+fine-word-matter & καλός-λόγος-πρᾶγμα & kalos-logos-pragma & 4.7 & 6.0 \\
+walk-behold-gaze & στείχω-εἰσοράω-λεύσσω & steichō-eisoraō-leussō & 2.3 & 5.8 \\
+child-before-bestow & τέκος-πάροιθε-ὀπάζω & tekos-paroithe-opazō & 8.3 & 5.7 \\
+hear-fear-grieve & ἀκούω-δείδω-λυπέω & akouō-deidō-lypeō & 6.5 & 5.6 \\
+enviable-father-acquire & ζηλωτός-πατήρ-κτάομαι & zēlōtos-patēr-ktaomai & 3.8 & 5.6 \\
+god-true-lord & θεός-ἀληθής-κύριος & theos-alēthēs-kyrios & 4.3 & 4.8 \\
+human-nature-soul & ἄνθρωπος-φύσις-ψυχή & anthrōpos-physis-psychē & 4.3 & 4.4 \\
+lament-pitiable-groan & ὀδύρομαι-οἰκτρός-στένω & odyromai-oiktros-stenō & 2.4 & 3.9 \\
+spear-lance-horse & δόρυ-λόγχη-ἵππος & dory-lonchē-hippos & 3.6 & 3.6 \\
+city-sack-rule & πόλις-πορθέω-κρατέω & polis-portheō-krateō & 2.1 & 3.4 \\
+marriage-couch-bed & γάμος-λέκτρον-λέχος & gamos-lektron-lechos & 1.5 & 3.2 \\
+temple-offer-precinct & ἱερόν-θύω-τέμενος & hieron-thyō-temenos & 4.0 & 2.9 \\
+rear-sprout-bloom & ἐκτρέφω-βλαστάνω-ἡβάω & ektrephō-blastanō-hēbaō & 2.3 & 2.6 \\
+murder-slayer-kill & φόνος-αὐτόχειρ-κτείνω & phonos-autocheir-kteinō & 2.7 & 2.2 \\
+water-wet-hot & ὕδωρ-ὑγρός-θερμός & hydōr-hygros-thermos & 4.1 & 2.2 \\
+begin-happen-necessity & ὑπάρχω-συμβαίνω-ἀνάγκη & hyparchō-symbainō-anankē & 3.1 & 2.2 \\
+neck-mane-robe & δειρή-χαίτη-εἷμα & deirē-chaitē-heima & 2.7 & 2.1 \\
+beast-deer-flock & θήρ-ἔλαφος-ποίμνη & thēr-elaphos-poimnē & 2.6 & 1.8 \\
+breast-neck-cling & στέρνον-αὐχήν-ἐμφύω & sternon-auchēn-emphyō & 3.2 & 1.6 \\
+sicken-sickness-deadly & κάμνω-νόσημα-θανάσιμος & kamnō-nosēma-thanasimos & 2.7 & 1.5 \\
+light-ray-sight & φάος-αὐγή-ὄψις & phaos-augē-opsis & 1.7 & 1.4 \\
+within-wall-door & ἔνδον-τεῖχος-θύρα & endon-teichos-thyra & 2.6 & 1.3 \\
+ship-sail-hull & ναῦς-πλέω-σκάφος & naus-pleō-skaphos & 1.8 & 1.1 \\
+bacchant-dance-paean & βάκχη-χορεύω-παιάν & bakchē-choreuō-paian & 1.4 & 0.9 \\
+garment-adorn-gold & ἐσθής-κοσμέω-χρυσός & esthēs-kosmeō-chrysos & 2.0 & 0.9 \\
+Greek-sea-barbarian & ἕλλην-πόντιος-βάρβαρος & hellēn-pontios-barbaros & 0.9 & 0.7 \\
+crash-voice-shout & κτύπος-φωνή-βοή & ktypos-phōnē-boē & 1.3 & 0.7 \\
+fire-flame-flash & πῦρ-φλόξ-σέλας & pyr-phlox-selas & 1.1 & 0.6 \\
+river-plain-afar & ποταμός-πεδίον-ἄπωθεν & potamos-pedion-apōthen & 1.0 & 0.5 \\
+leaf-myrtle-olive & φύλλον-μυρσίνη-ἐλαία & phyllon-myrsinē-elaia & 1.1 & 0.3 \\
+contest-rivalry-wrestling & ἀγών-ἅμιλλα-πάλη & agōn-hamilla-palē & 0.4 & 0.2 \\
+\bottomrule
+\end{tabular*}
+\caption{The 34 unsupervised topics, in order of their mass in the three tragedians. A topic is named by the three
+non-cognate lemmata nearest its centroid in the word2vec space; the English glosses are the labels used in the
+analysis. The last columns give the cluster's share of the 2532 topic-bearing lemmata of the vocabulary and of their 53931
+tokens in the three tragedians; each column sums to 100.}
+\label{tab:topics}
+\end{table*}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 and 2024 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.
