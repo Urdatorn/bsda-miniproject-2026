@@ -17,13 +17,23 @@ params:
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
-# The figure device: cairo_pdf draws vector figures and finds the system's
-# Times New Roman; without cairo, ragg draws PNGs at 300 dpi (sharp, no X11
-# display needed). R's plain pdf device knows only its built-in Times and
-# refuses any other family, so that is the last resort.
+# The figure device, in order of preference: cairo_pdf (vector, finds the
+# system's Times New Roman) where it can actually open a device, since on
+# a Mac without XQuartz capabilities("cairo") says yes and the device then
+# fails; quartz_pdf on a Mac (vector, system fonts); ragg at 300 dpi
+# (sharp PNGs, no display needed); and last R's plain pdf, which knows only
+# its built-in Times and refuses any other family.
 figure_font <- "Times New Roman"
-if (isTRUE(capabilities("cairo"))) {
+cairo_works <- isTRUE(capabilities("cairo")) && tryCatch({
+  trial <- tempfile(fileext = ".pdf")
+  grDevices::cairo_pdf(trial)
+  grDevices::dev.off()
+  TRUE
+}, error = function(e) FALSE, warning = function(w) FALSE)
+if (cairo_works) {
   knitr::opts_chunk$set(dev = "cairo_pdf")
+} else if (isTRUE(capabilities("aqua"))) {
+  knitr::opts_chunk$set(dev = "quartz_pdf")
 } else if (requireNamespace("ragg", quietly = TRUE)) {
   knitr::opts_chunk$set(dev = "ragg_png", dpi = 300)
 } else {
