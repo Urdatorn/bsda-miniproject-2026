@@ -394,10 +394,13 @@ walk by chain and a baseline by window. The figures are drawn by
 `scripts/genre_distance.py` from `data/baseline_windows.parquet`
 (`scripts/window_baselines.py`); their tables are in `results/hard/`.
 
-One circle per topic, ordered by the walk's share of it (the area), coloured
-by the log2 lift against each baseline, in full colour with the lift printed
-where the interval excludes 1: against Sophocles, against Aeschylus and
-Euripides, and against Classical Attic.
+One circle per topic, ordered by the walk's share of it, coloured by the
+log2 lift against each baseline, in full colour with the lift printed where
+the interval excludes 1: against Sophocles, against Aeschylus and Euripides,
+and against Classical Attic. The area runs from the smallest share to the
+largest, since the shares of the 34 topics lie within a factor of two or
+three of each other and circles proportional to the share itself would all
+look alike.
 
 ```{r circles_walk, echo = FALSE, out.width = "100%"}
 knitr::include_graphics(c("figures/hard_circles_walk_vs_sophocles.png",

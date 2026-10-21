@@ -120,7 +120,11 @@ def draw(table, title, topics, path, columns=9):
     share = table["rate_focus"].to_numpy()
     order = np.argsort(-share)
     rows = int(np.ceil(len(topics) / columns))
-    radius = 0.4 * np.sqrt(share / share.max())              # cell of the grid = 1 x 1.5, label under the circle
+    # the area runs linearly from the smallest share (a small circle) to the largest (0.4 radius, in a 1 x 1.5 grid
+    # cell with the label under the circle): the shares of 34-38 topics lie within a factor of two or three of each
+    # other, so circles proportional to the share itself would all look alike
+    spread = (share - share.min()) / max(share.max() - share.min(), 1e-12)
+    radius = np.sqrt(0.12 ** 2 + (0.4 ** 2 - 0.12 ** 2) * spread)
     significant = ((table["lift_q05"] > 1) | (table["lift_q95"] < 1)).to_numpy()
     lift = table["lift"].to_numpy()
     width_units, height_units = columns, 1.5 * rows + 0.3
@@ -141,7 +145,8 @@ def draw(table, title, topics, path, columns=9):
     ax.set_aspect("equal"); ax.axis("off")
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap); sm.set_array([])
     bar = fig.colorbar(sm, ax=ax, orientation="horizontal", fraction=0.05, pad=0.01, aspect=70, shrink=0.55)
-    bar.set_label("log2 lift against the baseline (full colour, black edge, lift printed: 90 % interval off 1)", fontsize=6.5)
+    bar.set_label(f"log2 lift against the baseline (full colour, black edge, lift printed: 90 % interval off 1); "
+                  f"area from the smallest share, {100 * share.min():.1f} %, to the largest, {100 * share.max():.1f} %", fontsize=6.5)
     bar.ax.tick_params(labelsize=6)
     fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
@@ -190,7 +195,7 @@ def main():
 
     focus_name = {"walk": "the walk", "sophocles": "Sophocles"}
     for (focus, base), table in tables.items():
-        title = f"The topics of {focus_name[focus]} against {baseline_name[base]}: area the share, colour the lift"
+        title = f"The topics of {focus_name[focus]} against {baseline_name[base]}: area the share (smallest to largest), colour the lift"
         draw(table, title, topics, os.path.join(a.figures, f"hard_circles_{focus}_vs_{base}.png"))
     for (focus, base), t in tables.items():
         sig = t[(t.lift_q05 > 1) | (t.lift_q95 < 1)].sort_values("lift", ascending=False)

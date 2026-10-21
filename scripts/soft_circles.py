@@ -37,7 +37,7 @@ def main():
         if rows.empty:
             continue
         rows = rows.set_index("topic").loc[topics].reset_index()
-        title = f"The soft model: {focus_name[focus]} against {BASELINE[base]}: area the mean share, colour the lift"
+        title = f"The soft model: {focus_name[focus]} against {BASELINE[base]}: area the mean share (smallest to largest), colour the lift"
         draw(rows, title, topics, os.path.join(a.figures, f"soft_circles_{focus}_vs_{base}.png")); n += 1
     print(f"wrote {n} figures soft_circles_<focus>_vs_<baseline>.png to {a.figures}", flush=True)
 
