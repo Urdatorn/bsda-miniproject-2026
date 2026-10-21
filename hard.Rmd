@@ -19,9 +19,17 @@ params:
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
-# on a headless Linux box ragg draws the PNGs without an X11 display
+# The figure device: ragg where it is installed (it draws PNGs without an
+# X11 display and finds the system's Times New Roman), otherwise cairo_pdf,
+# which finds the font too. R's plain pdf device knows only its built-in
+# Times and refuses any other family, so that is the last resort.
+figure_font <- "Times New Roman"
 if (requireNamespace("ragg", quietly = TRUE)) {
   knitr::opts_chunk$set(dev = "ragg_png")
+} else if (isTRUE(capabilities("cairo"))) {
+  knitr::opts_chunk$set(dev = "cairo_pdf")
+} else {
+  figure_font <- "Times"
 }
 library(arrow)      # reads the parquet files
 library(dplyr)      # filter(), arrange(), bind_rows()
@@ -29,7 +37,7 @@ library(jsonlite)   # reads vocab.json
 library(ggplot2)
 # The figures follow the ICML two-column style: Times at 8-9 pt on a 6.75 in
 # text width, so that they drop into the paper as they are
-theme_set(theme_minimal(base_size = 8, base_family = "Times New Roman"))
+theme_set(theme_minimal(base_size = 8, base_family = figure_font))
 knitr::opts_chunk$set(fig.width = 6.75)
 set.seed(params$seed)
 ```
