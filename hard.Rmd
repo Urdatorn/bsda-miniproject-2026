@@ -273,6 +273,9 @@ summarise_documents <- function(documents, baseline = NULL) {
   if (!is.null(baseline)) {
     result$p_above <- colMeans(mean_draws > baseline$mean_draws)
     result$lift <- colMeans(mean_draws) / colMeans(baseline$mean_draws)
+    lift_draws <- mean_draws / baseline$mean_draws
+    result$lift_q05 <- apply(lift_draws, 2, quantile, probs = 0.05)
+    result$lift_q95 <- apply(lift_draws, 2, quantile, probs = 0.95)
     pick <- sample(nrow(baseline$document_draws), nrow(document_draws),
                    replace = TRUE)
     paired <- baseline$document_draws[pick, ]
@@ -313,10 +316,12 @@ rows <- data.frame(topic = topic_names,
                    q95 = imputation_posterior$q95,
                    p_above_sophocles = imputation_posterior$p_above,
                    lift = imputation_posterior$lift,
+                   lift_q05 = imputation_posterior$lift_q05,
+                   lift_q95 = imputation_posterior$lift_q95,
                    p_document = imputation_posterior$p_document)
 rows$raised <- rows$p_above_sophocles >= 0.9 & rows$lift >= 1.5
 for (column in c("mean", "q05", "q95", "p_above_sophocles", "lift",
-                 "p_document")) {
+                 "lift_q05", "lift_q95", "p_document")) {
   rows[[column]] <- round(rows[[column]], 4)
 }
 
@@ -330,13 +335,24 @@ knitr::kable(sizes, digits = 1, row.names = FALSE,
 
 # Sophocles' baseline
 
+Sophocles' mean profile, the topics ordered by their share, each with its
+posterior mean and 90 % interval on a log scale, so that the small
+differences between topics can be read; the dashed line is the share every
+topic would have if all were equal.
+
 ```{r baseline, fig.height = 5}
-baseline_table <- data.frame(topic = factor(topic_names, rev(topic_names)),
-                             mean = baseline$mean)
-ggplot(baseline_table, aes(x = topic, y = mean)) +
-  geom_col() +
-  coord_flip() +
-  labs(x = NULL, y = "posterior mean of theta",
+baseline_table <- data.frame(topic = reorder(topic_names, baseline$mean),
+                             mean = baseline$mean,
+                             q05 = baseline$q05,
+                             q95 = baseline$q95)
+ggplot(baseline_table, aes(x = mean, y = topic)) +
+  geom_vline(xintercept = 1 / length(topic_names), linetype = "dashed",
+             colour = "grey50") +
+  geom_pointrange(aes(xmin = q05, xmax = q95), colour = okabe_ito[["blue"]],
+                  size = 0.25, linewidth = 0.4) +
+  scale_x_log10() +
+  labs(x = "posterior mean of theta, with its 90 % interval (log scale)",
+       y = NULL,
        title = paste("Sophocles,", baseline$n_docs,
                      "windows of seventeen trimeters"))
 ```
@@ -361,16 +377,22 @@ if (nrow(raised) == 0) {
 
 # Lift of every topic
 
+The lift of every topic, ordered by lift, with its 90 % interval on a log
+scale, where a lift of 2 and of 1/2 sit at the same distance from the
+dashed line at 1.
+
 ```{r lifts, fig.height = 5}
 lifts <- rows
-lifts$topic <- factor(lifts$topic, levels = rev(topic_names))
-ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
-  geom_col() +
-  geom_hline(yintercept = 1, linetype = "dashed") +
-  coord_flip() +
-  scale_fill_manual(values = c("grey70", okabe_ito[["vermillion"]]),
-                    name = "raised: P >= 0.9\nand lift >= 1.5") +
-  labs(x = NULL, y = "lift of the posterior mean against Sophocles") +
+lifts$topic <- reorder(lifts$topic, lifts$lift)
+ggplot(lifts, aes(x = lift, y = topic, colour = raised)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_pointrange(aes(xmin = lift_q05, xmax = lift_q95),
+                  size = 0.25, linewidth = 0.4) +
+  scale_x_log10() +
+  scale_colour_manual(values = c("grey60", okabe_ito[["vermillion"]]),
+                      name = "raised: P >= 0.9\nand lift >= 1.5") +
+  labs(x = "lift of the mean profile against Sophocles (log scale)",
+       y = NULL) +
   theme(legend.position = "bottom")
 ```
 

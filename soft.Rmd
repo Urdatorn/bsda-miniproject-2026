@@ -228,9 +228,10 @@ for (k in seq_len(K)) {
 What soft topics buy: a word can belong elsewhere than its cluster put it.
 For every lemma, $\phi_{k,w}$ normalised over the topics is the probability
 of topic $k$ given the word (a flat prior over topics); where the most
-probable topic is not the lemma's cluster, the lemma has moved. The table
-lists the movers the tragedians use most, with the probability of the
-cluster and of the new topic.
+probable topic is not the lemma's cluster, the lemma has moved. The first
+table counts the movers by the topic they move to, free topics marked; the
+second lists the movers the tragedians use most, with the probability of
+the cluster and of the new topic.
 
 ```{r moved_lemmata}
 vocab <- fromJSON(vocab_path)
@@ -242,14 +243,22 @@ moved <- with_topic$cluster_K40 != soft_topic
 to_free <- moved & !(soft_topic %in% topic_names[1:H])
 cat(sum(moved), "of", nrow(with_topic), "clustered lemmata move,",
     sum(to_free), "of them to a free topic.\n")
+free_mark <- ifelse(soft_topic %in% topic_names[1:H], soft_topic,
+                    paste(soft_topic, "(free)"))
 movers <- data.frame(lemma = with_topic$lemma,
                      tragic_tokens = with_topic$tragic_count,
                      cluster = with_topic$cluster_K40,
                      p_cluster = responsibility[cbind(
                        match(with_topic$cluster_K40, rownames(phi_matrix)),
                        seq_len(nrow(with_topic)))],
-                     soft_topic = soft_topic,
+                     soft_topic = free_mark,
                      p_soft = apply(responsibility, 2, max))[moved, ]
+destinations <- movers %>%
+  group_by(soft_topic) %>%
+  summarise(lemmata = n(), tragic_tokens = sum(tragic_tokens)) %>%
+  arrange(desc(tragic_tokens))
+knitr::kable(destinations, row.names = FALSE,
+             caption = "Where the movers go: lemmata and tragic tokens")
 movers <- head(arrange(movers, desc(tragic_tokens)), 30)
 knitr::kable(movers, digits = 2, row.names = FALSE,
              caption = "The thirty most frequent lemmata that move")
@@ -345,15 +354,25 @@ knitr::kable(sizes, row.names = FALSE,
 
 # Sophocles' baseline
 
+Sophocles' mean profile, the seeded topics ordered by their share, each
+with its posterior mean and 90 % interval on a log scale, so that the
+small differences between topics can be read; the dashed line is the
+share every topic would have if all were equal.
+
 ```{r baseline, fig.height = 5}
 sophocles_rows <- filter(profiles, source == "sophocles")
-baseline_table <- data.frame(topic = factor(sophocles_rows$topic,
-                                            rev(topic_names[1:H])),
-                             mean = sophocles_rows$mean)
-ggplot(baseline_table, aes(x = topic, y = mean)) +
-  geom_col() +
-  coord_flip() +
-  labs(x = NULL, y = "posterior mean of theta",
+baseline_table <- data.frame(topic = reorder(sophocles_rows$topic,
+                                             sophocles_rows$mean),
+                             mean = sophocles_rows$mean,
+                             q05 = sophocles_rows$q05,
+                             q95 = sophocles_rows$q95)
+ggplot(baseline_table, aes(x = mean, y = topic)) +
+  geom_vline(xintercept = 1 / K, linetype = "dashed", colour = "grey50") +
+  geom_pointrange(aes(xmin = q05, xmax = q95), colour = okabe_ito[["blue"]],
+                  size = 0.25, linewidth = 0.4) +
+  scale_x_log10() +
+  labs(x = "posterior mean of theta, with its 90 % interval (log scale)",
+       y = NULL,
        title = paste("Sophocles,", sophocles_rows$n_docs[1],
                      "windows of seventeen trimeters"))
 ```
@@ -379,16 +398,25 @@ if (nrow(raised) == 0) {
 
 # Lift of every topic
 
+The lift of every topic, ordered by lift, with its 90 % interval (from
+`comparisons.csv`) on a log scale, where a lift of 2 and of 1/2 sit at the
+same distance from the dashed line at 1.
+
 ```{r lifts, fig.height = 5}
-lifts <- imputations
-lifts$topic <- factor(lifts$topic, levels = rev(topic_names[1:H]))
-ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
-  geom_col() +
-  geom_hline(yintercept = 1, linetype = "dashed") +
-  coord_flip() +
-  scale_fill_manual(values = c("grey70", okabe_ito[["vermillion"]]),
-                    name = "raised: P >= 0.9\nand lift >= 1.5") +
-  labs(x = NULL, y = "lift of the mean profile against Sophocles") +
+interval <- filter(comparisons, comparison == "imputations vs sophocles")
+lifts <- inner_join(imputations,
+                    interval[, c("topic", "lift_q05", "lift_q95")],
+                    by = "topic")
+lifts$topic <- reorder(lifts$topic, lifts$lift)
+ggplot(lifts, aes(x = lift, y = topic, colour = raised)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_pointrange(aes(xmin = lift_q05, xmax = lift_q95),
+                  size = 0.25, linewidth = 0.4) +
+  scale_x_log10() +
+  scale_colour_manual(values = c("grey60", okabe_ito[["vermillion"]]),
+                      name = "raised: P >= 0.9\nand lift >= 1.5") +
+  labs(x = "lift of the mean profile against Sophocles (log scale)",
+       y = NULL) +
   theme(legend.position = "bottom")
 ```
 
