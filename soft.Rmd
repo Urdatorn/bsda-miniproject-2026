@@ -17,12 +17,13 @@ params:
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
-# The figure device, in order of preference: cairo_pdf (vector, finds the
-# system's Times New Roman) where it can actually open a device, since on
-# a Mac without XQuartz capabilities("cairo") says yes and the device then
-# fails; quartz_pdf on a Mac (vector, system fonts); ragg at 300 dpi
-# (sharp PNGs, no display needed); and last R's plain pdf, which knows only
-# its built-in Times and refuses any other family.
+# The figure device. ragg (install.packages("ragg")) draws sharp 300 dpi
+# PNGs with the system's Times New Roman on every platform, no display or
+# X11 needed, so it comes first. Without it: cairo_pdf (vector) where a
+# cairo device can actually be opened, since on a Mac without XQuartz
+# capabilities("cairo") says yes and the device then fails; then quartz_pdf
+# on a Mac; and last R's plain pdf device, which knows only its built-in
+# Times and no character outside Latin-1.
 figure_font <- "Times New Roman"
 cairo_works <- isTRUE(capabilities("cairo")) && tryCatch({
   trial <- tempfile(fileext = ".pdf")
@@ -30,12 +31,12 @@ cairo_works <- isTRUE(capabilities("cairo")) && tryCatch({
   grDevices::dev.off()
   TRUE
 }, error = function(e) FALSE, warning = function(w) FALSE)
-if (cairo_works) {
+if (requireNamespace("ragg", quietly = TRUE)) {
+  knitr::opts_chunk$set(dev = "ragg_png", dpi = 300)
+} else if (cairo_works) {
   knitr::opts_chunk$set(dev = "cairo_pdf")
 } else if (isTRUE(capabilities("aqua"))) {
   knitr::opts_chunk$set(dev = "quartz_pdf")
-} else if (requireNamespace("ragg", quietly = TRUE)) {
-  knitr::opts_chunk$set(dev = "ragg_png", dpi = 300)
 } else {
   figure_font <- "Times"
 }
