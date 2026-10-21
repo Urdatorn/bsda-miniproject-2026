@@ -1,4 +1,4 @@
-lemma,lemma_idx,rate_walk,count_walk,rate_sophocles,count_sophocles,rate_tragedians,count_tragedians,rate_attic,count_attic,excess_over_sophocles
+lemma,lemma_idx,rate_imputations,count_imputations,rate_sophocles,count_sophocles,rate_tragedians,count_tragedians,rate_attic,count_attic,excess_over_sophocles
 χάρις,1995,12.5686,3309,4.0240,55,3.6037,142,1.7556,907,8.5446
 μένω,917,7.1218,1875,1.9754,27,2.5378,100,2.0595,1064,5.1464
 πόνος,1541,7.1180,1874,2.1217,29,3.7052,146,1.3956,721,4.9963

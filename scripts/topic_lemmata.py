@@ -1,16 +1,16 @@
 """One topic, every lemma: who uses which words, and which words carry the lift.
 
-For one topic (default wrong-vengeance-err, the walk's clearest lift that
+For one topic (default wrong-vengeance-err, the imputations' clearest lift that
 survives every baseline) the figure lists all its lemmata, ordered by the
-walk's use, with each lemma's rate per thousand topic lemmata in the walk,
+imputations' use, with each lemma's rate per thousand topic lemmata in the imputations,
 in Sophocles, in Aeschylus and Euripides and in Classical Attic (the OGA
 works of the Attic authors before Alexander, ATTIC in
-topic_circles.py), on a log scale; the line from Sophocles' rate to the walk's is red
-where the walk uses the word more and blue where less.  The right-hand
-panel is each lemma's contribution to the walk's excess over Sophocles on
-the topic (walk rate minus Sophocles rate, in lemmata per thousand), so
+topic_circles.py), on a log scale; the line from Sophocles' rate to the imputations' is red
+where the imputations uses the word more and blue where less.  The right-hand
+panel is each lemma's contribution to the imputations' excess over Sophocles on
+the topic (imputations' rate minus Sophocles rate, in lemmata per thousand), so
 that the lift of the topic is read as a list of words.  The counts come
-from imputations.parquet (the walk) and baseline_lemma_counts.parquet
+from imputations.parquet (the imputations) and baseline_lemma_counts.parquet
 (scripts/window_baselines.py).
 
   python scripts/topic_lemmata.py --data data --out results/hard --figures figures --topic wrong-vengeance-err
@@ -27,8 +27,8 @@ import pyarrow.parquet as pq
 
 from topic_circles import ATTIC
 
-CELLS = {"walk": "the walk", "sophocles": "Sophocles", "tragedians": "Aeschylus and Euripides", "attic": "Classical Attic"}
-COLOURS = {"walk": "#0072B2", "sophocles": "#009E73", "tragedians": "#E69F00", "attic": "#7f7f7f"}   # Okabe-Ito, colour-blind safe
+CELLS = {"imputations": "the imputations", "sophocles": "Sophocles", "tragedians": "Aeschylus and Euripides", "attic": "Classical Attic"}
+COLOURS = {"imputations": "#0072B2", "sophocles": "#009E73", "tragedians": "#E69F00", "attic": "#7f7f7f"}   # Okabe-Ito, colour-blind safe
 
 
 def main():
@@ -51,10 +51,10 @@ def main():
     counts = {cell: np.zeros(len(vocab), dtype=np.int64) for cell in CELLS}
     imp = pq.read_table(os.path.join(a.data, "imputations.parquet"), columns=["restorer", "style_tilted", "lemma_idx", "count"])
     restorer = np.array(imp["restorer"].to_pylist()); tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
-    walk = imp.filter((restorer == "walk") & ~tilted)
-    for idx, cnt in zip(walk["lemma_idx"].to_pylist(), walk["count"].to_pylist()):
+    imputations = imp.filter((restorer == "walk") & ~tilted)
+    for idx, cnt in zip(imputations["lemma_idx"].to_pylist(), imputations["count"].to_pylist()):
         for i, c in zip(idx, cnt):
-            counts["walk"][int(i)] += int(c)
+            counts["imputations"][int(i)] += int(c)
     base = pq.read_table(os.path.join(a.data, "baseline_lemma_counts.parquet")).to_pandas()
     for cell, rows in (("sophocles", base[base.author == "sophocles"]),
                        ("tragedians", base[base.author.isin(["aeschylus", "euripides"])]),
@@ -67,8 +67,8 @@ def main():
     for cell in CELLS:
         table[f"rate_{cell}"] = rate[cell][members]
         table[f"count_{cell}"] = counts[cell][members]
-    table["excess_over_sophocles"] = table.rate_walk - table.rate_sophocles
-    table = table.sort_values("rate_walk", ascending=False).reset_index(drop=True)
+    table["excess_over_sophocles"] = table.rate_imputations - table.rate_sophocles
+    table = table.sort_values("rate_imputations", ascending=False).reset_index(drop=True)
     table.to_csv(os.path.join(a.out, f"topic_lemmata_{a.topic}.csv"), index=False, float_format="%.4f")
     total = {cell: table[f"rate_{cell}"].sum() for cell in CELLS}
     print(f"{a.topic}: {len(table)} lemmata; topic rate per thousand: " + ", ".join(f"{CELLS[c]} {total[c]:.1f}" for c in CELLS), flush=True)
@@ -89,14 +89,14 @@ def main():
         rows = table.iloc[part * half:(part + 1) * half]
         y = np.arange(len(rows))[::-1]
         for k, (_, r) in enumerate(rows.iterrows()):
-            up = r.rate_walk >= r.rate_sophocles
-            ax.plot([max(r.rate_sophocles, floor), max(r.rate_walk, floor)], [y[k], y[k]],
+            up = r.rate_imputations >= r.rate_sophocles
+            ax.plot([max(r.rate_sophocles, floor), max(r.rate_imputations, floor)], [y[k], y[k]],
                     color="#D55E00" if up else "#0072B2", lw=1.0, alpha=0.75, zorder=1)
-        for cell, marker, size in (("attic", "x", 9), ("tragedians", "D", 6), ("sophocles", "o", 11), ("walk", "o", 11)):
+        for cell, marker, size in (("attic", "x", 9), ("tragedians", "D", 6), ("sophocles", "o", 11), ("imputations", "o", 11)):
             ax.scatter(np.maximum(rows[f"rate_{cell}"], floor), y, s=size, marker=marker, color=COLOURS[cell],
                        linewidth=0.5, label=CELLS[cell], zorder=3, **({"edgecolor": "white"} if marker == "o" else {}))
         ax.set_yticks(y); ax.set_yticklabels(rows.lemma, fontsize=6)
-        ax.set_xscale("log"); ax.set_xlim(floor * 0.8, max(table.rate_walk.max(), table.rate_sophocles.max(), table.rate_attic.max()) * 1.6)
+        ax.set_xscale("log"); ax.set_xlim(floor * 0.8, max(table.rate_imputations.max(), table.rate_sophocles.max(), table.rate_attic.max()) * 1.6)
         ax.set_xlabel("per thousand topic lemmata (log; zero at the left edge)", fontsize=6.5)
         ax.tick_params(axis="x", labelsize=6); ax.grid(axis="x", lw=0.3, alpha=0.5)
         ax.set_ylim(-1, len(rows))
@@ -108,10 +108,10 @@ def main():
             color=np.where(shown.excess_over_sophocles >= 0, "#D55E00", "#0072B2"))
     ax.set_yticks(np.arange(len(shown))); ax.set_yticklabels(shown.lemma, fontsize=6)
     ax.axvline(0, color="black", lw=0.6)
-    ax.set_xlabel("walk minus Sophocles (per thousand)", fontsize=6.5)
-    ax.set_title("thirty largest contributions to the walk's excess", fontsize=7)
+    ax.set_xlabel("imputations minus Sophocles (per thousand)", fontsize=6.5)
+    ax.set_title("thirty largest contributions to the imputations' excess", fontsize=7)
     ax.tick_params(axis="x", labelsize=6); ax.grid(axis="x", lw=0.3, alpha=0.5)
-    fig.suptitle(f"The lemmata of {a.topic}: {CELLS['walk']} {total['walk']:.1f}, Sophocles {total['sophocles']:.1f}, "
+    fig.suptitle(f"The lemmata of {a.topic}: {CELLS['imputations']} {total['imputations']:.1f}, Sophocles {total['sophocles']:.1f}, "
                  f"Aeschylus and Euripides {total['tragedians']:.1f}, Classical Attic {total['attic']:.1f} per thousand topic lemmata",
                  fontsize=8)
     fig.savefig(os.path.join(a.figures, f"hard_topic_lemmata_{a.topic}.png"), bbox_inches="tight")

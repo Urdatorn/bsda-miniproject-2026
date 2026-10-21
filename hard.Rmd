@@ -61,7 +61,7 @@ set.seed(params$seed)
 
 P.Oxy. 5292 preserves twelve intact trimeters of Sophocles' *Tereus* and
 seventeen damaged ones (vv. 13–29). The judge-steered Markov walk restores
-the seventeen verses together, as one passage. Which topics does the walk
+the seventeen verses together, as one passage. Which topics do the imputations
 put into the lost passage, and does that differ from what Sophocles writes
 elsewhere? (W. B. Henry's restoration of the same verses is in the data,
 but a single text is not compared with the mean of thousands: it is left
@@ -94,7 +94,8 @@ $$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\kappa \mathbf m + \mathbf n),$$
 
 and needs no sampler beyond `rgamma`. Two sets of documents are compared:
 
-- the **walk**: every untilted snapshot of the walk, one document each;
+- the **imputations**: every untilted state of the judge-steered Markov
+  walk, one document each;
 - **Sophocles**, the baseline: every window of seventeen consecutive extant
   trimeters of Sophocles, one document each, the same shape as the lacuna.
 
@@ -102,10 +103,10 @@ Two posteriors are read from each set. The posterior of a **random
 document** is the equal mixture of the documents' posteriors: its spread is
 the spread between restorations plus the Dirichlet uncertainty of each. The
 posterior of the **mean profile** is the average of the documents'
-posteriors, draw by draw: it says what the walk puts into the passage on
-average, and with thousands of restorations it is sharp. The walk is
+posteriors, draw by draw: it says what the imputations put into the passage on
+average, and with thousands of restorations it is sharp. The imputations are
 compared with Sophocles on both levels:
-$P(\bar\theta_k^{\text{walk}} > \bar\theta_k^{\text{Soph}})$ for the mean
+$P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$ for the mean
 profiles over paired draws, with the lift of the means, and
 $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$ for a random document
 against a random window of Sophocles, which measures how much the two
@@ -194,14 +195,14 @@ knitr::kable(topics_table, row.names = FALSE,
 
 The vocabulary on the map it was clustered in: every topic-bearing lemma
 placed by UMAP from its word2vec vector and coloured by its topic, a
-point's size the walk's use of the word, a label's size the walk's share of
-the topic (`scripts/lemma_map.py`).
+point's size the imputations' use of the word, a label's size the
+imputations' share of the topic (`scripts/lemma_map.py`).
 
 ```{r lemma_map, echo = FALSE, out.width = "100%"}
 knitr::include_graphics("figures/hard_lemma_map.png")
 ```
 
-And the documents themselves: every walk snapshot and every Sophoclean
+And the documents themselves: every imputation and every Sophoclean
 window placed by UMAP from its profile over the 34 topics (Hellinger
 distance), coloured by its dominant topic (`scripts/topic_map.py`).
 Documents of a few dozen
@@ -304,34 +305,34 @@ baseline <- summarise_documents(sophocles_documents)
 # restorers that were never tilted)
 untilted <- filter(imputations, !coalesce(style_tilted, FALSE))
 
-# The walk: one document per snapshot (one chain at one step, all seventeen
-# verses). Chains run alone have an empty chain number, so there the chain
-# set is the chain.
-walk <- filter(untilted, restorer == "walk")
-walk$chain_id <- ifelse(is.na(walk$chain), walk$chain_set,
-                        paste(walk$chain_set, walk$chain))
-walk$snapshot <- paste(walk$chain_id, walk$iteration)
-walk_documents <- make_documents(walk, walk$snapshot)
-walk_posterior <- summarise_documents(walk_documents, baseline)
+# The imputations: one document per snapshot (one chain at one step, all
+# seventeen verses). Chains run alone have an empty chain number, so there
+# the chain set is the chain.
+imputations <- filter(untilted, restorer == "walk")
+imputations$chain_id <- ifelse(is.na(imputations$chain), imputations$chain_set,
+                        paste(imputations$chain_set, imputations$chain))
+imputations$snapshot <- paste(imputations$chain_id, imputations$iteration)
+imputation_documents <- make_documents(imputations, imputations$snapshot)
+imputation_posterior <- summarise_documents(imputation_documents, baseline)
 
 # One row per topic, the model's table
 rows <- data.frame(topic = topic_names,
-                   mean = walk_posterior$mean,
-                   q05 = walk_posterior$q05,
-                   q95 = walk_posterior$q95,
-                   p_above_sophocles = walk_posterior$p_above,
-                   lift = walk_posterior$lift,
-                   p_document = walk_posterior$p_document)
+                   mean = imputation_posterior$mean,
+                   q05 = imputation_posterior$q05,
+                   q95 = imputation_posterior$q95,
+                   p_above_sophocles = imputation_posterior$p_above,
+                   lift = imputation_posterior$lift,
+                   p_document = imputation_posterior$p_document)
 rows$raised <- rows$p_above_sophocles >= 0.9 & rows$lift >= 1.5
 for (column in c("mean", "q05", "q95", "p_above_sophocles", "lift",
                  "p_document")) {
   rows[[column]] <- round(rows[[column]], 4)
 }
 
-sizes <- data.frame(source = c("sophocles", "walk"),
-                    documents = c(baseline$n_docs, walk_posterior$n_docs),
+sizes <- data.frame(source = c("sophocles", "imputations"),
+                    documents = c(baseline$n_docs, imputation_posterior$n_docs),
                     lemmata_per_document = c(baseline$n_lemmata,
-                                             walk_posterior$n_lemmata))
+                                             imputation_posterior$n_lemmata))
 knitr::kable(sizes, digits = 1, row.names = FALSE,
              caption = "Documents, and topic-bearing lemmata per document")
 ```
@@ -395,21 +396,21 @@ knitr::kable(top_five, digits = 2, row.names = FALSE)
 
 # Beyond Sophocles: three baselines
 
-Is the walk's profile unusual, and against whom? Two further baselines are
+Is the imputations' profile unusual, and against whom? Two further baselines are
 cut from other text into windows of 28 vocabulary lemmata, the length of
-the walk's mean document: Aeschylus and Euripides, and Classical Attic,
+the imputations' mean document: Aeschylus and Euripides, and Classical Attic,
 the works of the Attic authors before Alexander in the Open Greek and Latin
 texts parsed by the same tagger (the tragedians with their lyrics,
 Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the Attic orators and
 the sophists who wrote Attic, 28,882 windows). Sophocles is cut the same
 way. The shares here are plain rates per thousand topic lemmata, pooled
 over the documents of each set; a lift's 90 % interval comes from resampling the
-walk by chain and a baseline by window. The figures are drawn by
+imputations by chain and a baseline by window. The figures are drawn by
 `scripts/topic_circles.py`, `scripts/topic_lemmata.py` and
 `scripts/genre_distance.py` from `data/baseline_windows.parquet`
 (`scripts/window_baselines.py`); their tables are in `results/hard/`.
 
-One circle per topic, ordered by the walk's share of it, coloured by the
+One circle per topic, ordered by the imputations' share of it, coloured by the
 log2 lift against each baseline, in full colour with the lift printed where
 the interval excludes 1: against Sophocles, against Aeschylus and Euripides,
 and against Classical Attic. The area runs from the smallest share to the
@@ -417,15 +418,15 @@ largest, since the shares of the 34 topics lie within a factor of two or
 three of each other and circles proportional to the share itself would all
 look alike.
 
-```{r circles_walk, echo = FALSE, out.width = "100%"}
-knitr::include_graphics(c("figures/hard_circles_walk_vs_sophocles.png",
-                          "figures/hard_circles_walk_vs_tragedians.png",
-                          "figures/hard_circles_walk_vs_attic.png"))
+```{r circles_imputations, echo = FALSE, out.width = "100%"}
+knitr::include_graphics(c("figures/hard_circles_imputations_vs_sophocles.png",
+                          "figures/hard_circles_imputations_vs_tragedians.png",
+                          "figures/hard_circles_imputations_vs_attic.png"))
 ```
 
 The same with Sophocles as the focus, against the other two tragedians and
 against Classical Attic, so that his own topics are visible beside the
-walk's:
+imputations':
 
 ```{r circles_sophocles, echo = FALSE, out.width = "100%"}
 knitr::include_graphics(c("figures/hard_circles_sophocles_vs_tragedians.png",
@@ -455,16 +456,16 @@ knitr::kable(baseline_rows, row.names = FALSE,
                            "smallest lifts"))
 ```
 
-The two lifts of every topic of the walk side by side: against Sophocles
+The two lifts of every topic of the imputations side by side: against Sophocles
 (the question of this report) and against Classical Attic (whether the
 topic is tragic at all). A topic in the upper right is more frequent in
-the walk than in both; one on the dashed line at 1 is at its baseline's
-rate. The dot is the walk's mean share of the topic, the grey lines the
+the imputations than in both; one on the dashed line at 1 is at its baseline's
+rate. The dot is the imputations' mean share of the topic, the grey lines the
 90 % intervals.
 
 ```{r lift_scatter, fig.height = 5.2}
 against <- function(baseline) {
-  rows <- filter(circles, comparison == paste("walk vs", baseline))
+  rows <- filter(circles, comparison == paste("imputations vs", baseline))
   rows[, c("topic", "rate_focus", "lift", "lift_q05", "lift_q95")]
 }
 scatter <- inner_join(against("sophocles"), against("attic"),
@@ -495,14 +496,14 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
   labels +
   scale_x_log10() +
   scale_y_log10() +
-  labs(title = paste("The hard model: the walk's lift against Sophocles",
+  labs(title = paste("The hard model: the imputations' lift against Sophocles",
                      "and Classical Attic"),
        x = "lift against Classical Attic (log scale)",
        y = "lift against Sophocles (log scale)",
        size = "mean share (%)")
 ```
 
-The one lift of the walk that holds against every baseline is
+The one lift of the imputations that holds against every baseline is
 *wrong-vengeance-err*:
 
 ```{r wrong_vengeance}
@@ -512,8 +513,8 @@ one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
 knitr::kable(one_topic, digits = 3, row.names = FALSE)
 ```
 
-Opened up lemma by lemma, the lift is not vengeance: the walk's excess over
-Sophocles is carried by χάρις, ἄξιος, μένω, πόνος, ἀσφαλής and ὠφελέω, the
+Opened up lemma by lemma, the lift is not vengeance: the imputations' excess
+over Sophocles is carried by χάρις, ἄξιος, μένω, πόνος, ἀσφαλής and ὠφελέω, the
 vocabulary of favour, worth, toil and safety, while the cluster's words of
 punishment are flat or down.
 
@@ -526,7 +527,7 @@ lemmata <- read.csv("results/hard/topic_lemmata_wrong-vengeance-err.csv",
                     encoding = "UTF-8")
 lemmata <- arrange(lemmata, desc(excess_over_sophocles))
 top_lemmata <- head(lemmata, 12)
-top_lemmata <- top_lemmata[, c("lemma", "rate_walk", "rate_sophocles",
+top_lemmata <- top_lemmata[, c("lemma", "rate_imputations", "rate_sophocles",
                                "rate_tragedians", "rate_attic",
                                "excess_over_sophocles")]
 caption <- paste("Rates per thousand topic lemmata: the twelve lemmata",
@@ -534,8 +535,8 @@ caption <- paste("Rates per thousand topic lemmata: the twelve lemmata",
 knitr::kable(top_lemmata, digits = 2, row.names = FALSE, caption = caption)
 ```
 
-Finally, does the walk write tragedy or its generator's Greek at large? The
-Jensen–Shannon divergence from the walk's topic profile to nine genres of
+Finally, do the imputations write tragedy or its generator's Greek at large? The
+Jensen–Shannon divergence from the imputations' topic profile to nine genres of
 authors of every period, with the same bootstraps; Sophocles beside it as
 the profile of a text that is tragedy:
 
@@ -550,15 +551,16 @@ genres <- genres[, c("focus", "genre", "windows", "js_bits", "js_q05",
 knitr::kable(genres, digits = 4, row.names = FALSE)
 genre_topics <- read.csv("results/hard/genre_topics.csv", encoding = "UTF-8")
 closer <- table(genre_topics$closer_to)
-cat("Topic by topic, the walk's rate is closer to tragedy's for",
+cat("Topic by topic, the imputations' rate is closer to tragedy's for",
     closer[["tragedy"]], "topics and to epic's for", closer[["epic"]], "\n")
 ```
 
-# Checks of the walk's profile
+# Checks of the imputations' profile
 
 Three checks that belong to the hard model's counts and are therefore in
 this report only: how variable the topics are from document to document,
-whether the walk's lifts drift along the walk, and whether the chains agree.
+whether the imputations' lifts drift along the walk, and whether the chains
+agree.
 
 ## How variable are the topics?
 
@@ -596,28 +598,28 @@ topic_variability <- function(documents, label) {
              excess = share_sd / sampling_sd)
 }
 variability <- rbind(topic_variability(sophocles_documents, "sophocles"),
-                     topic_variability(walk_documents, "walk"))
+                     topic_variability(imputation_documents, "imputations"))
 for (column in c("mean", "sd", "sampling_sd", "excess")) {
   variability[[column]] <- round(variability[[column]], 4)
 }
 
-# One row per topic: Sophocles and the walk side by side
+# One row per topic: Sophocles and the imputations side by side
 sophocles_var <- filter(variability, source == "sophocles")
-walk_var <- filter(variability, source == "walk")
+imputation_var <- filter(variability, source == "imputations")
 side_by_side <- data.frame(topic = topic_names,
                            sophocles_mean = sophocles_var$mean,
                            sophocles_sd = sophocles_var$sd,
                            sophocles_excess = sophocles_var$excess,
-                           walk_mean = walk_var$mean,
-                           walk_sd = walk_var$sd,
-                           walk_excess = walk_var$excess)
+                           imputation_mean = imputation_var$mean,
+                           imputation_sd = imputation_var$sd,
+                           imputation_excess = imputation_var$excess)
 side_by_side <- arrange(side_by_side, desc(sophocles_excess))
 knitr::kable(side_by_side, digits = 3, row.names = FALSE)
 ```
 
 ```{r variability_summary, results = "asis"}
-# The spread of the variability across topics, for Sophocles and the walk
-for (source_name in c("sophocles", "walk")) {
+# The spread of the variability across topics, for Sophocles and the imputations
+for (source_name in c("sophocles", "imputations")) {
   these <- filter(variability, source == source_name)
   cat(sprintf(paste("- **%s**: the between-document sd of a topic's share",
                     "ranges from %.3f to %.3f (median %.3f); its coefficient",
@@ -642,32 +644,32 @@ ggplot(variability, aes(x = mean, y = sd, colour = source)) +
 
 ## Where the walk went
 
-A reviewer may object that the walk's topics only reflect the region of the
+A reviewer may object that the imputations' topics only reflect the region of the
 restoration space that the chains happened to visit. Two checks answer that.
 First, does the lift of a topic drift as the walk proceeds? The snapshots are
-grouped into windows of steps, every window is summarised like the whole
-walk, and the slope of its lift against the step is the rate of change.
+grouped into windows of steps, every window is summarised like all the
+imputations, and the slope of its lift against the step is the rate of change.
 Second, do the 48 chains agree? Each chain's snapshots form a series of
 topic shares, and the
 Gelman–Rubin $\hat R$ (BDA3 §11.4) compares the spread between chains with the
 spread within them: $\hat R$ near 1 means a chain's share does not depend on
 which chain it is.
 
-```{r walk_lemmata}
+```{r imputation_lemmata}
 # One line per topic-bearing lemma of the walk, with its snapshot, chain
 # and step
-walk_lemmata <- lemma_table(walk, walk$snapshot)
-names(walk_lemmata)[names(walk_lemmata) == "group"] <- "snapshot"
-walk_row <- match(walk_lemmata$snapshot, walk$snapshot)
-walk_lemmata$chain_id <- walk$chain_id[walk_row]
-walk_lemmata$step <- walk$iteration[walk_row]
+imputation_lemmata <- lemma_table(imputations, imputations$snapshot)
+names(imputation_lemmata)[names(imputation_lemmata) == "group"] <- "snapshot"
+imputation_row <- match(imputation_lemmata$snapshot, imputations$snapshot)
+imputation_lemmata$chain_id <- imputations$chain_id[imputation_row]
+imputation_lemmata$step <- imputations$iteration[imputation_row]
 ```
 
 ## Drift over the steps
 
 ```{r drift}
 # The lift of every topic in each window of steps: the window's snapshots
-# are its documents, compared with Sophocles exactly as the whole walk is
+# are its documents, compared with Sophocles exactly as all imputations are
 lift_in_windows <- function(lemmata, breaks) {
   windows <- NULL
   for (i in seq_len(length(breaks) - 1)) {
@@ -684,11 +686,12 @@ lift_in_windows <- function(lemmata, breaks) {
 }
 
 # All chains over their common range, in windows of 250 steps
-short_range <- lift_in_windows(walk_lemmata, seq(500, 3000, by = 250))
+short_range <- lift_in_windows(imputation_lemmata, seq(500, 3000, by = 250))
 short_range$chains <- "all 48 chains, steps 525-3000"
 
 # The 24 long chains over their whole run, in windows of 1000 steps
-long_lemmata <- filter(walk_lemmata, startsWith(chain_id, "chains_eric_long"))
+long_lemmata <- filter(imputation_lemmata,
+                       startsWith(chain_id, "chains_eric_long"))
 long_range <- lift_in_windows(long_lemmata, seq(1000, 12000, by = 1000))
 long_range$chains <- "24 long chains, steps 1025-12000"
 
@@ -724,11 +727,12 @@ ggplot() +
 
 ```{r rhat}
 # The share of every topic in every snapshot, among its topic-bearing lemmata
-counts <- table(walk_lemmata$snapshot, walk_lemmata$topic)
+counts <- table(imputation_lemmata$snapshot, imputation_lemmata$topic)
 counts <- counts[, topic_names]
 shares <- counts / rowSums(counts)
-snapshot_chain <- walk$chain_id[match(rownames(counts), walk$snapshot)]
-snapshot_step <- walk$iteration[match(rownames(counts), walk$snapshot)]
+snapshot_row <- match(rownames(counts), imputations$snapshot)
+snapshot_chain <- imputations$chain_id[snapshot_row]
+snapshot_step <- imputations$iteration[snapshot_row]
 
 # The classic R-hat for chains of equal length: W is the mean within-chain
 # variance, B the variance between the chain means scaled by the length

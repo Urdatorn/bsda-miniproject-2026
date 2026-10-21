@@ -1,7 +1,7 @@
 """Baseline windows of content lemmata: Greek at large, and the tragedians.
 
-A walk document is one restoration of the seventeen verses, on average 28
-vocabulary lemmata.  To ask whether the walk's topics are unusual for Greek
+An imputation is one restoration of the seventeen verses, on average 28
+vocabulary lemmata.  To ask whether the imputations' topics are unusual for Greek
 in general, and whether Sophocles' are, every text is cut into windows of
 the same length: consecutive vocabulary lemmata (the V content lemmata of
 vocab.json, the same tagger and the same filter as the tragic corpus),
@@ -75,7 +75,7 @@ def main():
     ap.add_argument("--data", default="data")
     ap.add_argument("--oga", required=True, help="directory of the oga-conllu-stoicheia parquet shards")
     ap.add_argument("--out", default="data")
-    ap.add_argument("--window", type=int, default=28, help="vocabulary lemmata per window (the walk's mean document)")
+    ap.add_argument("--window", type=int, default=28, help="vocabulary lemmata per window (the imputations' mean document)")
     a = ap.parse_args()
     t0 = time.time()
 

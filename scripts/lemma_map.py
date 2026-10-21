@@ -3,7 +3,7 @@
 Every topic-bearing lemma of the vocabulary is one point, placed by UMAP
 from its skip-gram word2vec vector (the space the 34 topics were clustered
 in, so the topics are the regions of the map) and coloured by its topic.
-A point's size is how often the walk uses the lemma.
+A point's size is how often the imputations uses the lemma.
 
   python scripts/lemma_map.py --data data --out figures
 
@@ -48,7 +48,7 @@ def main():
     source = np.array(corpus["source"].to_pylist())
     restorer = np.array(imp["restorer"].to_pylist()); tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
     counts = {"sophocles": lemma_counts(corpus.filter(source == "sophocles")),
-              "walk": lemma_counts(imp.filter((restorer == "walk") & ~tilted))}
+              "imputations": lemma_counts(imp.filter((restorer == "walk") & ~tilted))}
 
     rows = [r for r in vocab if r["cluster_K40"] and np.any(vectors[r["index"]])]
     index = np.array([r["index"] for r in rows])
@@ -63,15 +63,15 @@ def main():
     reducer = umap.UMAP(n_neighbors=a.neighbors, min_dist=a.min_dist, metric="cosine", random_state=a.seed)
     coords = reducer.fit_transform(vectors[index])
     print("UMAP done", flush=True)
-    log_ratio = np.log2((rate["walk"] + 0.05) / (rate["sophocles"] + 0.05))
+    log_ratio = np.log2((rate["imputations"] + 0.05) / (rate["sophocles"] + 0.05))
 
     import datamapplot
     from figure_style import apply, font_family, TEXT_WIDTH
     apply()
-    sizes = 1.0 + 3.0 * np.sqrt(rate["walk"])
+    sizes = 1.0 + 3.0 * np.sqrt(rate["imputations"])
     fig, ax = datamapplot.create_plot(coords, labels, label_font_size=6, label_wrap_width=14, marker_size_array=sizes,
                                       font_family=font_family(), title="The topic vocabulary",
-                                      sub_title="lemmata placed by word2vec, coloured by topic, sized by the walk's use",
+                                      sub_title="lemmata placed by word2vec, coloured by topic, sized by the imputations' use",
                                       title_keywords={"fontsize": 9}, sub_title_keywords={"fontsize": 7},
                                       figsize=(TEXT_WIDTH, TEXT_WIDTH), dpi=300)
     fig.savefig(os.path.join(a.out, "hard_lemma_map.png"), dpi=300, bbox_inches="tight")

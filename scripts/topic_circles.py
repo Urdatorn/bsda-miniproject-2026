@@ -6,7 +6,7 @@ lift of the share against a baseline, and it is drawn in full colour with a
 black edge when the lift's 90 % interval excludes 1 (otherwise faded, the
 lift in brackets).  Five figures:
 
-  hard_circles_walk_vs_{sophocles,tragedians,attic}.png   the walk against
+  hard_circles_imputations_vs_{sophocles,tragedians,attic}.png   the imputations against
       Sophocles, against Aeschylus and Euripides, against Classical Attic;
   hard_circles_sophocles_vs_{tragedians,attic}.png   Sophocles against the
       other two: his own topics.
@@ -19,7 +19,7 @@ other tragedians' extant trimeters, and Classical Attic, the OGA works of
 the Attic authors before Alexander (ATTIC below: the three tragedians with
 their lyrics, Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the
 Attic orators and the sophists writing Attic).  The
-interval of a lift comes from two bootstraps: the walk resampled by chain
+interval of a lift comes from two bootstraps: the imputations resampled by chain
 (48 chains), a baseline resampled by window.  p_document is the chance that
 a random document of the focus set has a larger share than a random window
 of the baseline.  Everything is written to topic_circles.csv.
@@ -41,16 +41,16 @@ ATTIC = ["Aeschylus", "Sophocles", "Euripides", "Aristophanes", "Thucydides", "X
          "Dinarchus", "Gorgias of Leontini", "Critias", "Alcidamas", "Antiphon of Athens"]
 
 
-def walk_documents(data_dir, topic_of, K):
-    """topic counts per walk snapshot (documents x K) and the chain of each document"""
+def imputation_documents(data_dir, topic_of, K):
+    """topic counts per imputation (documents x K) and the chain of each document"""
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet")).to_pandas()
-    walk = imp[(imp.restorer == "walk") & (imp.style_tilted == False)].copy()  # noqa: E712
-    walk["chain_id"] = np.where(walk.chain.isna(), walk.chain_set.astype(str),
-                                walk.chain_set.astype(str) + " " + walk.chain.astype(str))
-    keys = walk.groupby(["chain_id", "iteration"], sort=True).ngroup().to_numpy()
+    imputations = imp[(imp.restorer == "walk") & (imp.style_tilted == False)].copy()  # noqa: E712
+    imputations["chain_id"] = np.where(imputations.chain.isna(), imputations.chain_set.astype(str),
+                                imputations.chain_set.astype(str) + " " + imputations.chain.astype(str))
+    keys = imputations.groupby(["chain_id", "iteration"], sort=True).ngroup().to_numpy()
     counts = np.zeros((keys.max() + 1, K), dtype=np.int32)
     chain_of = np.empty(keys.max() + 1, dtype=object)
-    for key, chain_id, idx, cnt in zip(keys, walk.chain_id, walk.lemma_idx, walk["count"]):
+    for key, chain_id, idx, cnt in zip(keys, imputations.chain_id, imputations.lemma_idx, imputations["count"]):
         chain_of[key] = chain_id
         for i, c in zip(idx, cnt):
             t = topic_of.get(int(i), -1)
@@ -173,7 +173,7 @@ def main():
     counts["sophocles"] = windows.loc[windows.author == "sophocles", topics].to_numpy(dtype=np.int32)
     counts["tragedians"] = windows.loc[windows.author.isin(["aeschylus", "euripides"]), topics].to_numpy(dtype=np.int32)
     counts["attic"] = windows.loc[(windows.source == "oga") & windows.author.isin(ATTIC), topics].to_numpy(dtype=np.int32)
-    counts["walk"], chain_of = walk_documents(a.data, topic_of, K)
+    counts["imputations"], chain_of = imputation_documents(a.data, topic_of, K)
     for cell in counts:
         print(f"{cell}: {len(counts[cell])} documents, {counts[cell].sum()} topic lemmata", flush=True)
     attic_authors = windows[(windows.source == "oga") & windows.author.isin(ATTIC)].author.value_counts()
@@ -183,17 +183,17 @@ def main():
         print("  not in the windows: " + ", ".join(missing), flush=True)
 
     boot = {cell: bootstrap_by_row(counts[cell]) for cell in ("sophocles", "tragedians", "attic")}
-    boot["walk"] = bootstrap_by_group(counts["walk"], chain_of)
+    boot["imputations"] = bootstrap_by_group(counts["imputations"], chain_of)
     print("bootstraps done", flush=True)
 
     baseline_name = {"sophocles": "Sophocles", "tragedians": "Aeschylus and Euripides", "attic": "Classical Attic"}
     tables = {}
-    for focus, bases in (("walk", ("sophocles", "tragedians", "attic")), ("sophocles", ("tragedians", "attic"))):
+    for focus, bases in (("imputations", ("sophocles", "tragedians", "attic")), ("sophocles", ("tragedians", "attic"))):
         for base in bases:
             tables[(focus, base)] = compare(f"{focus} vs {base}", counts[focus], counts[base], boot[focus], boot[base], topics)
     pd.concat(tables.values()).to_csv(os.path.join(a.out, "topic_circles.csv"), index=False, float_format="%.4f")
 
-    focus_name = {"walk": "the walk", "sophocles": "Sophocles"}
+    focus_name = {"imputations": "the imputations", "sophocles": "Sophocles"}
     for (focus, base), table in tables.items():
         title = f"The topics of {focus_name[focus]} against {baseline_name[base]}: area the share (smallest to largest), colour the lift"
         draw(table, title, topics, os.path.join(a.figures, f"hard_circles_{focus}_vs_{base}.png"))

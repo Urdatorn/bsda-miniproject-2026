@@ -5,7 +5,7 @@ profile under the soft model (the circle's area), coloured by the log2 lift
 of that mean against a baseline, in full colour with the lift printed where
 the lift's 90 % interval over the posterior draws of the two mean profiles
 excludes 1.  The comparisons come from results/soft/comparisons.csv
-(scripts/soft_model.py): the walk against Sophocles, against Aeschylus and
+(scripts/soft_model.py): the imputations against Sophocles, against Aeschylus and
 Euripides and against Classical Attic; Sophocles against the latter two.
 
   python scripts/soft_circles.py --soft results/soft --figures figures
@@ -30,9 +30,9 @@ def main():
     table = pd.read_csv(os.path.join(a.soft, "comparisons.csv"))
     topics = sorted(table.topic.unique())
 
-    focus_name = {"walk": "the walk", "sophocles": "Sophocles"}
+    focus_name = {"imputations": "the imputations", "sophocles": "Sophocles"}
     n = 0
-    for focus, base in (("walk", "sophocles"), ("walk", "tragedians"), ("walk", "attic"), ("sophocles", "tragedians"), ("sophocles", "attic")):
+    for focus, base in (("imputations", "sophocles"), ("imputations", "tragedians"), ("imputations", "attic"), ("sophocles", "tragedians"), ("sophocles", "attic")):
         rows = table[table.comparison == f"{focus} vs {base}"]
         if rows.empty:
             continue

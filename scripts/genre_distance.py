@@ -1,15 +1,15 @@
-"""Which genre does the walk's topic profile resemble: epic or tragedy?
+"""Which genre does the imputations' topic profile resemble: epic or tragedy?
 
-The walk's generator was trained on Greek at large, and the walk writes
+The imputations' generator was trained on Greek at large, and the imputations write
 tragic trimeters; its topic profile could lean either way.  Every genre is
 a set of OGA authors (tragedy is the three tragedians' extant trimeters of
-corpus.parquet, the register the walk is meant to write), pooled into one
+corpus.parquet, the register the imputations are meant to write), pooled into one
 topic profile from its baseline windows (baseline_windows.parquet,
 scripts/window_baselines.py).  The distance from a focus cell's profile to
 each genre is the Jensen-Shannon divergence in bits (0 identical, 1
 disjoint) and the Hellinger distance, with a 90 % interval from two
-bootstraps: the walk by chain, a genre by window.  Per topic, the table
-also says whether the walk's rate is closer (in log ratio) to epic's or to
+bootstraps: the imputations by chain, a genre by window.  Per topic, the table
+also says whether the imputations' rate is closer (in log ratio) to epic's or to
 tragedy's.  Sophocles is run as a second focus, against the genres with
 tragedy reduced to Aeschylus and Euripides, as the reference of a text that
 is tragedy.
@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from topic_circles import walk_documents, bootstrap_by_group, bootstrap_by_row, rate
+from topic_circles import imputation_documents, bootstrap_by_group, bootstrap_by_row, rate
 
 GENRES = {
     "epic": ["Homer", "Hesiod", "Homeric Hymns", "Apollonius Rhodius", "Quintus Smyrnaeus", "Nonnus of Panopolis",
@@ -86,8 +86,8 @@ def main():
         if missing:
             print(f"{genre}: not in the windows: {', '.join(missing)}", flush=True)
 
-    walk_counts, chain_of = walk_documents(a.data, topic_of, len(topics))
-    counts = {"walk": walk_counts}
+    imputation_counts, chain_of = imputation_documents(a.data, topic_of, len(topics))
+    counts = {"imputations": imputation_counts}
     counts["sophocles"] = windows.loc[windows.author == "sophocles", topics].to_numpy(dtype=np.int32)
     for genre, authors in GENRES.items():
         counts[genre] = windows.loc[windows.author.isin(authors), topics].to_numpy(dtype=np.int32)
@@ -99,12 +99,12 @@ def main():
             del counts[cell]
     genres = [g for g in GENRES if g in counts]
 
-    boot = {cell: bootstrap_by_row(c) for cell, c in counts.items() if cell != "walk"}
-    boot["walk"] = bootstrap_by_group(counts["walk"], chain_of)
+    boot = {cell: bootstrap_by_row(c) for cell, c in counts.items() if cell != "imputations"}
+    boot["imputations"] = bootstrap_by_group(counts["imputations"], chain_of)
     print("bootstraps done", flush=True)
 
     rows = []
-    for focus in ("walk", "sophocles"):
+    for focus in ("imputations", "sophocles"):
         for genre in genres:
             base = genre
             if focus == "sophocles" and genre == "tragedy":
@@ -118,36 +118,36 @@ def main():
                          "hellinger_q05": np.percentile(hd, 5), "hellinger_q95": np.percentile(hd, 95)})
     table = pd.DataFrame(rows)
     table.to_csv(os.path.join(a.out, "genre_distance.csv"), index=False, float_format="%.4f")
-    for focus in ("walk", "sophocles"):
+    for focus in ("imputations", "sophocles"):
         t = table[table.focus == focus].sort_values("js_bits")
         print(f"{focus}, nearest genres by JS: " + ", ".join(f"{r.genre} {r.js_bits:.4f} [{r.js_q05:.4f}, {r.js_q95:.4f}]" for r in t.itertuples()), flush=True)
 
-    # per topic: is the walk's rate closer to epic's or to tragedy's (log ratio)?
-    walk_rate, epic_rate, tragedy_rate = rate(counts["walk"]), rate(counts["epic"]), rate(counts["tragedy"])
-    per_topic = pd.DataFrame({"topic": topics, "rate_walk": walk_rate, "rate_epic": epic_rate, "rate_tragedy": tragedy_rate,
-                              "log2_walk_over_epic": np.log2(walk_rate / epic_rate),
-                              "log2_walk_over_tragedy": np.log2(walk_rate / tragedy_rate)})
-    per_topic["closer_to"] = np.where(per_topic.log2_walk_over_epic.abs() < per_topic.log2_walk_over_tragedy.abs(), "epic", "tragedy")
+    # per topic: is the imputations' rate closer to epic's or to tragedy's (log ratio)?
+    imputation_rate, epic_rate, tragedy_rate = rate(counts["imputations"]), rate(counts["epic"]), rate(counts["tragedy"])
+    per_topic = pd.DataFrame({"topic": topics, "rate_imputations": imputation_rate, "rate_epic": epic_rate, "rate_tragedy": tragedy_rate,
+                              "log2_imputations_over_epic": np.log2(imputation_rate / epic_rate),
+                              "log2_imputations_over_tragedy": np.log2(imputation_rate / tragedy_rate)})
+    per_topic["closer_to"] = np.where(per_topic.log2_imputations_over_epic.abs() < per_topic.log2_imputations_over_tragedy.abs(), "epic", "tragedy")
     # the share of chain-bootstrap draws in which the topic is closer to epic
-    closer_epic = np.abs(np.log2(boot["walk"] / epic_rate)) < np.abs(np.log2(boot["walk"] / tragedy_rate))
+    closer_epic = np.abs(np.log2(boot["imputations"] / epic_rate)) < np.abs(np.log2(boot["imputations"] / tragedy_rate))
     per_topic["p_closer_to_epic"] = closer_epic.mean(0)
     per_topic.to_csv(os.path.join(a.out, "genre_topics.csv"), index=False, float_format="%.4f")
     n_epic = int((per_topic.closer_to == "epic").sum())
-    print(f"per topic, the walk's rate is closer to epic's for {n_epic} of {len(topics)} topics and to tragedy's for "
+    print(f"per topic, the imputations' rate is closer to epic's for {n_epic} of {len(topics)} topics and to tragedy's for "
           f"{len(topics) - n_epic}: " + ", ".join(f"{r.topic} ({r.closer_to}, P(epic) {r.p_closer_to_epic:.2f})" for r in per_topic.itertuples()), flush=True)
 
     import matplotlib.pyplot as plt
     from figure_style import apply, TEXT_WIDTH
     apply()
     fig, axes = plt.subplots(1, 2, figsize=(TEXT_WIDTH, 2.6), sharey=False)
-    for ax, focus in zip(axes, ("walk", "sophocles")):
+    for ax, focus in zip(axes, ("imputations", "sophocles")):
         t = table[table.focus == focus].sort_values("js_bits", ascending=False)
         y = np.arange(len(t))
         ax.barh(y, t.js_bits, color=np.where(t.genre.isin(["epic", "tragedy"]), "#D55E00", "#9aa0a6"))
         ax.errorbar(t.js_bits, y, xerr=[t.js_bits - t.js_q05, t.js_q95 - t.js_bits], fmt="none", ecolor="black", capsize=2, lw=0.8)
         ax.set_yticks(y); ax.set_yticklabels([f"{g} ({w})" for g, w in zip(t.genre, t.windows)], fontsize=7)
         ax.set_xlabel("Jensen–Shannon divergence (bits)", fontsize=7.5)
-        ax.set_title(f"from {'the walk' if focus == 'walk' else 'Sophocles'} to each genre (windows)", fontsize=8)
+        ax.set_title(f"from {'the imputations' if focus == 'imputations' else 'Sophocles'} to each genre (windows)", fontsize=8)
         ax.tick_params(axis="x", labelsize=7)
     fig.tight_layout()
     fig.savefig(os.path.join(a.figures, "hard_genre_distance.png"), bbox_inches="tight")

@@ -82,11 +82,12 @@ like the restorations and $\phi$ is not fitted on the text it is then
 compared with; each of the unsupervised clusters of the hard model seeds one
 topic with a strong word prior on all its lemmata, plus a few free topics.
 
-The documents are those of the hard report: the walk, one document per
+The documents are those of the hard report: the imputations, one document per
 untilted snapshot, and Sophocles' extant trimeters in windows of seventeen,
-the baseline. The walk is read on two levels: its **mean profile**, the
-documents' posteriors averaged draw by draw, compared with Sophocles' by
-$P(\bar\theta_k^{\text{walk}} > \bar\theta_k^{\text{Soph}})$ and the lift
+the baseline. The imputations are read on two levels: their **mean
+profile**, the documents' posteriors averaged draw by draw, compared with
+Sophocles' by
+$P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$ and the lift
 of the means, and a **random document** against a random window,
 $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$. A topic is raised when
 the mean-profile probability is at least 0.9 and the lift at least 1.5.
@@ -120,8 +121,9 @@ vocabulary with its cluster labels, the corpus of the three tragedians, the
 baseline windows) and writes to `results/soft/` the diagnostics of every
 fit (`diagnostics.csv.gz`), two documents with their posterior summary for
 the refit below (`check_documents.json`), the mean profiles of the four
-sets of documents, the walk, Sophocles and the two further baselines, with
-the walk's lift (`profiles.csv`), and the comparisons between the sets
+sets of documents, the imputations, Sophocles and the two further
+baselines, with the imputations' lift (`profiles.csv`), and the comparisons
+between the sets
 (`comparisons.csv`). The topics themselves, the
 topic-word matrix with its top lemmata (`phi.json`, and the whole matrix
 `phi_matrix.csv.gz`), and the kept draws of every document
@@ -158,9 +160,9 @@ topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
 H <- sum(profiles$source == "sophocles")          # seeded topics only
 profiles$source <- factor(profiles$source,
-                          levels = c("walk", "sophocles", "tragedians",
+                          levels = c("imputations", "sophocles", "tragedians",
                                      "attic"))
-walk <- filter(profiles, source == "walk")
+imputations <- filter(profiles, source == "imputations")
 
 figure <- function(paths) {
   drawn <- paths[file.exists(paths)]
@@ -240,7 +242,7 @@ mcmc_neff_hist(diagnostics$min_ess_bulk / 2000) +
 
 ## Two documents refitted here
 
-One snapshot of the walk and one window of Sophocles, drawn at random by
+One snapshot of the imputations and one window of Sophocles, drawn at random by
 the GPU script, are sampled again here with `rstan` from the same program
 and the same $\phi$, so that the chains can be looked at, and the stored
 summary (from 100 kept draws) is set beside the fresh one (from
@@ -288,7 +290,7 @@ for (document in check_set$documents) {
 }
 ```
 
-The four sets of documents: the walk, Sophocles, and the two further
+The four sets of documents: the imputations, Sophocles, and the two further
 baselines of the section on them below.
 
 ```{r sizes}
@@ -319,8 +321,9 @@ lift of at least 1.5, with the lift, the posterior mean and, in brackets,
 the document-level probability.
 
 ```{r raised, results = "asis"}
-walk$raised <- walk$p_above_sophocles >= 0.9 & walk$lift >= 1.5
-raised <- arrange(filter(walk, raised), desc(lift))
+imputations$raised <- imputations$p_above_sophocles >= 0.9 &
+  imputations$lift >= 1.5
+raised <- arrange(filter(imputations, raised), desc(lift))
 if (nrow(raised) == 0) {
   cat("None.\n")
 } else {
@@ -333,7 +336,7 @@ if (nrow(raised) == 0) {
 # Lift of every topic
 
 ```{r lifts, fig.height = 5}
-lifts <- walk
+lifts <- imputations
 lifts$topic <- factor(lifts$topic, levels = rev(topic_names[1:H]))
 ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   geom_col() +
@@ -350,7 +353,7 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
 The five topics with the largest lift.
 
 ```{r top}
-top_five <- head(arrange(walk, desc(lift)), 5)
+top_five <- head(arrange(imputations, desc(lift)), 5)
 top_five <- top_five[, c("topic", "mean", "q05", "q95", "p_above_sophocles",
                          "lift", "p_document")]
 knitr::kable(top_five, digits = 2, row.names = FALSE)
@@ -361,7 +364,7 @@ knitr::kable(top_five, digits = 2, row.names = FALSE)
 The same two further baselines as in the hard report, Aeschylus and
 Euripides and Classical Attic (`data/attic_windows.parquet`, windows of 28
 lemmata of the Attic authors before Alexander), every window sampled like
-the restorations: the baseline's mean profile is compared with the walk's
+the restorations: the baseline's mean profile is compared with the imputations'
 draw by draw, and a lift's 90 % interval is that of the ratio of the two
 mean profiles over the posterior draws, not a bootstrap.
 `scripts/soft_circles.py` draws the grids from
@@ -370,10 +373,10 @@ smallest mean share to the largest: the shares of 34 topics lie within
 a factor of two of each other, and circles proportional to the share
 itself would all look alike.
 
-```{r soft_circles_walk, echo = FALSE, out.width = "100%"}
-figure(c("figures/soft_circles_walk_vs_sophocles.png",
-         "figures/soft_circles_walk_vs_tragedians.png",
-         "figures/soft_circles_walk_vs_attic.png"))
+```{r soft_circles_imputations, echo = FALSE, out.width = "100%"}
+figure(c("figures/soft_circles_imputations_vs_sophocles.png",
+         "figures/soft_circles_imputations_vs_tragedians.png",
+         "figures/soft_circles_imputations_vs_attic.png"))
 ```
 
 Sophocles as the focus, against the other two tragedians and against
@@ -404,16 +407,16 @@ knitr::kable(baseline_rows, row.names = FALSE,
                            "smallest lifts"))
 ```
 
-The two lifts of every topic of the walk side by side: against Sophocles
+The two lifts of every topic of the imputations side by side: against Sophocles
 (the question of this report) and against Classical Attic (whether the
 topic is tragic at all). A topic in the upper right is more frequent in
-the walk than in both; one on the dashed line at 1 is at its baseline's
-rate. The dot is the walk's mean share of the topic, the grey lines the
+the imputations than in both; one on the dashed line at 1 is at its baseline's
+rate. The dot is the imputations' mean share of the topic, the grey lines the
 90 % intervals.
 
 ```{r lift_scatter, fig.height = 5.2}
 against <- function(baseline) {
-  rows <- filter(comparisons, comparison == paste("walk vs", baseline))
+  rows <- filter(comparisons, comparison == paste("imputations vs", baseline))
   rows[, c("topic", "rate_focus", "lift", "lift_q05", "lift_q95")]
 }
 scatter <- inner_join(against("sophocles"), against("attic"),
@@ -444,7 +447,7 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
   labels +
   scale_x_log10() +
   scale_y_log10() +
-  labs(title = paste("The soft model: the walk's lift against Sophocles",
+  labs(title = paste("The soft model: the imputations' lift against Sophocles",
                      "and Classical Attic"),
        x = "lift against Classical Attic (log scale)",
        y = "lift against Sophocles (log scale)",
@@ -464,8 +467,9 @@ knitr::kable(one_topic, digits = 3, row.names = FALSE)
 # Which seeded topic dominates
 
 A reading the soft model alone affords, since its posterior is over the
-whole simplex at once: for a random document of the walk, of Sophocles, of
-Aeschylus and Euripides or of Classical Attic, the probability that each
+whole simplex at once: for a random document of the imputations, of
+Sophocles, of Aeschylus and Euripides or of Classical Attic, the probability
+that each
 seeded topic is the largest.
 
 ```{r dominant, fig.height = 7}
@@ -479,12 +483,12 @@ ggplot(heat, aes(x = source, y = topic, fill = p_dominant)) +
        title = "Which seeded topic dominates a random document")
 ```
 
-The five largest mean profiles of Sophocles and of the walk.
+The five largest mean profiles of Sophocles and of the imputations.
 
 ```{r mass}
 columns <- c("source", "topic", "mean", "q05", "q95", "lift",
              "p_above_sophocles", "p_document")
 top_five <- rbind(head(arrange(sophocles_rows, desc(mean)), 5)[, columns],
-                  head(arrange(walk, desc(mean)), 5)[, columns])
+                  head(arrange(imputations, desc(mean)), 5)[, columns])
 knitr::kable(top_five, digits = 3, row.names = FALSE)
 ```

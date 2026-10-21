@@ -1,6 +1,6 @@
 """An interactive map of the restorations in the word2vec topic space.
 
-Every document of the hard model is one point: a walk snapshot (one
+Every document of the hard model is one point: a imputation (one
 chain at one step, all seventeen verses) and every window of seventeen
 consecutive extant trimeters of Sophocles.  A
 document's position comes from its topic profile, the share of its lemmata
@@ -25,7 +25,7 @@ FIRST, LAST = 13, 29
 WINDOW = LAST - FIRST + 1
 
 
-def documents(data_dir, max_walk, rng):
+def documents(data_dir, max_imputations, rng):
     """one record per document: cell, name, chain, step, lemma counts (vocabulary index -> count), Greek text"""
     corpus = pq.read_table(os.path.join(data_dir, "corpus.parquet")).to_pandas()
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet")).to_pandas()
@@ -38,15 +38,15 @@ def documents(data_dir, max_walk, rng):
         docs.append({"cell": "sophocles", "name": f"Sophocles, window {w + 1} (lines {int(rows.line.iloc[0]) + 1}-{int(rows.line.iloc[-1]) + 1})",
                      "chain": "", "step": -1, "counts": bag(rows), "text": " / ".join(rows.text)})
 
-    walk = imp[(imp.restorer == "walk") & (imp.style_tilted == False)].copy()  # noqa: E712  (untilted snapshots only)
-    walk["chain_id"] = np.where(walk.chain.isna(), walk.chain_set.astype(str), walk.chain_set.astype(str) + " " + walk.chain.astype(str))
-    groups = walk.groupby(["chain_id", "iteration"], sort=True)
+    imputations = imp[(imp.restorer == "walk") & (imp.style_tilted == False)].copy()  # noqa: E712  (untilted snapshots only)
+    imputations["chain_id"] = np.where(imputations.chain.isna(), imputations.chain_set.astype(str), imputations.chain_set.astype(str) + " " + imputations.chain.astype(str))
+    groups = imputations.groupby(["chain_id", "iteration"], sort=True)
     keys = list(groups.groups)
-    if len(keys) > max_walk:
-        keys = [keys[i] for i in sorted(rng.choice(len(keys), max_walk, replace=False))]
+    if len(keys) > max_imputations:
+        keys = [keys[i] for i in sorted(rng.choice(len(keys), max_imputations, replace=False))]
     for chain_id, step in keys:
         rows = groups.get_group((chain_id, step)).sort_values("verse")
-        docs.append({"cell": "walk", "name": f"walk, chain {chain_id}, step {int(step)}", "chain": chain_id, "step": int(step),
+        docs.append({"cell": "imputations", "name": f"imputation, chain {chain_id}, step {int(step)}", "chain": chain_id, "step": int(step),
                      "counts": bag(rows), "text": " / ".join(rows.text)})
     return docs
 
@@ -63,7 +63,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default="data")
     ap.add_argument("--out", default="figures")
-    ap.add_argument("--max-walk", type=int, default=4000, help="walk snapshots drawn at random (all 12,722 make a 13 MB page)")
+    ap.add_argument("--max-imputations", type=int, default=4000, help="imputations drawn at random (all 12,722 make a 13 MB page)")
     ap.add_argument("--neighbors", type=int, default=15)
     ap.add_argument("--min-dist", type=float, default=0.1)
     ap.add_argument("--seed", type=int, default=917)
@@ -74,8 +74,8 @@ def main():
     vocab = json.load(open(os.path.join(a.data, "vocab.json"), encoding="utf-8"))
     vectors = np.load(os.path.join(a.data, "vocab_vectors.npy"))
     topic_of = {r["index"]: r["cluster_K40"] for r in vocab if r["cluster_K40"]}
-    docs = documents(a.data, a.max_walk, rng)
-    print(f"{len(docs)} documents: " + ", ".join(f"{c} {sum(d['cell'] == c for d in docs)}" for c in ("sophocles", "walk")), flush=True)
+    docs = documents(a.data, a.max_imputations, rng)
+    print(f"{len(docs)} documents: " + ", ".join(f"{c} {sum(d['cell'] == c for d in docs)}" for c in ("sophocles", "imputations")), flush=True)
 
     # a document's label is the topic with most lemmata in it; its position comes from its topic profile
     # (square-root shares) or, with --space word2vec, from the count-weighted mean of its lemma vectors
@@ -117,7 +117,7 @@ def main():
     sizes = np.where(cells == "sophocles", 2.0, 1.0)
     fig, ax = datamapplot.create_plot(coords, labels, noise_label=NOISE, label_font_size=6, label_wrap_width=14, marker_size_array=sizes,
                                       font_family=font_family(), title="Restorations in the topic space",
-                                      sub_title="walk snapshots (small), Sophoclean windows (larger), coloured by dominant topic",
+                                      sub_title="imputations (small), Sophoclean windows (larger), coloured by dominant topic",
                                       title_keywords={"fontsize": 9}, sub_title_keywords={"fontsize": 7},
                                       figsize=(TEXT_WIDTH, TEXT_WIDTH), dpi=300)
     fig.savefig(os.path.join(a.out, "hard_topic_map.png"), dpi=300, bbox_inches="tight")

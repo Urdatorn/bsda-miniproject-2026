@@ -16,20 +16,20 @@ The posterior.  With phi fixed, p(theta | document) of one document is the
 (K-1)-dimensional density prod_n sum_k theta_k phi[k, w_n] on the simplex, and
 Stan's NUTS samples it exactly in about a second: the program is
 lda_given_phi.stan (data: the N x K matrix of log phi for the document's
-lemmata).  Every document of every set (the walk's snapshots, Sophocles'
+lemmata).  Every document of every set (the imputations' snapshots, Sophocles'
 windows, the windows of Aeschylus and Euripides and of Classical Attic) is
 sampled with --chains chains of --warmup + --samples iterations by a pool of
 --workers CmdStan processes, --keep draws of each are kept, and Stan's own
 diagnostics (split R-hat, bulk ESS, divergent transitions, tree-depth hits) are
 recorded for every document.
 
-The documents.  The walk is the object: one document per untilted snapshot
+The documents.  The imputations are the object: one document per untilted snapshot
 (one chain at one step, all seventeen verses).  Sophocles' extant trimeters in
 windows of seventeen are the baseline, the same shape as the lacuna.  Only
 restored text enters a document; the surviving letters of a damaged verse are
-never counted.  The walk is read on two levels, as in the hard model: its mean
+never counted.  The imputations are read on two levels, as in the hard model: its mean
 profile (the documents' posteriors averaged draw by draw), compared with
-Sophocles' by P(mean_k^walk > mean_k^Soph) and the lift of the means, and a
+Sophocles' by P(mean_k^imp > mean_k^Soph) and the lift of the means, and a
 random document against a random window of Sophocles,
 P(theta_k^doc > theta_k^window).
 
@@ -38,8 +38,8 @@ Usage (a GH200 node for its cores; CMDSTAN must point at the aarch64 CmdStan):
 Writes phi.json (topics; a free topic is named by the glosses of its three top lemmata) and phi_matrix.csv.gz (K x V, read by the report and
 the lemma map), diagnostics.csv.gz (one row per document), check_documents.json
 (two documents with their posterior summary, refitted with rstan in the
-report), profiles.csv (the mean profiles of the walk and of Sophocles, with the
-walk's lift), comparisons.csv (the walk against Sophocles, against Aeschylus
+report), profiles.csv (the mean profiles of the imputations and of Sophocles, with the
+imputations' lift), comparisons.csv (the imputations against Sophocles, against Aeschylus
 and Euripides and against Classical Attic, and Sophocles against the latter
 two, with the lift's 90 % interval over the posterior draws of the two mean
 profiles), and theta_draws.npz (the kept draws of every document, for the
@@ -75,7 +75,7 @@ def windows(rows, size=WINDOW):
 
 def load(data_dir):
     """vocab (the lemmata, index = column of a bag), cluster (the topic of each lemma or None),
-    docs: {"sophocles": windows, "walk": snapshots, "tragedians": the windows of Aeschylus and Euripides (also the LDA's
+    docs: {"sophocles": windows, "imputations": snapshots, "tragedians": the windows of Aeschylus and Euripides (also the LDA's
     corpus), "attic": the Classical Attic windows of 28 lemmata}, and the windows of Aeschylus and Euripides for the LDA"""
     vocab = json.load(open(os.path.join(data_dir, "vocab.json"), encoding="utf-8"))
     corpus = pq.read_table(os.path.join(data_dir, "corpus.parquet"))
@@ -88,11 +88,11 @@ def load(data_dir):
         if author != "sophocles": tragic += author_windows
     restorer = np.array(imp["restorer"].to_pylist())
     tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
-    walk = imp.filter((restorer == "walk") & ~tilted)
+    imputations = imp.filter((restorer == "walk") & ~tilted)
     snapshot = defaultdict(list)
-    for key_set, key_chain, key_step, lemmata in zip(walk["chain_set"].to_pylist(), walk["chain"].to_pylist(), walk["iteration"].to_pylist(), row_lemmata(walk)):
+    for key_set, key_chain, key_step, lemmata in zip(imputations["chain_set"].to_pylist(), imputations["chain"].to_pylist(), imputations["iteration"].to_pylist(), row_lemmata(walk)):
         snapshot[(key_set, key_chain, key_step)] += lemmata
-    docs["walk"] = [snapshot[k] for k in sorted(snapshot, key=str)]
+    docs["imputations"] = [snapshot[k] for k in sorted(snapshot, key=str)]
     docs["tragedians"] = list(tragic)
     attic_path = os.path.join(data_dir, "attic_windows.parquet")
     if os.path.exists(attic_path):
@@ -213,7 +213,7 @@ def main():
     # ---- every document of every set through NUTS
     scratch = tempfile.mkdtemp(prefix="soft-logphi-"); logphi_path = os.path.join(scratch, "logphi.npy"); np.save(logphi_path, logphi)
     draws, diagnostics = {}, []
-    sets = [name for name in ("sophocles", "walk", "tragedians", "attic") if name in docs]
+    sets = [name for name in ("sophocles", "imputations", "tragedians", "attic") if name in docs]
     print(f"sampling {sum(len(docs[n]) for n in sets)} documents with {a.workers} workers: {a.chains} chains x ({a.warmup} + {a.samples}) iterations each, {a.keep} draws kept", flush=True)
     with Pool(a.workers, initializer=worker_init, initargs=(model.exe_file, logphi_path, a.chains, a.warmup, a.samples, a.keep)) as pool:
         for offset, name in enumerate(sets):
@@ -242,7 +242,7 @@ def main():
 
     # ---- two documents with their posterior summary, refitted with rstan in the report
     check = []
-    for name in ("walk", "sophocles"):
+    for name in ("imputations", "sophocles"):
         i = int(rng.integers(len(docs[name]))); P = draws[name][i].astype(np.float64)
         check.append({"source": name, "index": i, "lemma_idx": [int(w) for w in docs[name][i]], "mean": P.mean(0).round(5).tolist(),
                       "sd": P.std(0).round(5).tolist(), "q05": np.quantile(P, 0.05, 0).round(5).tolist(), "q95": np.quantile(P, 0.95, 0).round(5).tolist()})
@@ -263,7 +263,7 @@ def main():
             s["p_document"] = (P > B).mean(0).tolist()
         return s
     profiles = {"sophocles": summarise("sophocles")}
-    for name in ("walk", "tragedians", "attic"):
+    for name in ("imputations", "tragedians", "attic"):
         if name in docs: profiles[name] = summarise(name, profiles["sophocles"])
 
     # the comparisons behind the circle grids: focus against baseline, seeded topics only, the lift's interval over
@@ -277,7 +277,7 @@ def main():
                  "lift": F.mean(0)[k] / Bm.mean(0)[k], "lift_q05": np.quantile(ratio[:, k], 0.05), "lift_q95": np.quantile(ratio[:, k], 0.95),
                  "p_above": (F[:, k] > Bm[:, k]).mean(), "p_document": (P[:, k] > Q[:, k]).mean()} for k in range(H)]
     comparisons = []
-    for focus, base in (("walk", "sophocles"), ("walk", "tragedians"), ("walk", "attic"), ("sophocles", "tragedians"), ("sophocles", "attic")):
+    for focus, base in (("imputations", "sophocles"), ("imputations", "tragedians"), ("imputations", "attic"), ("sophocles", "tragedians"), ("sophocles", "attic")):
         if focus in profiles and base in profiles: comparisons += compare(focus, base, f"{focus} vs {base}")
     with open(f"{a.out}/comparisons.csv", "w") as f:
         f.write("topic,comparison,rate_focus,rate_baseline,lift,lift_q05,lift_q95,p_above,p_document\n")

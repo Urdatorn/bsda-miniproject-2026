@@ -1,4 +1,4 @@
-topic,rate_walk,rate_epic,rate_tragedy,log2_walk_over_epic,log2_walk_over_tragedy,closer_to,p_closer_to_epic
+topic,rate_imputations,rate_epic,rate_tragedy,log2_imputations_over_epic,log2_imputations_over_tragedy,closer_to,p_closer_to_epic
 Greek-sea-barbarian,2.5411,7.3244,6.7099,-1.5273,-1.4009,tragedy,0.0000
 bacchant-dance-paean,8.6563,21.0392,9.4052,-1.2813,-0.1197,tragedy,0.0000
 beast-deer-flock,11.4025,30.8460,18.6595,-1.4357,-0.7106,tragedy,0.0000
