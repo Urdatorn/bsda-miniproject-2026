@@ -143,7 +143,7 @@ def main():
     for ax, focus in zip(axes, ("walk", "sophocles")):
         t = table[table.focus == focus].sort_values("js_bits", ascending=False)
         y = np.arange(len(t))
-        ax.barh(y, t.js_bits, color=np.where(t.genre.isin(["epic", "tragedy"]), "#e15759", "#9aa0a6"))
+        ax.barh(y, t.js_bits, color=np.where(t.genre.isin(["epic", "tragedy"]), "#D55E00", "#9aa0a6"))
         ax.errorbar(t.js_bits, y, xerr=[t.js_bits - t.js_q05, t.js_q95 - t.js_bits], fmt="none", ecolor="black", capsize=2, lw=0.8)
         ax.set_yticks(y); ax.set_yticklabels([f"{g} ({w})" for g, w in zip(t.genre, t.windows)], fontsize=7)
         ax.set_xlabel("Jensen–Shannon divergence (bits)", fontsize=7.5)

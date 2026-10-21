@@ -49,6 +49,10 @@ library(ggplot2)
 # text width, so that they drop into the paper as they are
 theme_set(theme_minimal(base_size = 8, base_family = figure_font))
 knitr::opts_chunk$set(fig.width = 6.75)
+# Colours from the Okabe-Ito palette, which colour-blind readers can tell
+# apart; every plot of this report draws on it
+okabe_ito <- c(blue = "#0072B2", vermillion = "#D55E00", orange = "#E69F00",
+               green = "#009E73", sky = "#56B4E9", purple = "#CC79A7")
 set.seed(params$seed)
 ```
 
@@ -371,7 +375,7 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   geom_col() +
   geom_hline(yintercept = 1, linetype = "dashed") +
   coord_flip() +
-  scale_fill_manual(values = c("grey70", "firebrick"),
+  scale_fill_manual(values = c("grey70", okabe_ito[["vermillion"]]),
                     name = "raised: P >= 0.9\nand lift >= 1.5") +
   labs(x = NULL, y = "lift of the posterior mean against Sophocles") +
   theme(legend.position = "bottom")
@@ -485,7 +489,8 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
                  colour = "grey80", linewidth = 0.3) +
   geom_linerange(aes(xmin = lift_q05_attic, xmax = lift_q95_attic),
                  colour = "grey80", linewidth = 0.3) +
-  geom_point(aes(size = rate_focus), colour = "steelblue4", alpha = 0.7) +
+  geom_point(aes(size = rate_focus), colour = okabe_ito[["blue"]],
+             alpha = 0.7) +
   labels +
   scale_x_log10() +
   scale_y_log10() +
@@ -628,6 +633,7 @@ for (source_name in c("sophocles", "walk")) {
 ggplot(variability, aes(x = mean, y = sd, colour = source)) +
   geom_point() +
   geom_line(aes(y = sampling_sd), linetype = "dashed") +
+  scale_colour_manual(values = unname(okabe_ito[c("blue", "vermillion")])) +
   labs(x = "mean share of the topic", y = "sd of the share across documents",
        title = "Topic variability against its mean; dashed: sampling alone",
        colour = NULL)
@@ -707,6 +713,7 @@ ggplot() +
   geom_line(data = filter(drift, shown != "other"),
             aes(x = step, y = lift, colour = shown)) +
   geom_hline(yintercept = 1, linetype = "dashed") +
+  scale_colour_manual(values = unname(okabe_ito)) +
   facet_wrap(~ chains, scales = "free_x") +
   labs(x = "step of the walk", y = "lift against Sophocles", colour = NULL,
        title = "Lift of every topic along the walk")

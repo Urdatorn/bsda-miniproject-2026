@@ -50,6 +50,10 @@ rstan_options(auto_write = TRUE)
 theme_set(theme_minimal(base_size = 8, base_family = figure_font))
 bayesplot_theme_set(theme_minimal(base_size = 8, base_family = figure_font))
 knitr::opts_chunk$set(fig.width = 6.75)
+# Colours from the Okabe-Ito palette, which colour-blind readers can tell
+# apart; every plot of this report draws on it
+okabe_ito <- c(blue = "#0072B2", vermillion = "#D55E00", orange = "#E69F00",
+               green = "#009E73", sky = "#56B4E9", purple = "#CC79A7")
 results_dir <- params$results
 ```
 
@@ -112,18 +116,27 @@ error, so there is nothing to calibrate: the checks are the diagnostics.
 The GPU script reads the same dataset as the hard report
 (`Urdatorn/bsda-miniproject-2026`: the bags of content lemmata, the
 vocabulary with its cluster labels, the corpus of the three tragedians, the
-baseline windows) and writes to `results/soft/` the topic-word matrix with
-its top lemmata (`phi.json`, and the whole matrix `phi_matrix.csv.gz`), the
-diagnostics of every fit (`diagnostics.csv.gz`), two documents with their
-posterior summary for the refit below (`check_documents.json`), the mean
-profiles of the walk and of Sophocles with the walk's lift
-(`profiles.csv`) and the comparisons with the further baselines
-(`comparisons.csv`). The kept draws of every document
-(`theta_draws.npz`) go to the dataset, not to the repository. This document
-reads that output; it stops here, with a note, if the run has not been made
-yet.
+baseline windows) and writes to `results/soft/` the diagnostics of every
+fit (`diagnostics.csv.gz`), two documents with their posterior summary for
+the refit below (`check_documents.json`), the mean profiles of the walk and
+of Sophocles with the walk's lift (`profiles.csv`) and the comparisons with
+the further baselines (`comparisons.csv`). The topics themselves, the
+topic-word matrix with its top lemmata (`phi.json`, and the whole matrix
+`phi_matrix.csv.gz`), and the kept draws of every document
+(`theta_draws.npz`) go to the dataset's `soft/` folder, not to the
+repository; this document downloads the two phi files into `results/soft/`
+when they are absent. It stops here, with a note, if the run has not been
+made yet.
 
 ```{r load, include = FALSE}
+hub <- "https://huggingface.co/datasets/Urdatorn/bsda-miniproject-2026"
+for (file_name in c("phi.json", "phi_matrix.csv.gz")) {
+  local_path <- file.path(results_dir, file_name)
+  if (!file.exists(local_path) && dir.exists(results_dir)) {
+    url <- paste(hub, "resolve/main/soft", file_name, sep = "/")
+    try(download.file(url, local_path, mode = "wb", quiet = TRUE))
+  }
+}
 needed <- c("phi.json", "phi_matrix.csv.gz", "diagnostics.csv.gz",
             "check_documents.json", "profiles.csv", "comparisons.csv")
 missing <- needed[!file.exists(file.path(results_dir, needed))]
@@ -321,7 +334,7 @@ ggplot(lifts, aes(x = topic, y = lift, fill = raised)) +
   geom_col() +
   geom_hline(yintercept = 1, linetype = "dashed") +
   coord_flip() +
-  scale_fill_manual(values = c("grey70", "firebrick"),
+  scale_fill_manual(values = c("grey70", okabe_ito[["vermillion"]]),
                     name = "raised: P >= 0.9\nand lift >= 1.5") +
   labs(x = NULL, y = "lift of the mean profile against Sophocles") +
   theme(legend.position = "bottom")
@@ -421,7 +434,8 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
                  colour = "grey80", linewidth = 0.3) +
   geom_linerange(aes(xmin = lift_q05_attic, xmax = lift_q95_attic),
                  colour = "grey80", linewidth = 0.3) +
-  geom_point(aes(size = rate_focus), colour = "steelblue4", alpha = 0.7) +
+  geom_point(aes(size = rate_focus), colour = okabe_ito[["blue"]],
+             alpha = 0.7) +
   labels +
   scale_x_log10() +
   scale_y_log10() +
@@ -453,7 +467,7 @@ heat <- profiles
 heat$topic <- factor(heat$topic, levels = rev(topic_names[1:H]))
 ggplot(heat, aes(x = source, y = topic, fill = p_dominant)) +
   geom_tile() +
-  scale_fill_gradient(low = "white", high = "firebrick",
+  scale_fill_gradient(low = "white", high = okabe_ito[["blue"]],
                       name = "P(largest\nseeded topic)") +
   labs(x = NULL, y = NULL,
        title = "Which seeded topic dominates a random document")

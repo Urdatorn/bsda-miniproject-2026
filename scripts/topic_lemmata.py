@@ -28,7 +28,7 @@ import pyarrow.parquet as pq
 from topic_circles import ATTIC
 
 CELLS = {"walk": "the walk", "sophocles": "Sophocles", "tragedians": "Aeschylus and Euripides", "attic": "Classical Attic"}
-COLOURS = {"walk": "#4e79a7", "sophocles": "#59a14f", "tragedians": "#f28e2b", "attic": "#7f7f7f"}
+COLOURS = {"walk": "#0072B2", "sophocles": "#009E73", "tragedians": "#E69F00", "attic": "#7f7f7f"}   # Okabe-Ito, colour-blind safe
 
 
 def main():
@@ -91,7 +91,7 @@ def main():
         for k, (_, r) in enumerate(rows.iterrows()):
             up = r.rate_walk >= r.rate_sophocles
             ax.plot([max(r.rate_sophocles, floor), max(r.rate_walk, floor)], [y[k], y[k]],
-                    color="#d62728" if up else "#1f77b4", lw=1.0, alpha=0.75, zorder=1)
+                    color="#D55E00" if up else "#0072B2", lw=1.0, alpha=0.75, zorder=1)
         for cell, marker, size in (("attic", "x", 9), ("tragedians", "D", 6), ("sophocles", "o", 11), ("walk", "o", 11)):
             ax.scatter(np.maximum(rows[f"rate_{cell}"], floor), y, s=size, marker=marker, color=COLOURS[cell],
                        linewidth=0.5, label=CELLS[cell], zorder=3, **({"edgecolor": "white"} if marker == "o" else {}))
@@ -105,7 +105,7 @@ def main():
     ax = fig.add_subplot(grid[0, 2])
     shown = excess.head(30)[::-1]
     ax.barh(np.arange(len(shown)), shown.excess_over_sophocles,
-            color=np.where(shown.excess_over_sophocles >= 0, "#d62728", "#1f77b4"))
+            color=np.where(shown.excess_over_sophocles >= 0, "#D55E00", "#0072B2"))
     ax.set_yticks(np.arange(len(shown))); ax.set_yticklabels(shown.lemma, fontsize=6)
     ax.axvline(0, color="black", lw=0.6)
     ax.set_xlabel("walk minus Sophocles (per thousand)", fontsize=6.5)

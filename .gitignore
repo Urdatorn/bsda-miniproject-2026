@@ -10,3 +10,5 @@ lda_given_phi.hpp
 lda_given_phi.rds
 results/soft/theta_draws.npz
 .DS_Store
+results/soft/phi.json
+results/soft/phi_matrix.csv.gz

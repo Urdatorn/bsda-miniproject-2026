@@ -52,6 +52,10 @@ def font_family():
     return FAMILIES[-1]
 
 
+# The Okabe-Ito palette: eight colours that colour-blind readers can tell apart; every figure draws on it
+OKABE_ITO = ["#0072B2", "#D55E00", "#E69F00", "#009E73", "#56B4E9", "#CC79A7", "#F0E442", "#000000"]
+
+
 def apply():
     matplotlib.use("Agg")
     register_times()
@@ -61,4 +65,5 @@ def apply():
         "font.size": 8, "axes.titlesize": 9, "axes.labelsize": 8, "xtick.labelsize": 7, "ytick.labelsize": 7,
         "legend.fontsize": 7, "figure.titlesize": 9, "axes.linewidth": 0.6, "lines.linewidth": 1.0,
         "xtick.major.width": 0.5, "ytick.major.width": 0.5, "savefig.dpi": 300, "figure.dpi": 100,
-        "pdf.fonttype": 42, "axes.unicode_minus": False})
+        "pdf.fonttype": 42, "axes.unicode_minus": False,
+        "axes.prop_cycle": matplotlib.cycler(color=OKABE_ITO)})     # colour-blind safe default colours
