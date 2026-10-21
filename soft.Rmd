@@ -376,6 +376,52 @@ knitr::kable(baseline_rows, row.names = FALSE,
                            "smallest lifts"))
 ```
 
+The two lifts of every topic of the walk side by side: against Sophocles
+(the question of this report) and against Classical Attic (whether the
+topic is tragic at all). A topic in the upper right is more frequent in
+the walk than in both; one on the dashed line at 1 is at its baseline's
+rate. The dot is the walk's mean share of the topic, the grey lines the
+90 % intervals.
+
+```{r lift_scatter, fig.height = 5.2}
+against <- function(baseline) {
+  rows <- filter(comparisons, comparison == paste("walk vs", baseline))
+  rows[, c("topic", "rate_focus", "lift", "lift_q05", "lift_q95")]
+}
+scatter <- inner_join(against("sophocles"), against("attic"),
+                      by = c("topic", "rate_focus"),
+                      suffix = c("_sophocles", "_attic"))
+scatter$off_one <- scatter$lift_q05_sophocles > 1 |
+  scatter$lift_q95_sophocles < 1 | scatter$lift_q05_attic > 1 |
+  scatter$lift_q95_attic < 1
+# every topic is labelled where ggrepel can keep the labels apart; without
+# it, only the topics with an interval off 1 (the crowd at 1 stays unnamed)
+labels <- if (requireNamespace("ggrepel", quietly = TRUE)) {
+  ggrepel::geom_text_repel(aes(label = topic), size = 2,
+                           family = figure_font, max.overlaps = Inf,
+                           segment.size = 0.2, segment.colour = "grey60")
+} else {
+  geom_text(aes(label = ifelse(off_one, topic, "")), size = 2,
+            vjust = -1.1, family = figure_font)
+}
+ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_linerange(aes(ymin = lift_q05_sophocles, ymax = lift_q95_sophocles),
+                 colour = "grey80", linewidth = 0.3) +
+  geom_linerange(aes(xmin = lift_q05_attic, xmax = lift_q95_attic),
+                 colour = "grey80", linewidth = 0.3) +
+  geom_point(aes(size = rate_focus), colour = "steelblue4", alpha = 0.7) +
+  labels +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(title = paste("The soft model: the walk's lift against Sophocles",
+                     "and Classical Attic"),
+       x = "lift against Classical Attic (log scale)",
+       y = "lift against Sophocles (log scale)",
+       size = "mean share")
+```
+
 The topic the hard report singles out, *wrong-vengeance-err*, under the
 soft model:
 
