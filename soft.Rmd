@@ -157,7 +157,8 @@ comparisons <- read.csv(file.path(results_dir, "comparisons.csv"),
 topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
 H <- sum(profiles$source == "sophocles")          # seeded topics only
-profiles$source <- factor(profiles$source,
+                          levels = c("walk", "sophocles", "tragedians",
+                                     "attic"))
                           levels = c("walk", "sophocles", "tragedians", "attic"))
 walk <- filter(profiles, source == "walk")
 
