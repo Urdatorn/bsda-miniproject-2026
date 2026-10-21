@@ -119,9 +119,10 @@ The GPU script reads the same dataset as the hard report
 vocabulary with its cluster labels, the corpus of the three tragedians, the
 baseline windows) and writes to `results/soft/` the diagnostics of every
 fit (`diagnostics.csv.gz`), two documents with their posterior summary for
-the refit below (`check_documents.json`), the mean profiles of the walk and
-of Sophocles with the walk's lift (`profiles.csv`) and the comparisons with
-the further baselines (`comparisons.csv`). The topics themselves, the
+the refit below (`check_documents.json`), the mean profiles of the four
+sets of documents, the walk, Sophocles and the two further baselines, with
+the walk's lift (`profiles.csv`), and the comparisons between the sets
+(`comparisons.csv`). The topics themselves, the
 topic-word matrix with its top lemmata (`phi.json`, and the whole matrix
 `phi_matrix.csv.gz`), and the kept draws of every document
 (`theta_draws.npz`) go to the dataset's `soft/` folder, not to the
@@ -156,7 +157,8 @@ comparisons <- read.csv(file.path(results_dir, "comparisons.csv"),
 topic_names <- phi$names
 K <- length(topic_names)                          # seeded + free topics
 H <- sum(profiles$source == "sophocles")          # seeded topics only
-profiles$source <- factor(profiles$source, levels = c("sophocles", "walk"))
+profiles$source <- factor(profiles$source,
+                          levels = c("walk", "sophocles", "tragedians", "attic"))
 walk <- filter(profiles, source == "walk")
 
 figure <- function(paths) {
@@ -285,7 +287,8 @@ for (document in check_set$documents) {
 }
 ```
 
-The two sets of documents.
+The four sets of documents: the walk, Sophocles, and the two further
+baselines of the section on them below.
 
 ```{r sizes}
 sizes <- unique(profiles[, c("source", "n_docs", "n_lemmata")])
@@ -460,8 +463,9 @@ knitr::kable(one_topic, digits = 3, row.names = FALSE)
 # Which seeded topic dominates
 
 A reading the soft model alone affords, since its posterior is over the
-whole simplex at once: for a random document of the walk or of Sophocles,
-the probability that each seeded topic is the largest.
+whole simplex at once: for a random document of the walk, of Sophocles, of
+Aeschylus and Euripides or of Classical Attic, the probability that each
+seeded topic is the largest.
 
 ```{r dominant, fig.height = 7}
 heat <- profiles
