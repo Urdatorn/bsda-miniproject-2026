@@ -61,11 +61,15 @@ set.seed(params$seed)
 
 P.Oxy. 5292 preserves twelve intact trimeters of Sophocles' *Tereus* and
 seventeen damaged ones (vv. 13–29). The judge-steered Markov walk restores
-the seventeen verses together, as one passage. Which topics do the imputations
-put into the lost passage, and does that differ from what Sophocles writes
-elsewhere? (W. B. Henry's restoration of the same verses is in the data,
-but a single text is not compared with the mean of thousands: it is left
-out.)
+the seventeen verses together, as one passage: Stoicheia proposes a word,
+the formal rules filter it, and an LLM judge (Qwen2.5-72B-Instruct) decides
+by Metropolis–Hastings whether the passage reads better, its log-odds taken
+to the power $1/T_{\text{judge}} = 4$. Eight chains of 20,000 steps start
+from Eric Cullhed's eight reconstructions, and a state is kept every ten
+steps after a burn-in of 300. Which topics do the imputations put into the
+lost passage, and does that differ from what Sophocles writes elsewhere?
+(W. B. Henry's restoration of the same verses is in the data, but a single
+text is not compared with the mean of thousands: it is left out.)
 
 # The model
 
@@ -94,8 +98,8 @@ $$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\kappa \mathbf m + \mathbf n),$$
 
 and needs no sampler beyond `rgamma`. Two sets of documents are compared:
 
-- the **imputations**: every untilted state of the judge-steered Markov
-  walk, one document each;
+- the **imputations**: every recorded state of the eight chains, one
+  document each;
 - **Sophocles**, the baseline: every window of seventeen consecutive extant
   trimeters of Sophocles, one document each, the same shape as the lacuna.
 
@@ -410,12 +414,12 @@ knitr::kable(top_five, digits = 2, row.names = FALSE)
 # Beyond Sophocles: three baselines
 
 Is the imputations' profile unusual, and against whom? Two further baselines are
-cut from other text into windows of 28 vocabulary lemmata, the length of
+cut from other text into windows of 30 vocabulary lemmata, the length of
 the imputations' mean document: Aeschylus and Euripides, and Classical Attic,
 the works of the Attic authors before Alexander in the Open Greek and Latin
 texts parsed by the same tagger (the tragedians with their lyrics,
 Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the Attic orators and
-the sophists who wrote Attic, 28,882 windows). Sophocles is cut the same
+the sophists who wrote Attic, 23,328 windows). Sophocles is cut the same
 way. The shares here are plain rates per thousand topic lemmata, pooled
 over the documents of each set; a lift's 90 % interval comes from resampling the
 imputations by chain and a baseline by window. The figures are drawn by
@@ -517,26 +521,30 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
 ```
 
 The one lift of the imputations that holds against every baseline is
-*wrong-vengeance-err*:
+*marriage-couch-bed*:
 
-```{r wrong_vengeance}
-one_topic <- filter(circles, topic == "wrong-vengeance-err")
+```{r marriage}
+one_topic <- filter(circles, topic == "marriage-couch-bed")
 one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
                            "p_document")]
 knitr::kable(one_topic, digits = 3, row.names = FALSE)
 ```
 
-Opened up lemma by lemma, the lift is not vengeance: the imputations' excess
-over Sophocles is carried by χάρις, ἄξιος, μένω, πόνος, ἀσφαλής and ὠφελέω, the
-vocabulary of favour, worth, toil and safety, while the cluster's words of
-punishment are flat or down.
+Opened up lemma by lemma, the lift is the subject of the intact lines
+carried on: the imputations' excess over Sophocles is carried by μήτηρ,
+γάμος, ἁγνός, λέχος, πόσις and νυμφεύω, the mother, the wedding and the
+marriage bed, while the cluster's words for maidens and gifts (κόρη,
+παρθένος, δῶρον) fall below Sophocles' rate. Sophocles himself uses this
+vocabulary less than Aeschylus and Euripides do, so the lift says as much
+about the passage, a woman speaking of her marriage, as about the restorer:
+the judge keeps the lost verses on the subject the surviving ones set.
 
 ```{r lemmata, echo = FALSE, out.width = "100%"}
-knitr::include_graphics("figures/hard_topic_lemmata_wrong-vengeance-err.png")
+knitr::include_graphics("figures/hard_topic_lemmata_marriage-couch-bed.png")
 ```
 
 ```{r excess}
-lemmata <- read.csv("results/hard/topic_lemmata_wrong-vengeance-err.csv",
+lemmata <- read.csv("results/hard/topic_lemmata_marriage-couch-bed.csv",
                     encoding = "UTF-8")
 lemmata <- arrange(lemmata, desc(excess_over_sophocles))
 top_lemmata <- head(lemmata, 12)
@@ -606,9 +614,10 @@ topic_variability <- function(documents, label) {
   share_mean <- colMeans(shares)
   share_sd <- apply(shares, 2, sd)
   sampling_sd <- sqrt(share_mean * (1 - share_mean) / mean_length)
+  # a topic the set never uses has no spread to compare: its excess is NA
+  excess <- ifelse(sampling_sd > 0, share_sd / sampling_sd, NA)
   data.frame(source = label, topic = topic_names, mean = share_mean,
-             sd = share_sd, sampling_sd = sampling_sd,
-             excess = share_sd / sampling_sd)
+             sd = share_sd, sampling_sd = sampling_sd, excess = excess)
 }
 variability <- rbind(topic_variability(sophocles_documents, "sophocles"),
                      topic_variability(imputation_documents, "imputations"))
@@ -640,8 +649,16 @@ for (source_name in c("sophocles", "imputations")) {
                     "sampling ranges from %.2f to %.2f (median %.2f).\n"),
               source_name, min(these$sd), max(these$sd),
               median(these$sd), sd(these$sd) / mean(these$sd),
-              min(these$excess), max(these$excess),
-              median(these$excess)))
+              min(these$excess, na.rm = TRUE),
+              max(these$excess, na.rm = TRUE),
+              median(these$excess, na.rm = TRUE)))
+}
+unused <- topic_names[colSums(share_table(imputation_documents)) == 0]
+if (length(unused) > 0) {
+  cat(sprintf(paste("- %s never occur%s in the imputations, so the rows of",
+                    "that topic stay empty here and in the chain table.\n"),
+              paste(unused, collapse = ", "),
+              ifelse(length(unused) == 1, "s", "")))
 }
 ```
 
@@ -663,7 +680,7 @@ answer that.
 First, does the lift of a topic drift as the walk proceeds? The snapshots are
 grouped into windows of steps, every window is summarised like all the
 imputations, and the slope of its lift against the step is the rate of change.
-Second, do the 48 chains agree? Each chain's snapshots form a series of
+Second, do the eight chains agree? Each chain's snapshots form a series of
 topic shares, and the
 Gelman–Rubin $\hat R$ (BDA3 §11.4) compares the spread between chains with the
 spread within them: $\hat R$ near 1 means a chain's share does not depend on
@@ -699,21 +716,16 @@ lift_in_windows <- function(lemmata, breaks) {
   windows
 }
 
-# All chains over their common range, in windows of 250 steps
-short_range <- lift_in_windows(imputation_lemmata, seq(500, 3000, by = 250))
-short_range$chains <- "all 48 chains, steps 525-3000"
-
-# The 24 long chains over their whole run, in windows of 1000 steps
-long_lemmata <- filter(imputation_lemmata,
-                       startsWith(chain_id, "chains_eric_long"))
-long_range <- lift_in_windows(long_lemmata, seq(1000, 12000, by = 1000))
-long_range$chains <- "24 long chains, steps 1025-12000"
+# All chains over their whole run, in windows of 1000 steps; every chain
+# covers the same steps, so no range is special
+last_step <- max(imputation_lemmata$step)
+drift <- lift_in_windows(imputation_lemmata, seq(0, last_step, by = 1000))
 
 # The rate of change: the slope of lift against the step, per 1000 steps,
-# fitted by least squares over the windows of the common range
+# fitted by least squares over the windows
 slopes <- data.frame(topic = topic_names, slope_per_1000 = NA)
 for (i in seq_len(K)) {
-  topic_windows <- filter(short_range, topic == topic_names[i])
+  topic_windows <- filter(drift, topic == topic_names[i])
   fit <- lm(lift ~ step, data = topic_windows)
   slopes$slope_per_1000[i] <- coef(fit)[2] * 1000
 }
@@ -722,8 +734,6 @@ for (i in seq_len(K)) {
 ```{r drift_plot, fig.height = 4.5}
 # The five topics with the steepest slopes are coloured; the rest are grey
 steepest <- head(arrange(slopes, desc(abs(slope_per_1000))), 5)$topic
-drift <- rbind(short_range, long_range)
-drift$chains <- factor(drift$chains, levels = unique(drift$chains))
 drift$shown <- ifelse(drift$topic %in% steepest, drift$topic, "other")
 ggplot() +
   geom_line(data = filter(drift, shown == "other"),
@@ -732,7 +742,6 @@ ggplot() +
             aes(x = step, y = lift, colour = shown)) +
   geom_hline(yintercept = 1, linetype = "dashed") +
   scale_colour_manual(values = unname(okabe_ito)) +
-  facet_wrap(~ chains, scales = "free_x") +
   labs(x = "step of the walk", y = "lift against Sophocles", colour = NULL,
        title = "Lift of every topic along the walk")
 ```
@@ -741,8 +750,9 @@ ggplot() +
 
 ```{r rhat}
 # The share of every topic in every snapshot, among its topic-bearing lemmata
-counts <- table(imputation_lemmata$snapshot, imputation_lemmata$topic)
-counts <- counts[, topic_names]
+# (a topic that no imputation uses still gets a column, of zeros)
+counts <- table(imputation_lemmata$snapshot,
+                factor(imputation_lemmata$topic, levels = topic_names))
 shares <- counts / rowSums(counts)
 snapshot_row <- match(rownames(counts), imputations$snapshot)
 snapshot_chain <- imputations$chain_id[snapshot_row]
@@ -757,11 +767,13 @@ rhat <- function(x, chain) {
   W <- mean(chain_vars)
   B <- n * var(chain_means)
   var_hat <- (n - 1) / n * W + B / n
+  if (W == 0) return(NA)   # a share that never moves has no R-hat
   sqrt(var_hat / W)
 }
 
-# Steps 1025-3000 are covered by every chain with 80 snapshots each
-common <- snapshot_step >= 1025 & snapshot_step <= 3000
+# Every chain covers the same steps with the same number of snapshots, so
+# every snapshot enters
+common <- rep(TRUE, length(snapshot_step))
 stability <- data.frame(topic = topic_names, rhat = NA,
                         chain_lift_q05 = NA, chain_lift_q95 = NA)
 for (i in seq_len(K)) {
@@ -785,7 +797,7 @@ knitr::kable(stability, digits = 3, row.names = FALSE)
 
 ```{r stability_summary, results = "asis"}
 steepest_topic <- stability$topic[which.max(abs(stability$slope_per_1000))]
-sentence <- paste("Over the common range the median absolute slope is %.3f",
+sentence <- paste("Over the whole run the median absolute slope is %.3f",
                   "lift units per 1000 steps; the steepest topic, %s, moves",
                   "%.3f per 1000 steps. The largest R-hat is %.2f (%s), the",
                   "next largest %.2f (%s).")

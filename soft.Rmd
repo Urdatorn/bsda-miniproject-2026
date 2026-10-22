@@ -62,12 +62,13 @@ results_dir <- params$results
 # The question
 
 The same question as the hard report asks, with soft topics: which topics
-does the judge-steered Markov walk put into the seventeen lost verses of
-P.Oxy. 5292 (vv. 13–29), and does that differ from what Sophocles writes
-elsewhere? Here a lemma belongs to every topic with some probability, so the
-posterior over a document's topic profile has no closed form; it is sampled
-exactly, document by document, with Stan. The sections follow the hard
-report one by one, so that the two can be read side by side.
+does the judge-steered Markov walk (eight chains of 20,000 steps under the
+judge Qwen2.5-72B-Instruct, as described there) put into the seventeen lost
+verses of P.Oxy. 5292 (vv. 13–29), and does that differ from what Sophocles
+writes elsewhere? Here a lemma belongs to every topic with some
+probability, so the posterior over a document's topic profile has no closed
+form; it is sampled exactly, document by document, with Stan. The sections
+follow the hard report one by one, so that the two can be read side by side.
 
 # The model
 
@@ -434,7 +435,7 @@ knitr::kable(top_five, digits = 2, row.names = FALSE)
 # Beyond Sophocles: three baselines
 
 The same two further baselines as in the hard report, Aeschylus and
-Euripides and Classical Attic (`data/attic_windows.parquet`, windows of 28
+Euripides and Classical Attic (`data/attic_windows.parquet`, windows of 30
 lemmata of the Attic authors before Alexander), every window sampled like
 the restorations: the baseline's mean profile is compared with the imputations'
 draw by draw, and a lift's 90 % interval is that of the ratio of the two
@@ -526,11 +527,11 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
        size = "mean share")
 ```
 
-The topic the hard report singles out, *wrong-vengeance-err*, under the
+The topic the hard report singles out, *marriage-couch-bed*, under the
 soft model:
 
-```{r soft_wrong_vengeance}
-one_topic <- filter(comparisons, topic == "wrong-vengeance-err")
+```{r soft_marriage}
+one_topic <- filter(comparisons, topic == "marriage-couch-bed")
 one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
                            "p_document")]
 knitr::kable(one_topic, digits = 3, row.names = FALSE)

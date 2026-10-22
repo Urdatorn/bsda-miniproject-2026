@@ -20,7 +20,7 @@ the Attic authors before Alexander (ATTIC below: the three tragedians with
 their lyrics, Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the
 Attic orators and the sophists writing Attic).  The
 interval of a lift comes from two bootstraps: the imputations resampled by chain
-(48 chains), a baseline resampled by window.  p_document is the chance that
+(eight chains), a baseline resampled by window.  p_document is the chance that
 a random document of the focus set has a larger share than a random window
 of the baseline.  Everything is written to topic_circles.csv.
 
