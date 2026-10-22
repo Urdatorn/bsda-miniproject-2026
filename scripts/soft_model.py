@@ -76,7 +76,7 @@ def windows(rows, size=WINDOW):
 def load(data_dir):
     """vocab (the lemmata, index = column of a bag), cluster (the topic of each lemma or None),
     docs: {"sophocles": windows, "imputations": snapshots, "tragedians": the windows of Aeschylus and Euripides (also the LDA's
-    corpus), "attic": the Classical Attic windows of 28 lemmata}, and the windows of Aeschylus and Euripides for the LDA"""
+    corpus), "attic": the Classical Attic windows of 30 lemmata}, and the windows of Aeschylus and Euripides for the LDA"""
     vocab = json.load(open(os.path.join(data_dir, "vocab.json"), encoding="utf-8"))
     corpus = pq.read_table(os.path.join(data_dir, "corpus.parquet"))
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet"))
@@ -90,7 +90,7 @@ def load(data_dir):
     tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
     imputations = imp.filter((restorer == "walk") & ~tilted)
     snapshot = defaultdict(list)
-    for key_set, key_chain, key_step, lemmata in zip(imputations["chain_set"].to_pylist(), imputations["chain"].to_pylist(), imputations["iteration"].to_pylist(), row_lemmata(walk)):
+    for key_set, key_chain, key_step, lemmata in zip(imputations["chain_set"].to_pylist(), imputations["chain"].to_pylist(), imputations["iteration"].to_pylist(), row_lemmata(imputations)):
         snapshot[(key_set, key_chain, key_step)] += lemmata
     docs["imputations"] = [snapshot[k] for k in sorted(snapshot, key=str)]
     docs["tragedians"] = list(tragic)
