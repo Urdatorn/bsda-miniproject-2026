@@ -37,6 +37,7 @@ def main():
     ap.add_argument("--out", default="results/hard", help="where the table goes")
     ap.add_argument("--figures", default="figures", help="where the figure goes")
     ap.add_argument("--topic", default="wrong-vengeance-err")
+    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.figures, exist_ok=True)
 
@@ -49,9 +50,10 @@ def main():
 
     # counts over the whole vocabulary per cell; the rate is per thousand topic-bearing lemmata of the cell
     counts = {cell: np.zeros(len(vocab), dtype=np.int64) for cell in CELLS}
-    imp = pq.read_table(os.path.join(a.data, "imputations.parquet"), columns=["restorer", "style_tilted", "lemma_idx", "count"])
+    imp = pq.read_table(os.path.join(a.data, "imputations.parquet"), columns=["restorer", "style_tilted", "chain_set", "lemma_idx", "count"])
     restorer = np.array(imp["restorer"].to_pylist()); tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
-    imputations = imp.filter((restorer == "walk") & ~tilted)
+    chain_set = np.array([c or "" for c in imp["chain_set"].to_pylist()])
+    imputations = imp.filter((restorer == "walk") & ~tilted & ((chain_set == a.chain_set) if a.chain_set else True))
     for idx, cnt in zip(imputations["lemma_idx"].to_pylist(), imputations["count"].to_pylist()):
         for i, c in zip(idx, cnt):
             counts["imputations"][int(i)] += int(c)

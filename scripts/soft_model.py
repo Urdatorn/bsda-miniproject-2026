@@ -73,7 +73,7 @@ def windows(rows, size=WINDOW):
     return [sum(rows[i:i + size], []) for i in range(0, len(rows) - size + 1, size)]
 
 
-def load(data_dir):
+def load(data_dir, chain_set=None):
     """vocab (the lemmata, index = column of a bag), cluster (the topic of each lemma or None),
     docs: {"sophocles": windows, "imputations": snapshots, "tragedians": the windows of Aeschylus and Euripides (also the LDA's
     corpus), "attic": the Classical Attic windows of 30 lemmata}, and the windows of Aeschylus and Euripides for the LDA"""
@@ -88,7 +88,8 @@ def load(data_dir):
         if author != "sophocles": tragic += author_windows
     restorer = np.array(imp["restorer"].to_pylist())
     tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
-    imputations = imp.filter((restorer == "walk") & ~tilted)
+    walk_set = np.array([c or "" for c in imp["chain_set"].to_pylist()])
+    imputations = imp.filter((restorer == "walk") & ~tilted & ((walk_set == chain_set) if chain_set else True))
     snapshot = defaultdict(list)
     for key_set, key_chain, key_step, lemmata in zip(imputations["chain_set"].to_pylist(), imputations["chain"].to_pylist(), imputations["iteration"].to_pylist(), row_lemmata(imputations)):
         snapshot[(key_set, key_chain, key_step)] += lemmata
@@ -157,9 +158,10 @@ def main():
     ap.add_argument("--workers", type=int, default=int(os.environ.get("SLURM_CPUS_PER_TASK", os.cpu_count() or 4)), help="CmdStan processes side by side")
     ap.add_argument("--max-docs", type=int, default=0, help="documents read per set, sampled at random if more (0 = all); for dry runs")
     ap.add_argument("--seed", type=int, default=917)
+    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     rng = np.random.default_rng(a.seed)
-    vocab, cluster, docs, tragic = load(a.data); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
+    vocab, cluster, docs, tragic = load(a.data, a.chain_set); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
     if a.max_docs:
         docs = {name: [ds[i] for i in sorted(rng.choice(len(ds), a.max_docs, replace=False))] if len(ds) > a.max_docs else ds for name, ds in docs.items()}
     lengths = {name: np.array([len(d) for d in ds]) for name, ds in docs.items()}

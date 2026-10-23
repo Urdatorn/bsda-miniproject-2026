@@ -41,10 +41,12 @@ ATTIC = ["Aeschylus", "Sophocles", "Euripides", "Aristophanes", "Thucydides", "X
          "Dinarchus", "Gorgias of Leontini", "Critias", "Alcidamas", "Antiphon of Athens"]
 
 
-def imputation_documents(data_dir, topic_of, K):
-    """topic counts per imputation (documents x K) and the chain of each document"""
+def imputation_documents(data_dir, topic_of, K, chain_set=None):
+    """topic counts per imputation (documents x K) and the chain of each document; chain_set picks one walk set"""
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet")).to_pandas()
     imputations = imp[(imp.restorer == "walk") & (imp.style_tilted == False)].copy()  # noqa: E712
+    if chain_set: imputations = imputations[imputations.chain_set == chain_set]
+    if imputations.empty: raise SystemExit(f"no untilted walk states in {chain_set or 'any set'}")
     imputations["chain_id"] = np.where(imputations.chain.isna(), imputations.chain_set.astype(str),
                                 imputations.chain_set.astype(str) + " " + imputations.chain.astype(str))
     keys = imputations.groupby(["chain_id", "iteration"], sort=True).ngroup().to_numpy()
@@ -158,6 +160,7 @@ def main():
     ap.add_argument("--out", default="results/hard", help="where the tables go")
     ap.add_argument("--figures", default="figures", help="where the figures go")
     ap.add_argument("--baselines", default=None, help="baseline_windows.parquet (default: in --data)")
+    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.figures, exist_ok=True)
 
@@ -173,7 +176,7 @@ def main():
     counts["sophocles"] = windows.loc[windows.author == "sophocles", topics].to_numpy(dtype=np.int32)
     counts["tragedians"] = windows.loc[windows.author.isin(["aeschylus", "euripides"]), topics].to_numpy(dtype=np.int32)
     counts["attic"] = windows.loc[(windows.source == "oga") & windows.author.isin(ATTIC), topics].to_numpy(dtype=np.int32)
-    counts["imputations"], chain_of = imputation_documents(a.data, topic_of, K)
+    counts["imputations"], chain_of = imputation_documents(a.data, topic_of, K, a.chain_set)
     for cell in counts:
         print(f"{cell}: {len(counts[cell])} documents, {counts[cell].sum()} topic lemmata", flush=True)
     attic_authors = windows[(windows.source == "oga") & windows.author.isin(ATTIC)].author.value_counts()

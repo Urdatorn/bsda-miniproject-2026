@@ -72,6 +72,7 @@ def main():
     ap.add_argument("--out", default="results/hard", help="where the tables go")
     ap.add_argument("--figures", default="figures", help="where the figure goes")
     ap.add_argument("--baselines", default=None)
+    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.figures, exist_ok=True)
 
@@ -86,7 +87,7 @@ def main():
         if missing:
             print(f"{genre}: not in the windows: {', '.join(missing)}", flush=True)
 
-    imputation_counts, chain_of = imputation_documents(a.data, topic_of, len(topics))
+    imputation_counts, chain_of = imputation_documents(a.data, topic_of, len(topics), a.chain_set)
     counts = {"imputations": imputation_counts}
     counts["sophocles"] = windows.loc[windows.author == "sophocles", topics].to_numpy(dtype=np.int32)
     for genre, authors in GENRES.items():

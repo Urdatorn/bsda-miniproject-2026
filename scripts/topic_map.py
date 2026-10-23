@@ -25,7 +25,7 @@ FIRST, LAST = 13, 29
 WINDOW = LAST - FIRST + 1
 
 
-def documents(data_dir, max_imputations, rng):
+def documents(data_dir, max_imputations, rng, chain_set=None):
     """one record per document: cell, name, chain, step, lemma counts (vocabulary index -> count), Greek text"""
     corpus = pq.read_table(os.path.join(data_dir, "corpus.parquet")).to_pandas()
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet")).to_pandas()
@@ -39,6 +39,7 @@ def documents(data_dir, max_imputations, rng):
                      "chain": "", "step": -1, "counts": bag(rows), "text": " / ".join(rows.text)})
 
     imputations = imp[(imp.restorer == "walk") & (imp.style_tilted == False)].copy()  # noqa: E712  (untilted snapshots only)
+    if chain_set: imputations = imputations[imputations.chain_set == chain_set]
     imputations["chain_id"] = np.where(imputations.chain.isna(), imputations.chain_set.astype(str), imputations.chain_set.astype(str) + " " + imputations.chain.astype(str))
     groups = imputations.groupby(["chain_id", "iteration"], sort=True)
     keys = list(groups.groups)
@@ -63,8 +64,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default="data")
     ap.add_argument("--out", default="figures")
-    ap.add_argument("--max-imputations", type=int, default=4000, help="imputations drawn at random (all 12,722 make a 13 MB page)")
+    ap.add_argument("--max-imputations", type=int, default=4000, help="imputations drawn at random (all 17,000 would make a 13 MB page)")
     ap.add_argument("--neighbors", type=int, default=15)
+    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
     ap.add_argument("--min-dist", type=float, default=0.1)
     ap.add_argument("--seed", type=int, default=917)
     ap.add_argument("--space", choices=["topics", "word2vec"], default="topics", help="what a document's position is computed from")
@@ -74,7 +76,7 @@ def main():
     vocab = json.load(open(os.path.join(a.data, "vocab.json"), encoding="utf-8"))
     vectors = np.load(os.path.join(a.data, "vocab_vectors.npy"))
     topic_of = {r["index"]: r["cluster_K40"] for r in vocab if r["cluster_K40"]}
-    docs = documents(a.data, a.max_imputations, rng)
+    docs = documents(a.data, a.max_imputations, rng, a.chain_set)
     print(f"{len(docs)} documents: " + ", ".join(f"{c} {sum(d['cell'] == c for d in docs)}" for c in ("sophocles", "imputations")), flush=True)
 
     # a document's label is the topic with most lemmata in it; its position comes from its topic profile

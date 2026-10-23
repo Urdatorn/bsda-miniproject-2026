@@ -62,8 +62,8 @@ results_dir <- params$results
 # The question
 
 The same question as the hard report asks, with soft topics: which topics
-does the judge-steered Markov walk (eight chains of 20,000 steps under the
-judge Qwen2.5-72B-Instruct, as described there) put into the seventeen lost
+does the judge-steered Markov walk (sixteen chains under the judge
+Qwen3-235B-A22B-Instruct-2507, as described there) put into the seventeen lost
 verses of P.Oxy. 5292 (vv. 13–29), and does that differ from what Sophocles
 writes elsewhere? Here a lemma belongs to every topic with some
 probability, so the posterior over a document's topic profile has no closed
@@ -527,14 +527,18 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
        size = "mean share")
 ```
 
-The topic the hard report singles out, *marriage-couch-bed*, under the
-soft model:
+The topics the hard report singles out, *wrong-vengeance-err* and
+*god-true-lord*, the two lifts that hold against every baseline there, and
+*marriage-couch-bed*, raised against Sophocles but not against the other
+tragedians, under the soft model:
 
-```{r soft_marriage}
-one_topic <- filter(comparisons, topic == "marriage-couch-bed")
-one_topic <- one_topic[, c("comparison", "lift", "lift_q05", "lift_q95",
-                           "p_document")]
-knitr::kable(one_topic, digits = 3, row.names = FALSE)
+```{r soft_held}
+held <- filter(comparisons,
+               topic %in% c("wrong-vengeance-err", "god-true-lord",
+                            "marriage-couch-bed"))
+held <- held[, c("topic", "comparison", "lift", "lift_q05", "lift_q95",
+                 "p_document")]
+knitr::kable(held, digits = 3, row.names = FALSE)
 ```
 
 # Which seeded topic dominates
