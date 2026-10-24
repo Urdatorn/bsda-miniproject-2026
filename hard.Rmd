@@ -69,9 +69,11 @@ log-odds taken to the power $1/T_{\text{judge}} = 4$. Sixteen chains start
 from Eric Cullhed's eight reconstructions, two from each: eight run 12,000
 steps and eight 10,000, and a state is kept every ten steps after a burn-in
 of 300. (The data also hold sixteen chains under the smaller judge
-Qwen2.5-72B-Instruct, the set `chains_judge72_t4_v3e`; this report reads
-one set, named by its parameter `chain_set`.) Which topics do the
-imputations put into the lost passage, and does that differ from what
+Qwen2.5-72B-Instruct, the set `chains_judge72_t4_v3e`, and a short pilot
+under Claude Sonnet 5.5; this report reads one set, named by its parameter
+`chain_set`, and sets the three judges side by side at the end.) Which
+topics do the imputations put into the lost passage, and does that differ
+from what
 Sophocles writes elsewhere?
 (W. B. Henry's restoration of the same verses is in the data, but a single
 text is not compared with the mean of thousands: it is left out.)
@@ -850,4 +852,120 @@ sentence <- paste("%d of the %d topics with an R-hat have one above 1.1: in",
                   "their width.")
 cat(sprintf(sentence, poorly_mixed, with_rhat, vengeance$chain_lift_q05,
             vengeance$chain_lift_q95), "\n")
+```
+
+## A third judge
+
+The judge is the one part of the walk that is a language model's opinion,
+so how much of the profile is the judge's? Beside the two Qwen sets the data
+hold a pilot with a closed model as judge, Claude Sonnet 5.5 (the set
+`chains_judge_claude-sonnet-5-5_t4`): eight chains from the same starts, the
+same $1/T_{\text{judge}} = 4$ and the same prompt, each capped at 3.10 USD of
+API calls, which bought about 1,500 steps. Three economies that the Qwen sets
+did not have kept the cost down: a proposal that changed less than a tenth of
+a verse's letters was dropped unjudged, burn-in ended once half the restored
+letters differed from the start (between step 100 and 277), and a state was
+recorded only when the restored letters had moved by a tenth since the last
+record, about one state per 130 steps. The set is small, 387 documents, and
+this report does not read it; it is here for the comparison.
+`scripts/judge_comparison.py` computes the lifts of all three sets exactly as
+in the baseline section above, and `results/hard/judge_behaviour.csv` (from
+the walks' trajectories, `scripts/judge_behaviour.py` of the generation
+repository) records what each judge returned.
+
+```{r judges_behaviour}
+behaviour <- read.csv("results/hard/judge_behaviour.csv", encoding = "UTF-8")
+shown <- behaviour[, c("judge", "chains", "steps", "mean_abs_logodds",
+                       "logodds_q50", "share_zero", "share_abs_ge_2",
+                       "accepted_of_judged")]
+names(shown) <- c("judge", "chains", "steps", "mean |log-odds|",
+                  "median log-odds", "share zero", "share |log-odds| >= 2",
+                  "accepted of judged")
+knitr::kable(shown, digits = 2, row.names = FALSE)
+```
+
+```{r judges_behaviour_summary, results = "asis"}
+qwen <- filter(behaviour, judge == "Qwen3-235B")
+sonnet <- filter(behaviour, judge == "Claude Sonnet 5.5")
+sentence <- paste("The scales differ: a Qwen judge's log-odds is the",
+                  "difference of two next-token logits, Sonnet's the log-odds",
+                  "of a stated probability clamped to [0.01, 0.99], at most",
+                  "4.6 in size. Even so the difference is one of kind. The",
+                  "235B returns a mean absolute log-odds of %.1f and a median",
+                  "of %.1f, a standing preference for the line already in",
+                  "place, and the walk accepts %.0f %% of the proposals it",
+                  "judges. Sonnet, asked at low effort and without thinking,",
+                  "is close to indifferent: mean absolute log-odds %.2f,",
+                  "exactly zero in %.0f %% of the steps (the same probability",
+                  "in both orders), and %.0f %% of the judged proposals are",
+                  "accepted. At the same $1/T_{\\text{judge}}$ it steers far",
+                  "less; a sharper Claude judge would need thinking on or a",
+                  "higher $1/T_{\\text{judge}}$.")
+cat(sprintf(sentence, qwen$mean_abs_logodds, qwen$logodds_q50,
+            100 * qwen$accepted_of_judged, sonnet$mean_abs_logodds,
+            100 * sonnet$share_zero, 100 * sonnet$accepted_of_judged), "\n")
+```
+
+The lift of every topic against Sophocles under the three judges, for the
+topics whose interval is off 1 under at least one of them; the intervals are
+in `results/hard/judge_comparison.csv`.
+
+```{r judges_lifts}
+judges <- read.csv("results/hard/judge_comparison.csv", encoding = "UTF-8")
+judges$off_one <- judges$lift_q05 > 1 | judges$lift_q95 < 1
+soph <- filter(judges, comparison == "imputations vs sophocles")
+judge_names <- c("Qwen3-235B", "Qwen2.5-72B", "Claude Sonnet 5.5")
+# One column of lifts per judge, one row per topic
+lifts <- data.frame(topic = sort(unique(soph$topic)))
+for (name in judge_names) {
+  these <- filter(soph, judge == name)
+  lifts[[name]] <- these$lift[match(lifts$topic, these$topic)]
+}
+# A topic is shown when some judge's interval is off 1
+off_any <- unique(soph$topic[soph$off_one])
+lifts <- filter(lifts, topic %in% off_any)
+lifts <- arrange(lifts, desc(.data[["Qwen3-235B"]]))
+knitr::kable(lifts, digits = 2, row.names = FALSE)
+```
+
+```{r judges_agreement, results = "asis"}
+# How alike the three profiles are: the correlation of log lifts
+# across all topics, and the topics raised under every judge
+all_lifts <- data.frame(topic = sort(unique(soph$topic)))
+for (name in judge_names) {
+  these <- filter(soph, judge == name)
+  all_lifts[[name]] <- these$lift[match(all_lifts$topic, these$topic)]
+}
+log_lifts <- log(all_lifts[, judge_names])
+log_lifts[log_lifts == -Inf] <- NA
+agreement <- cor(log_lifts, use = "pairwise.complete.obs")
+raised_by <- lapply(judge_names, function(name)
+  soph$topic[soph$judge == name & soph$lift_q05 > 1])
+raised_all <- Reduce(intersect, raised_by)
+sonnet_only <- setdiff(raised_by[[3]], union(raised_by[[1]], raised_by[[2]]))
+# Does wrong-vengeance-err hold against all three baselines under Sonnet?
+vengeance_sonnet <- filter(judges, judge == "Claude Sonnet 5.5",
+                           topic == "wrong-vengeance-err")
+holds <- all(vengeance_sonnet$lift_q05 > 1)
+sentence <- paste("The two Qwen profiles correlate at %.2f in log lift;",
+                  "Sonnet's correlates with them at %.2f and %.2f. The judge",
+                  "is a large part of the profile. What survives the change",
+                  "of judge is the topic the report singles out: the topics",
+                  "with an interval above 1 against Sophocles under all",
+                  "three judges are %s. Under Sonnet wrong-vengeance-err",
+                  "%s against the other tragedians and against Classical",
+                  "Attic as well. Sonnet alone raises %s; the 72B's",
+                  "marriage-couch-bed is at %.2f under Sonnet, below",
+                  "Sophocles, and god-true-lord at %.2f with an interval",
+                  "that covers 1.")
+cat(sprintf(sentence, agreement["Qwen3-235B", "Qwen2.5-72B"],
+            agreement["Claude Sonnet 5.5", "Qwen3-235B"],
+            agreement["Claude Sonnet 5.5", "Qwen2.5-72B"],
+            paste(raised_all, collapse = ", "),
+            ifelse(holds, "also holds", "does not hold"),
+            paste(sonnet_only, collapse = ", "),
+            all_lifts[all_lifts$topic == "marriage-couch-bed",
+                      "Claude Sonnet 5.5"],
+            all_lifts[all_lifts$topic == "god-true-lord",
+                      "Claude Sonnet 5.5"]), "\n")
 ```

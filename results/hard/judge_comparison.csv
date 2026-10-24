@@ -1,0 +1,307 @@
+judge,chain_set,documents,topic,comparison,rate_focus,rate_baseline,lift,lift_q05,lift_q95,p_document
+Qwen3-235B,chains_judge235_t4,17120,Greek-sea-barbarian,imputations vs sophocles,0.1445,1.7572,0.0822,0.0102,0.1820,0.4813
+Qwen3-235B,chains_judge235_t4,17120,bacchant-dance-paean,imputations vs sophocles,11.7846,8.1271,1.4500,0.6922,2.3886,0.5378
+Qwen3-235B,chains_judge235_t4,17120,beast-deer-flock,imputations vs sophocles,15.0055,17.3525,0.8647,0.4806,1.3045,0.4853
+Qwen3-235B,chains_judge235_t4,17120,begin-happen-necessity,imputations vs sophocles,29.2639,21.8187,1.3412,1.0404,1.6750,0.5572
+Qwen3-235B,chains_judge235_t4,17120,breast-neck-cling,imputations vs sophocles,9.2069,15.3756,0.5988,0.3786,0.8632,0.4620
+Qwen3-235B,chains_judge235_t4,17120,child-before-bestow,imputations vs sophocles,86.2614,68.5313,1.2587,1.0638,1.4836,0.5820
+Qwen3-235B,chains_judge235_t4,17120,city-sack-rule,imputations vs sophocles,15.8587,31.2637,0.5073,0.3399,0.7110,0.4148
+Qwen3-235B,chains_judge235_t4,17120,contest-rivalry-wrestling,imputations vs sophocles,0.6681,0.7322,0.9125,0.0752,2.6839,0.4972
+Qwen3-235B,chains_judge235_t4,17120,crash-voice-shout,imputations vs sophocles,1.7786,8.9325,0.1991,0.0297,0.4252,0.4357
+Qwen3-235B,chains_judge235_t4,17120,enviable-father-acquire,imputations vs sophocles,42.1342,53.0092,0.7948,0.6032,1.0088,0.4497
+Qwen3-235B,chains_judge235_t4,17120,fine-word-matter,imputations vs sophocles,64.3445,68.3848,0.9409,0.7965,1.0959,0.4895
+Qwen3-235B,chains_judge235_t4,17120,fire-flame-flash,imputations vs sophocles,2.7086,3.9537,0.6851,0.0506,1.5799,0.4913
+Qwen3-235B,chains_judge235_t4,17120,garment-adorn-gold,imputations vs sophocles,2.6431,6.2235,0.4247,0.1457,0.8083,0.4689
+Qwen3-235B,chains_judge235_t4,17120,god-true-lord,imputations vs sophocles,88.4802,55.7915,1.5859,1.3442,1.8531,0.6632
+Qwen3-235B,chains_judge235_t4,17120,hear-fear-grieve,imputations vs sophocles,66.7032,68.8241,0.9692,0.7675,1.1852,0.4919
+Qwen3-235B,chains_judge235_t4,17120,human-nature-soul,imputations vs sophocles,31.8393,53.3021,0.5973,0.4510,0.7457,0.3795
+Qwen3-235B,chains_judge235_t4,17120,lament-pitiable-groan,imputations vs sophocles,54.7832,43.5642,1.2575,0.8997,1.6755,0.5769
+Qwen3-235B,chains_judge235_t4,17120,leaf-myrtle-olive,imputations vs sophocles,1.0879,2.7823,0.3910,0.0689,0.8209,0.4845
+Qwen3-235B,chains_judge235_t4,17120,light-ray-sight,imputations vs sophocles,17.8066,12.0076,1.4829,0.9135,2.1896,0.5599
+Qwen3-235B,chains_judge235_t4,17120,marriage-couch-bed,imputations vs sophocles,29.9998,16.1810,1.8540,1.3924,2.3747,0.6326
+Qwen3-235B,chains_judge235_t4,17120,murder-slayer-kill,imputations vs sophocles,26.0069,18.0114,1.4439,0.9604,2.0597,0.5483
+Qwen3-235B,chains_judge235_t4,17120,neck-mane-robe,imputations vs sophocles,6.4622,16.1078,0.4012,0.2876,0.5346,0.4333
+Qwen3-235B,chains_judge235_t4,17120,persuade-man-king,imputations vs sophocles,93.3331,76.8780,1.2140,1.0284,1.4183,0.5806
+Qwen3-235B,chains_judge235_t4,17120,rear-sprout-bloom,imputations vs sophocles,24.2598,24.5277,0.9891,0.6365,1.4038,0.5026
+Qwen3-235B,chains_judge235_t4,17120,river-plain-afar,imputations vs sophocles,0.2212,4.9788,0.0444,0.0136,0.0885,0.4565
+Qwen3-235B,chains_judge235_t4,17120,see-know-learn,imputations vs sophocles,63.8051,70.9474,0.8993,0.7728,1.0317,0.4753
+Qwen3-235B,chains_judge235_t4,17120,ship-sail-hull,imputations vs sophocles,0.4356,9.0057,0.0484,0.0110,0.1008,0.4426
+Qwen3-235B,chains_judge235_t4,17120,sicken-sickness-deadly,imputations vs sophocles,12.8612,18.5239,0.6943,0.4631,0.9839,0.4719
+Qwen3-235B,chains_judge235_t4,17120,spear-lance-horse,imputations vs sophocles,7.6337,29.7262,0.2568,0.1712,0.3695,0.3743
+Qwen3-235B,chains_judge235_t4,17120,temple-offer-precinct,imputations vs sophocles,37.4777,28.1886,1.3295,1.0367,1.6343,0.5812
+Qwen3-235B,chains_judge235_t4,17120,walk-behold-gaze,imputations vs sophocles,48.1269,53.3753,0.9017,0.7235,1.0978,0.4666
+Qwen3-235B,chains_judge235_t4,17120,water-wet-hot,imputations vs sophocles,8.5862,22.8438,0.3759,0.2002,0.5668,0.3922
+Qwen3-235B,chains_judge235_t4,17120,within-wall-door,imputations vs sophocles,5.3743,10.1772,0.5281,0.2611,0.8602,0.4718
+Qwen3-235B,chains_judge235_t4,17120,wrong-vengeance-err,imputations vs sophocles,92.9132,58.7934,1.5803,1.2702,1.9209,0.6559
+Qwen3-235B,chains_judge235_t4,17120,Greek-sea-barbarian,imputations vs tragedians,0.1445,8.4302,0.0171,0.0024,0.0354,0.4236
+Qwen3-235B,chains_judge235_t4,17120,bacchant-dance-paean,imputations vs tragedians,11.7846,9.8522,1.1961,0.5784,1.9219,0.5249
+Qwen3-235B,chains_judge235_t4,17120,beast-deer-flock,imputations vs tragedians,15.0055,19.1204,0.7848,0.4371,1.1632,0.4654
+Qwen3-235B,chains_judge235_t4,17120,begin-happen-necessity,imputations vs tragedians,29.2639,21.1772,1.3819,1.0836,1.6971,0.5638
+Qwen3-235B,chains_judge235_t4,17120,breast-neck-cling,imputations vs tragedians,9.2069,16.4034,0.5613,0.3552,0.8053,0.4472
+Qwen3-235B,chains_judge235_t4,17120,child-before-bestow,imputations vs tragedians,86.2614,51.9781,1.6596,1.4024,1.9540,0.6788
+Qwen3-235B,chains_judge235_t4,17120,city-sack-rule,imputations vs tragedians,15.8587,36.1079,0.4392,0.2926,0.6091,0.3821
+Qwen3-235B,chains_judge235_t4,17120,contest-rivalry-wrestling,imputations vs tragedians,0.6681,2.2599,0.2956,0.0266,0.7777,0.4812
+Qwen3-235B,chains_judge235_t4,17120,crash-voice-shout,imputations vs tragedians,1.7786,5.8402,0.3045,0.0448,0.6509,0.4672
+Qwen3-235B,chains_judge235_t4,17120,enviable-father-acquire,imputations vs tragedians,42.1342,57.7421,0.7297,0.5578,0.9175,0.4190
+Qwen3-235B,chains_judge235_t4,17120,fine-word-matter,imputations vs tragedians,64.3445,58.5293,1.0994,0.9376,1.2687,0.5405
+Qwen3-235B,chains_judge235_t4,17120,fire-flame-flash,imputations vs tragedians,2.7086,6.8305,0.3965,0.0290,0.8833,0.4670
+Qwen3-235B,chains_judge235_t4,17120,garment-adorn-gold,imputations vs tragedians,2.6431,10.2839,0.2570,0.0853,0.4796,0.4322
+Qwen3-235B,chains_judge235_t4,17120,god-true-lord,imputations vs tragedians,88.4802,46.7726,1.8917,1.6032,2.1940,0.7131
+Qwen3-235B,chains_judge235_t4,17120,hear-fear-grieve,imputations vs tragedians,66.7032,52.8668,1.2617,1.0075,1.5392,0.5712
+Qwen3-235B,chains_judge235_t4,17120,human-nature-soul,imputations vs tragedians,31.8393,40.5769,0.7847,0.5940,0.9817,0.4466
+Qwen3-235B,chains_judge235_t4,17120,lament-pitiable-groan,imputations vs tragedians,54.7832,38.4947,1.4231,1.0170,1.8649,0.6059
+Qwen3-235B,chains_judge235_t4,17120,leaf-myrtle-olive,imputations vs tragedians,1.0879,3.2502,0.3347,0.0528,0.6764,0.4844
+Qwen3-235B,chains_judge235_t4,17120,light-ray-sight,imputations vs tragedians,17.8066,15.3370,1.1610,0.7190,1.6832,0.5290
+Qwen3-235B,chains_judge235_t4,17120,marriage-couch-bed,imputations vs tragedians,29.9998,37.8345,0.7929,0.6083,0.9801,0.4930
+Qwen3-235B,chains_judge235_t4,17120,murder-slayer-kill,imputations vs tragedians,26.0069,24.3512,1.0680,0.7244,1.5185,0.5087
+Qwen3-235B,chains_judge235_t4,17120,neck-mane-robe,imputations vs tragedians,6.4622,22.6499,0.2853,0.2040,0.3707,0.3822
+Qwen3-235B,chains_judge235_t4,17120,persuade-man-king,imputations vs tragedians,93.3331,78.6146,1.1872,1.0160,1.3745,0.5766
+Qwen3-235B,chains_judge235_t4,17120,rear-sprout-bloom,imputations vs tragedians,24.2598,26.9412,0.9005,0.5753,1.2663,0.4946
+Qwen3-235B,chains_judge235_t4,17120,river-plain-afar,imputations vs tragedians,0.2212,5.1800,0.0427,0.0132,0.0814,0.4451
+Qwen3-235B,chains_judge235_t4,17120,see-know-learn,imputations vs tragedians,63.8051,47.8645,1.3330,1.1500,1.5227,0.6055
+Qwen3-235B,chains_judge235_t4,17120,ship-sail-hull,imputations vs tragedians,0.4356,12.1121,0.0360,0.0086,0.0741,0.4228
+Qwen3-235B,chains_judge235_t4,17120,sicken-sickness-deadly,imputations vs tragedians,12.8612,13.8896,0.9260,0.6198,1.2927,0.5033
+Qwen3-235B,chains_judge235_t4,17120,spear-lance-horse,imputations vs tragedians,7.6337,38.4947,0.1983,0.1335,0.2790,0.3262
+Qwen3-235B,chains_judge235_t4,17120,temple-offer-precinct,imputations vs tragedians,37.4777,30.2169,1.2403,0.9731,1.4921,0.5712
+Qwen3-235B,chains_judge235_t4,17120,walk-behold-gaze,imputations vs tragedians,48.1269,61.6271,0.7809,0.6248,0.9471,0.4294
+Qwen3-235B,chains_judge235_t4,17120,water-wet-hot,imputations vs tragedians,8.5862,22.0151,0.3900,0.2105,0.5827,0.4091
+Qwen3-235B,chains_judge235_t4,17120,within-wall-door,imputations vs tragedians,5.3743,13.8388,0.3883,0.1929,0.6206,0.4376
+Qwen3-235B,chains_judge235_t4,17120,wrong-vengeance-err,imputations vs tragedians,92.9132,62.5159,1.4862,1.2063,1.7999,0.6430
+Qwen3-235B,chains_judge235_t4,17120,Greek-sea-barbarian,imputations vs attic,0.1445,6.1085,0.0236,0.0033,0.0482,0.4575
+Qwen3-235B,chains_judge235_t4,17120,bacchant-dance-paean,imputations vs attic,11.7846,5.7364,2.0544,1.0012,3.2558,0.5759
+Qwen3-235B,chains_judge235_t4,17120,beast-deer-flock,imputations vs attic,15.0055,14.7832,1.0150,0.5677,1.4948,0.5306
+Qwen3-235B,chains_judge235_t4,17120,begin-happen-necessity,imputations vs attic,29.2639,89.2685,0.3278,0.2594,0.4008,0.3304
+Qwen3-235B,chains_judge235_t4,17120,breast-neck-cling,imputations vs attic,9.2069,14.2396,0.6466,0.4157,0.9154,0.4918
+Qwen3-235B,chains_judge235_t4,17120,child-before-bestow,imputations vs attic,86.2614,17.5423,4.9173,4.1762,5.7178,0.8721
+Qwen3-235B,chains_judge235_t4,17120,city-sack-rule,imputations vs attic,15.8587,52.1924,0.3039,0.2021,0.4168,0.3808
+Qwen3-235B,chains_judge235_t4,17120,contest-rivalry-wrestling,imputations vs attic,0.6681,2.2953,0.2911,0.0261,0.7693,0.4846
+Qwen3-235B,chains_judge235_t4,17120,crash-voice-shout,imputations vs attic,1.7786,5.9156,0.3007,0.0448,0.6320,0.4800
+Qwen3-235B,chains_judge235_t4,17120,enviable-father-acquire,imputations vs attic,42.1342,41.3783,1.0183,0.7860,1.2819,0.5658
+Qwen3-235B,chains_judge235_t4,17120,fine-word-matter,imputations vs attic,64.3445,115.8109,0.5556,0.4746,0.6385,0.3753
+Qwen3-235B,chains_judge235_t4,17120,fire-flame-flash,imputations vs attic,2.7086,5.5610,0.4871,0.0352,1.0517,0.4939
+Qwen3-235B,chains_judge235_t4,17120,garment-adorn-gold,imputations vs attic,2.6431,11.6676,0.2265,0.0773,0.4151,0.4421
+Qwen3-235B,chains_judge235_t4,17120,god-true-lord,imputations vs attic,88.4802,59.7507,1.4808,1.2673,1.7081,0.6677
+Qwen3-235B,chains_judge235_t4,17120,hear-fear-grieve,imputations vs attic,66.7032,49.9030,1.3367,1.0626,1.6246,0.6231
+Qwen3-235B,chains_judge235_t4,17120,human-nature-soul,imputations vs attic,31.8393,65.3877,0.4869,0.3721,0.6029,0.3756
+Qwen3-235B,chains_judge235_t4,17120,lament-pitiable-groan,imputations vs attic,54.7832,8.8890,6.1630,4.4340,8.1192,0.7928
+Qwen3-235B,chains_judge235_t4,17120,leaf-myrtle-olive,imputations vs attic,1.0879,2.2447,0.4847,0.0811,0.9515,0.4977
+Qwen3-235B,chains_judge235_t4,17120,light-ray-sight,imputations vs attic,17.8066,14.0526,1.2671,0.7871,1.8274,0.5717
+Qwen3-235B,chains_judge235_t4,17120,marriage-couch-bed,imputations vs attic,29.9998,10.1010,2.9700,2.2708,3.6641,0.7046
+Qwen3-235B,chains_judge235_t4,17120,murder-slayer-kill,imputations vs attic,26.0069,8.8403,2.9418,1.9769,4.1716,0.6445
+Qwen3-235B,chains_judge235_t4,17120,neck-mane-robe,imputations vs attic,6.4622,7.3790,0.8758,0.6333,1.1325,0.5198
+Qwen3-235B,chains_judge235_t4,17120,persuade-man-king,imputations vs attic,93.3331,90.0381,1.0366,0.8897,1.2014,0.5635
+Qwen3-235B,chains_judge235_t4,17120,rear-sprout-bloom,imputations vs attic,24.2598,22.2070,1.0924,0.7069,1.5245,0.5818
+Qwen3-235B,chains_judge235_t4,17120,river-plain-afar,imputations vs attic,0.2212,7.7745,0.0285,0.0088,0.0539,0.4492
+Qwen3-235B,chains_judge235_t4,17120,see-know-learn,imputations vs attic,63.8051,72.1977,0.8838,0.7625,1.0024,0.5001
+Qwen3-235B,chains_judge235_t4,17120,ship-sail-hull,imputations vs attic,0.4356,12.2599,0.0355,0.0083,0.0719,0.4413
+Qwen3-235B,chains_judge235_t4,17120,sicken-sickness-deadly,imputations vs attic,12.8612,16.6597,0.7720,0.5226,1.0657,0.5118
+Qwen3-235B,chains_judge235_t4,17120,spear-lance-horse,imputations vs attic,7.6337,23.4716,0.3252,0.2202,0.4545,0.4484
+Qwen3-235B,chains_judge235_t4,17120,temple-offer-precinct,imputations vs attic,37.4777,23.6294,1.5861,1.2476,1.8993,0.6486
+Qwen3-235B,chains_judge235_t4,17120,walk-behold-gaze,imputations vs attic,48.1269,15.0872,3.1899,2.5650,3.8460,0.7375
+Qwen3-235B,chains_judge235_t4,17120,water-wet-hot,imputations vs attic,8.5862,39.1063,0.2196,0.1191,0.3268,0.4393
+Qwen3-235B,chains_judge235_t4,17120,within-wall-door,imputations vs attic,5.3743,10.7947,0.4979,0.2490,0.7757,0.4824
+Qwen3-235B,chains_judge235_t4,17120,wrong-vengeance-err,imputations vs attic,92.9132,57.7262,1.6096,1.3138,1.9509,0.6793
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,Greek-sea-barbarian,imputations vs sophocles,0.0241,1.7572,0.0137,0.0000,0.0396,0.4798
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,bacchant-dance-paean,imputations vs sophocles,5.3735,8.1271,0.6612,0.3060,1.0805,0.4756
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,beast-deer-flock,imputations vs sophocles,3.5136,17.3525,0.2025,0.1303,0.2818,0.3915
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,begin-happen-necessity,imputations vs sophocles,19.4795,21.8187,0.8928,0.6614,1.1715,0.4907
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,breast-neck-cling,imputations vs sophocles,11.6599,15.3756,0.7583,0.4582,1.0568,0.4805
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,child-before-bestow,imputations vs sophocles,49.7457,68.5313,0.7259,0.5849,0.8693,0.3878
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,city-sack-rule,imputations vs sophocles,9.6934,31.2637,0.3101,0.1780,0.4904,0.3550
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,contest-rivalry-wrestling,imputations vs sophocles,0.3060,0.7322,0.4179,0.0000,1.3276,0.4952
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,crash-voice-shout,imputations vs sophocles,0.5260,8.9325,0.0589,0.0074,0.1230,0.4205
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,enviable-father-acquire,imputations vs sophocles,90.0473,53.0092,1.6987,1.3115,2.0947,0.6615
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,fine-word-matter,imputations vs sophocles,87.0459,68.3848,1.2729,1.0580,1.5168,0.6011
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,fire-flame-flash,imputations vs sophocles,0.2578,3.9537,0.0652,0.0042,0.1539,0.4647
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,garment-adorn-gold,imputations vs sophocles,1.6726,6.2235,0.2688,0.0616,0.5933,0.4561
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,god-true-lord,imputations vs sophocles,112.7877,55.7915,2.0216,1.6735,2.4377,0.7673
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,hear-fear-grieve,imputations vs sophocles,58.9457,68.8241,0.8565,0.6672,1.0717,0.4695
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,human-nature-soul,imputations vs sophocles,36.2499,53.3021,0.6801,0.4412,0.9688,0.3852
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,lament-pitiable-groan,imputations vs sophocles,41.5375,43.5642,0.9535,0.6456,1.3004,0.5040
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,leaf-myrtle-olive,imputations vs sophocles,0.0877,2.7823,0.0315,0.0000,0.0918,0.4720
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,light-ray-sight,imputations vs sophocles,5.9769,12.0076,0.4978,0.3233,0.7279,0.4597
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,marriage-couch-bed,imputations vs sophocles,60.8589,16.1810,3.7611,2.9326,4.6756,0.7781
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,murder-slayer-kill,imputations vs sophocles,19.3936,18.0114,1.0767,0.7618,1.4088,0.5183
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,neck-mane-robe,imputations vs sophocles,5.0005,16.1078,0.3104,0.1487,0.4866,0.4237
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,persuade-man-king,imputations vs sophocles,107.8714,76.8780,1.4032,1.2117,1.6184,0.6550
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,rear-sprout-bloom,imputations vs sophocles,26.6391,24.5277,1.0861,0.6791,1.5311,0.5115
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,river-plain-afar,imputations vs sophocles,0.3971,4.9788,0.0798,0.0000,0.1864,0.4584
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,see-know-learn,imputations vs sophocles,68.6511,70.9474,0.9676,0.7293,1.2367,0.4864
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,ship-sail-hull,imputations vs sophocles,0.2424,9.0057,0.0269,0.0013,0.0659,0.4403
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,sicken-sickness-deadly,imputations vs sophocles,5.6778,18.5239,0.3065,0.1854,0.4347,0.4050
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,spear-lance-horse,imputations vs sophocles,5.2360,29.7262,0.1761,0.0919,0.2925,0.3509
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,temple-offer-precinct,imputations vs sophocles,56.2864,28.1886,1.9968,1.5192,2.5599,0.6722
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,walk-behold-gaze,imputations vs sophocles,23.0636,53.3753,0.4321,0.3274,0.5599,0.3171
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,water-wet-hot,imputations vs sophocles,6.4513,22.8438,0.2824,0.1105,0.4759,0.3673
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,within-wall-door,imputations vs sophocles,2.5149,10.1772,0.2471,0.1346,0.3945,0.4350
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,wrong-vengeance-err,imputations vs sophocles,76.7853,58.7934,1.3060,1.0971,1.5262,0.5944
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,Greek-sea-barbarian,imputations vs tragedians,0.0241,8.4302,0.0029,0.0000,0.0077,0.4221
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,bacchant-dance-paean,imputations vs tragedians,5.3735,9.8522,0.5454,0.2486,0.8681,0.4617
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,beast-deer-flock,imputations vs tragedians,3.5136,19.1204,0.1838,0.1191,0.2503,0.3716
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,begin-happen-necessity,imputations vs tragedians,19.4795,21.1772,0.9198,0.6786,1.1833,0.4959
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,breast-neck-cling,imputations vs tragedians,11.6599,16.4034,0.7108,0.4265,0.9797,0.4662
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,child-before-bestow,imputations vs tragedians,49.7457,51.9781,0.9571,0.7775,1.1424,0.4895
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,city-sack-rule,imputations vs tragedians,9.6934,36.1079,0.2685,0.1544,0.4241,0.3220
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,contest-rivalry-wrestling,imputations vs tragedians,0.3060,2.2599,0.1354,0.0000,0.3516,0.4792
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,crash-voice-shout,imputations vs tragedians,0.5260,5.8402,0.0901,0.0112,0.1914,0.4512
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,enviable-father-acquire,imputations vs tragedians,90.0473,57.7421,1.5595,1.2187,1.9085,0.6393
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,fine-word-matter,imputations vs tragedians,87.0459,58.5293,1.4872,1.2315,1.7486,0.6526
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,fire-flame-flash,imputations vs tragedians,0.2578,6.8305,0.0377,0.0024,0.0872,0.4404
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,garment-adorn-gold,imputations vs tragedians,1.6726,10.2839,0.1626,0.0378,0.3565,0.4192
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,god-true-lord,imputations vs tragedians,112.7877,46.7726,2.4114,2.0087,2.8911,0.8173
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,hear-fear-grieve,imputations vs tragedians,58.9457,52.8668,1.1150,0.8763,1.3933,0.5528
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,human-nature-soul,imputations vs tragedians,36.2499,40.5769,0.8934,0.5784,1.2636,0.4510
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,lament-pitiable-groan,imputations vs tragedians,41.5375,38.4947,1.0790,0.7396,1.4443,0.5341
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,leaf-myrtle-olive,imputations vs tragedians,0.0877,3.2502,0.0270,0.0000,0.0726,0.4718
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,light-ray-sight,imputations vs tragedians,5.9769,15.3370,0.3897,0.2533,0.5466,0.4264
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,marriage-couch-bed,imputations vs tragedians,60.8589,37.8345,1.6086,1.2826,1.9315,0.6542
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,murder-slayer-kill,imputations vs tragedians,19.3936,24.3512,0.7964,0.5749,1.0154,0.4806
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,neck-mane-robe,imputations vs tragedians,5.0005,22.6499,0.2208,0.1037,0.3429,0.3757
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,persuade-man-king,imputations vs tragedians,107.8714,78.6146,1.3722,1.1857,1.5750,0.6517
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,rear-sprout-bloom,imputations vs tragedians,26.6391,26.9412,0.9888,0.6175,1.3749,0.5056
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,river-plain-afar,imputations vs tragedians,0.3971,5.1800,0.0767,0.0000,0.1731,0.4471
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,see-know-learn,imputations vs tragedians,68.6511,47.8645,1.4343,1.0802,1.8381,0.6118
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,ship-sail-hull,imputations vs tragedians,0.2424,12.1121,0.0200,0.0009,0.0481,0.4207
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,sicken-sickness-deadly,imputations vs tragedians,5.6778,13.8896,0.4088,0.2473,0.5720,0.4324
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,spear-lance-horse,imputations vs tragedians,5.2360,38.4947,0.1360,0.0720,0.2246,0.3039
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,temple-offer-precinct,imputations vs tragedians,56.2864,30.2169,1.8627,1.4192,2.3327,0.6660
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,walk-behold-gaze,imputations vs tragedians,23.0636,61.6271,0.3742,0.2837,0.4798,0.2814
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,water-wet-hot,imputations vs tragedians,6.4513,22.0151,0.2930,0.1138,0.4845,0.3816
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,within-wall-door,imputations vs tragedians,2.5149,13.8388,0.1817,0.1000,0.2843,0.4003
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,wrong-vengeance-err,imputations vs tragedians,76.7853,62.5159,1.2283,1.0372,1.4275,0.5825
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,Greek-sea-barbarian,imputations vs attic,0.0241,6.1085,0.0039,0.0000,0.0105,0.4560
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,bacchant-dance-paean,imputations vs attic,5.3735,5.7364,0.9367,0.4397,1.4885,0.5137
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,beast-deer-flock,imputations vs attic,3.5136,14.7832,0.2377,0.1551,0.3185,0.4371
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,begin-happen-necessity,imputations vs attic,19.4795,89.2685,0.2182,0.1619,0.2797,0.2837
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,breast-neck-cling,imputations vs attic,11.6599,14.2396,0.8188,0.4979,1.1193,0.5097
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,child-before-bestow,imputations vs attic,49.7457,17.5423,2.8358,2.3050,3.3703,0.7390
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,city-sack-rule,imputations vs attic,9.6934,52.1924,0.1857,0.1074,0.2881,0.3299
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,contest-rivalry-wrestling,imputations vs attic,0.3060,2.2953,0.1333,0.0000,0.3414,0.4826
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,crash-voice-shout,imputations vs attic,0.5260,5.9156,0.0889,0.0112,0.1856,0.4643
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,enviable-father-acquire,imputations vs attic,90.0473,41.3783,2.1762,1.6927,2.6445,0.7399
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,fine-word-matter,imputations vs attic,87.0459,115.8109,0.7516,0.6257,0.8775,0.4613
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,fire-flame-flash,imputations vs attic,0.2578,5.5610,0.0464,0.0030,0.1051,0.4680
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,garment-adorn-gold,imputations vs attic,1.6726,11.6676,0.1434,0.0338,0.3108,0.4300
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,god-true-lord,imputations vs attic,112.7877,59.7507,1.8876,1.5766,2.2483,0.7546
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,hear-fear-grieve,imputations vs attic,58.9457,49.9030,1.1812,0.9322,1.4655,0.6036
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,human-nature-soul,imputations vs attic,36.2499,65.3877,0.5544,0.3590,0.7834,0.3823
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,lament-pitiable-groan,imputations vs attic,41.5375,8.8890,4.6729,3.1903,6.2427,0.7253
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,leaf-myrtle-olive,imputations vs attic,0.0877,2.2447,0.0391,0.0000,0.1083,0.4850
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,light-ray-sight,imputations vs attic,5.9769,14.0526,0.4253,0.2789,0.6006,0.4742
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,marriage-couch-bed,imputations vs attic,60.8589,10.1010,6.0250,4.8420,7.1952,0.8267
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,murder-slayer-kill,imputations vs attic,19.3936,8.8403,2.1938,1.5899,2.7860,0.6163
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,neck-mane-robe,imputations vs attic,5.0005,7.3790,0.6777,0.3204,1.0462,0.5048
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,persuade-man-king,imputations vs attic,107.8714,90.0381,1.1981,1.0397,1.3655,0.6177
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,rear-sprout-bloom,imputations vs attic,26.6391,22.2070,1.1996,0.7626,1.6634,0.5861
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,river-plain-afar,imputations vs attic,0.3971,7.7745,0.0511,0.0000,0.1149,0.4511
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,see-know-learn,imputations vs attic,68.6511,72.1977,0.9509,0.7200,1.2041,0.5074
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,ship-sail-hull,imputations vs attic,0.2424,12.2599,0.0198,0.0009,0.0481,0.4390
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,sicken-sickness-deadly,imputations vs attic,5.6778,16.6597,0.3408,0.2068,0.4705,0.4446
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,spear-lance-horse,imputations vs attic,5.2360,23.4716,0.2231,0.1180,0.3693,0.4222
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,temple-offer-precinct,imputations vs attic,56.2864,23.6294,2.3820,1.8202,2.9541,0.7194
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,walk-behold-gaze,imputations vs attic,23.0636,15.0872,1.5287,1.1632,1.9583,0.6009
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,water-wet-hot,imputations vs attic,6.4513,39.1063,0.1650,0.0642,0.2722,0.4113
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,within-wall-door,imputations vs attic,2.5149,10.7947,0.2330,0.1305,0.3575,0.4465
+Qwen2.5-72B,chains_judge72_t4_v3e,23520,wrong-vengeance-err,imputations vs attic,76.7853,57.7262,1.3302,1.1245,1.5380,0.6247
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,Greek-sea-barbarian,imputations vs sophocles,3.1243,1.7572,1.7780,0.8300,3.2482,0.5127
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,bacchant-dance-paean,imputations vs sophocles,7.1743,8.1271,0.8828,0.3593,1.5470,0.4954
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,beast-deer-flock,imputations vs sophocles,6.8271,17.3525,0.3934,0.2246,0.5578,0.4288
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,begin-happen-necessity,imputations vs sophocles,35.5242,21.8187,1.6282,1.1374,2.1688,0.5749
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,breast-neck-cling,imputations vs sophocles,7.2900,15.3756,0.4741,0.2077,0.9005,0.4320
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,child-before-bestow,imputations vs sophocles,51.4927,68.5313,0.7514,0.5101,1.0821,0.3971
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,city-sack-rule,imputations vs sophocles,38.4170,31.2637,1.2288,0.8608,1.6508,0.5279
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,contest-rivalry-wrestling,imputations vs sophocles,0.9257,0.7322,1.2643,0.0000,3.6062,0.5018
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,crash-voice-shout,imputations vs sophocles,3.1243,8.9325,0.3498,0.2017,0.5235,0.4487
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,enviable-father-acquire,imputations vs sophocles,57.5098,53.0092,1.0849,0.9105,1.2521,0.5595
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,fine-word-matter,imputations vs sophocles,139.4353,68.3848,2.0390,1.7240,2.3403,0.7949
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,fire-flame-flash,imputations vs sophocles,2.8928,3.9537,0.7317,0.2312,1.4110,0.4937
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,garment-adorn-gold,imputations vs sophocles,3.7028,6.2235,0.5950,0.3026,1.0276,0.4761
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,god-true-lord,imputations vs sophocles,62.4855,55.7915,1.1200,0.9035,1.3706,0.5579
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,hear-fear-grieve,imputations vs sophocles,62.9484,68.8241,0.9146,0.7581,1.0705,0.4902
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,human-nature-soul,imputations vs sophocles,36.5656,53.3021,0.6860,0.5663,0.8052,0.4274
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,lament-pitiable-groan,imputations vs sophocles,17.1257,43.5642,0.3931,0.2430,0.5758,0.3687
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,leaf-myrtle-olive,imputations vs sophocles,0.9257,2.7823,0.3327,0.1017,0.6250,0.4798
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,light-ray-sight,imputations vs sophocles,3.7028,12.0076,0.3084,0.1510,0.5001,0.4362
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,marriage-couch-bed,imputations vs sophocles,12.1500,16.1810,0.7509,0.4265,1.0998,0.4864
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,murder-slayer-kill,imputations vs sophocles,6.4800,18.0114,0.3598,0.2394,0.5114,0.4042
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,neck-mane-robe,imputations vs sophocles,3.3557,16.1078,0.2083,0.0619,0.3822,0.4043
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,persuade-man-king,imputations vs sophocles,91.0669,76.8780,1.1846,1.0399,1.3367,0.5842
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,rear-sprout-bloom,imputations vs sophocles,20.4814,24.5277,0.8350,0.6209,1.0605,0.4810
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,river-plain-afar,imputations vs sophocles,2.4300,4.9788,0.4881,0.0000,1.2081,0.4817
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,see-know-learn,imputations vs sophocles,82.3883,70.9474,1.1613,1.0482,1.2944,0.5795
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,ship-sail-hull,imputations vs sophocles,3.2400,9.0057,0.3598,0.1496,0.6379,0.4720
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,sicken-sickness-deadly,imputations vs sophocles,17.4728,18.5239,0.9433,0.5439,1.5134,0.4855
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,spear-lance-horse,imputations vs sophocles,10.0671,29.7262,0.3387,0.1415,0.5975,0.3818
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,temple-offer-precinct,imputations vs sophocles,26.1514,28.1886,0.9277,0.6500,1.2513,0.5139
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,walk-behold-gaze,imputations vs sophocles,58.6670,53.3753,1.0991,0.8430,1.3685,0.5442
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,water-wet-hot,imputations vs sophocles,4.8600,22.8438,0.2127,0.1568,0.2838,0.3585
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,within-wall-door,imputations vs sophocles,11.4557,10.1772,1.1256,0.5496,1.8687,0.5143
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,wrong-vengeance-err,imputations vs sophocles,108.5397,58.7934,1.8461,1.6011,2.1005,0.7513
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,Greek-sea-barbarian,imputations vs tragedians,3.1243,8.4302,0.3706,0.1747,0.5976,0.4543
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,bacchant-dance-paean,imputations vs tragedians,7.1743,9.8522,0.7282,0.2882,1.2330,0.4822
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,beast-deer-flock,imputations vs tragedians,6.8271,19.1204,0.3571,0.2047,0.4919,0.4103
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,begin-happen-necessity,imputations vs tragedians,35.5242,21.1772,1.6775,1.1971,2.2090,0.5833
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,breast-neck-cling,imputations vs tragedians,7.2900,16.4034,0.4444,0.1944,0.8350,0.4170
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,child-before-bestow,imputations vs tragedians,51.4927,51.9781,0.9907,0.6784,1.4190,0.4921
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,city-sack-rule,imputations vs tragedians,38.4170,36.1079,1.0640,0.7472,1.4265,0.5008
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,contest-rivalry-wrestling,imputations vs tragedians,0.9257,2.2599,0.4096,0.0000,0.9413,0.4858
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,crash-voice-shout,imputations vs tragedians,3.1243,5.8402,0.5350,0.3064,0.8115,0.4799
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,enviable-father-acquire,imputations vs tragedians,57.5098,57.7421,0.9960,0.8405,1.1373,0.5312
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,fine-word-matter,imputations vs tragedians,139.4353,58.5293,2.3823,2.0448,2.7128,0.8340
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,fire-flame-flash,imputations vs tragedians,2.8928,6.8305,0.4235,0.1359,0.7539,0.4694
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,garment-adorn-gold,imputations vs tragedians,3.7028,10.2839,0.3601,0.1866,0.6071,0.4405
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,god-true-lord,imputations vs tragedians,62.4855,46.7726,1.3359,1.0752,1.6272,0.6164
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,hear-fear-grieve,imputations vs tragedians,62.9484,52.8668,1.1907,0.9958,1.3881,0.5762
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,human-nature-soul,imputations vs tragedians,36.5656,40.5769,0.9011,0.7558,1.0442,0.4986
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,lament-pitiable-groan,imputations vs tragedians,17.1257,38.4947,0.4449,0.2729,0.6357,0.3966
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,leaf-myrtle-olive,imputations vs tragedians,0.9257,3.2502,0.2848,0.0851,0.5028,0.4797
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,light-ray-sight,imputations vs tragedians,3.7028,15.3370,0.2414,0.1201,0.3863,0.4040
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,marriage-couch-bed,imputations vs tragedians,12.1500,37.8345,0.3211,0.1832,0.4604,0.3654
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,murder-slayer-kill,imputations vs tragedians,6.4800,24.3512,0.2661,0.1799,0.3716,0.3684
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,neck-mane-robe,imputations vs tragedians,3.3557,22.6499,0.1482,0.0453,0.2716,0.3570
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,persuade-man-king,imputations vs tragedians,91.0669,78.6146,1.1584,1.0285,1.2906,0.5811
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,rear-sprout-bloom,imputations vs tragedians,20.4814,26.9412,0.7602,0.5641,0.9510,0.4758
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,river-plain-afar,imputations vs tragedians,2.4300,5.1800,0.4691,0.0000,1.1252,0.4716
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,see-know-learn,imputations vs tragedians,82.3883,47.8645,1.7213,1.5532,1.9005,0.7100
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,ship-sail-hull,imputations vs tragedians,3.2400,12.1121,0.2675,0.1107,0.4553,0.4530
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,sicken-sickness-deadly,imputations vs tragedians,17.4728,13.8896,1.2580,0.7260,1.9505,0.5138
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,spear-lance-horse,imputations vs tragedians,10.0671,38.4947,0.2615,0.1094,0.4588,0.3352
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,temple-offer-precinct,imputations vs tragedians,26.1514,30.2169,0.8655,0.6018,1.1462,0.5076
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,walk-behold-gaze,imputations vs tragedians,58.6670,61.6271,0.9520,0.7327,1.1732,0.5097
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,water-wet-hot,imputations vs tragedians,4.8600,22.0151,0.2208,0.1644,0.2917,0.3729
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,within-wall-door,imputations vs tragedians,11.4557,13.8388,0.8278,0.4067,1.3246,0.4835
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,wrong-vengeance-err,imputations vs tragedians,108.5397,62.5159,1.7362,1.5275,1.9580,0.7357
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,Greek-sea-barbarian,imputations vs attic,3.1243,6.1085,0.5115,0.2436,0.8116,0.4877
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,bacchant-dance-paean,imputations vs attic,7.1743,5.7364,1.2507,0.4983,2.1199,0.5323
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,beast-deer-flock,imputations vs attic,6.8271,14.7832,0.4618,0.2652,0.6327,0.4708
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,begin-happen-necessity,imputations vs attic,35.5242,89.2685,0.3979,0.2791,0.5167,0.3560
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,breast-neck-cling,imputations vs attic,7.2900,14.2396,0.5120,0.2234,0.9577,0.4613
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,child-before-bestow,imputations vs attic,51.4927,17.5423,2.9353,2.0130,4.2054,0.7203
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,city-sack-rule,imputations vs attic,38.4170,52.1924,0.7361,0.5188,0.9703,0.4771
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,contest-rivalry-wrestling,imputations vs attic,0.9257,2.2953,0.4033,0.0000,0.8666,0.4892
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,crash-voice-shout,imputations vs attic,3.1243,5.9156,0.5281,0.3077,0.7691,0.4920
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,enviable-father-acquire,imputations vs attic,57.5098,41.3783,1.3899,1.1736,1.5826,0.6564
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,fine-word-matter,imputations vs attic,139.4353,115.8109,1.2040,1.0415,1.3617,0.6327
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,fire-flame-flash,imputations vs attic,2.8928,5.5610,0.5202,0.1701,0.9307,0.4963
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,garment-adorn-gold,imputations vs attic,3.7028,11.6676,0.3174,0.1647,0.5447,0.4493
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,god-true-lord,imputations vs attic,62.4855,59.7507,1.0458,0.8440,1.2678,0.5722
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,hear-fear-grieve,imputations vs attic,62.9484,49.9030,1.2614,1.0553,1.4674,0.6189
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,human-nature-soul,imputations vs attic,36.5656,65.3877,0.5592,0.4706,0.6442,0.4127
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,lament-pitiable-groan,imputations vs attic,17.1257,8.8890,1.9266,1.1960,2.7397,0.5936
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,leaf-myrtle-olive,imputations vs attic,0.9257,2.2447,0.4124,0.1096,0.7179,0.4929
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,light-ray-sight,imputations vs attic,3.7028,14.0526,0.2635,0.1307,0.4161,0.4500
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,marriage-couch-bed,imputations vs attic,12.1500,10.1010,1.2028,0.6939,1.7144,0.5550
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,murder-slayer-kill,imputations vs attic,6.4800,8.8403,0.7330,0.4948,1.0253,0.4995
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,neck-mane-robe,imputations vs attic,3.3557,7.3790,0.4548,0.1397,0.8263,0.4821
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,persuade-man-king,imputations vs attic,91.0669,90.0381,1.0114,0.8998,1.1247,0.5589
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,rear-sprout-bloom,imputations vs attic,20.4814,22.2070,0.9223,0.6938,1.1417,0.5516
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,river-plain-afar,imputations vs attic,2.4300,7.7745,0.3126,0.0000,0.7423,0.4735
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,see-know-learn,imputations vs attic,82.3883,72.1977,1.1411,1.0417,1.2486,0.5910
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,ship-sail-hull,imputations vs attic,3.2400,12.2599,0.2643,0.1104,0.4401,0.4701
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,sicken-sickness-deadly,imputations vs attic,17.4728,16.6597,1.0488,0.6008,1.6081,0.5185
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,spear-lance-horse,imputations vs attic,10.0671,23.4716,0.4289,0.1790,0.7529,0.4516
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,temple-offer-precinct,imputations vs attic,26.1514,23.6294,1.1067,0.7764,1.4647,0.5784
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,walk-behold-gaze,imputations vs attic,58.6670,15.0872,3.8885,2.9996,4.7949,0.7819
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,water-wet-hot,imputations vs attic,4.8600,39.1063,0.1243,0.0917,0.1631,0.4017
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,within-wall-door,imputations vs attic,11.4557,10.7947,1.0612,0.5323,1.7023,0.5227
+Claude Sonnet 5.5,chains_judge_claude-sonnet-5-5_t4,387,wrong-vengeance-err,imputations vs attic,108.5397,57.7262,1.8803,1.6565,2.1112,0.7531
