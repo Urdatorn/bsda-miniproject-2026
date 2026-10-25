@@ -69,12 +69,12 @@ log-odds taken to the power $1/T_{\text{judge}} = 4$. Sixteen chains start
 from Eric Cullhed's eight reconstructions, two from each: eight run 12,000
 steps and eight 10,000, and a state is kept every ten steps after a burn-in
 of 300. (The data also hold sixteen chains under the smaller judge
-Qwen2.5-72B-Instruct, the set `chains_judge72_t4_v3e`, and a short pilot
-under Claude Sonnet 5.5; this report reads one set, named by its parameter
-`chain_set`, and sets the three judges side by side at the end.) Which
-topics do the imputations put into the lost passage, and does that differ
-from what
-Sophocles writes elsewhere?
+Qwen2.5-72B-Instruct, the set `chains_judge72_t4_v3e`, a short pilot
+under Claude Sonnet 5.5, and eight more chains under the same judge from
+starts unrelated to one another; this report reads one set, named by its
+parameter `chain_set`, and sets the other sets beside it in the checks at
+the end.) Which topics do the imputations put into the lost passage, and
+does that differ from what Sophocles writes elsewhere?
 (W. B. Henry's restoration of the same verses is in the data, but a single
 text is not compared with the mean of thousands: it is left out.)
 
@@ -843,7 +843,8 @@ vengeance <- filter(stability, topic == "wrong-vengeance-err")
 sentence <- paste("%d of the %d topics with an R-hat have one above 1.1: in",
                   "10,000 steps the chains have not mixed over the",
                   "restoration space, and a chain's share of a topic still",
-                  "depends on where it started. The lift of",
+                  "depends on which chain it is; whether that is the",
+                  "start's doing is the next check's question. The lift of",
                   "wrong-vengeance-err runs from %.2f to %.2f over the",
                   "sixteen chains (their 5th and 95th percentiles), so the",
                   "pooled lift is an average over the starts rather than a",
@@ -852,6 +853,116 @@ sentence <- paste("%d of the %d topics with an R-hat have one above 1.1: in",
                   "their width.")
 cat(sprintf(sentence, poorly_mixed, with_rhat, vengeance$chain_lift_q05,
             vengeance$chain_lift_q95), "\n")
+```
+
+## Unrelated starts
+
+The sixteen chains start from Eric Cullhed's eight reconstructions, and
+those are variants of one text: about nine per cent of the restored words
+differ between any two of them. Their agreement is therefore agreement
+between chains of one origin, and the poor mixing above may be the mark of
+that origin or of the walk. A second set of eight chains under the same
+judge, `chains_judge235_t4_spread`, tells the two apart. One chain keeps
+Eric's text; the other seven start from late states of the sixteen chains
+above, chosen one per source chain so that the eight starts are as far
+apart in words as possible (`scripts/spread_starts.py` in the generation
+repository: 96 to 100 per cent of the restored words differ between any
+two starts, as between unrelated passages). Everything else is the same:
+the judge, $1/T_{\text{judge}} = 4$, 10,000 steps, burn-in 300, a state
+every ten steps. At the level of words the two sets end alike, with about
+96 per cent of the restored words differing between two chains' final
+states in either set, so what the comparison tests is the topic profile:
+if a chain's topics depend on where it started, the spread set should
+disagree more and its pooled lifts should move; if the walk forgets its
+start, both sets should put the same topics into the passage.
+
+```{r spread_set}
+# The spread set, one document per snapshot, summarised like the report's
+# set and compared with Sophocles
+spread <- filter(untilted, restorer == "walk",
+                 chain_set == "chains_judge235_t4_spread")
+stopifnot(nrow(spread) > 0)
+spread$chain_id <- paste(spread$chain_set, spread$chain)
+spread$snapshot <- paste(spread$chain_id, spread$iteration)
+spread_documents <- make_documents(spread, spread$snapshot)
+spread_posterior <- summarise_documents(spread_documents, baseline)
+
+# The share of every topic in every snapshot of the spread set, and the
+# chain each snapshot belongs to; every chain has the same number of
+# snapshots, so R-hat needs no trimming here
+spread_lemmata <- lemma_table(spread, spread$snapshot)
+names(spread_lemmata)[names(spread_lemmata) == "group"] <- "snapshot"
+spread_counts <- table(spread_lemmata$snapshot,
+                       factor(spread_lemmata$topic, levels = topic_names))
+spread_shares <- spread_counts / rowSums(spread_counts)
+spread_chain <- spread$chain_id[match(rownames(spread_counts),
+                                      spread$snapshot)]
+stopifnot(length(unique(table(spread_chain))) == 1)
+
+# One row per topic: the lift and R-hat of each set, and the range of the
+# spread set's eight chain lifts
+starts <- data.frame(topic = topic_names,
+                     lift_eric = rows$lift,
+                     lift_spread = spread_posterior$lift,
+                     lift_spread_q05 = spread_posterior$lift_q05,
+                     lift_spread_q95 = spread_posterior$lift_q95,
+                     rhat_eric = stability$rhat[match(topic_names,
+                                                      stability$topic)],
+                     rhat_spread = NA, chain_q05 = NA, chain_q95 = NA)
+for (i in seq_len(K)) {
+  x <- spread_shares[, i]
+  starts$rhat_spread[i] <- rhat(x, spread_chain)
+  chain_lifts <- tapply(x, spread_chain, mean) / baseline$mean[i]
+  starts$chain_q05[i] <- quantile(chain_lifts, 0.05)
+  starts$chain_q95[i] <- quantile(chain_lifts, 0.95)
+}
+starts <- arrange(starts, desc(rhat_eric))
+knitr::kable(starts, digits = 2, row.names = FALSE,
+             col.names = c("topic", "lift, Eric's starts", "lift, spread",
+                           "q05", "q95", "R-hat, Eric's starts",
+                           "R-hat, spread", "chain q05", "chain q95"))
+```
+
+```{r spread_summary, results = "asis"}
+# How alike the two sets' profiles are, how many topics each set's chains
+# disagree on, and the topic the report singles out
+agreement <- cor(log(starts$lift_eric), log(starts$lift_spread),
+                 use = "complete.obs")
+spread_raised <- starts$topic[spread_posterior$p_above[match(starts$topic,
+                                 topic_names)] >= 0.9 &
+                              starts$lift_spread >= 1.5]
+both_raised <- intersect(rows$topic[rows$raised], spread_raised)
+mixed_eric <- sum(starts$rhat_eric > 1.1, na.rm = TRUE)
+mixed_spread <- sum(starts$rhat_spread > 1.1, na.rm = TRUE)
+vengeance <- filter(starts, topic == "wrong-vengeance-err")
+worst <- starts[which.max(starts$rhat_spread), ]
+marriage <- filter(starts, topic == "marriage-couch-bed")
+sentence <- paste("The log lifts of the two sets correlate at %.2f over the",
+                  "%d topics. Raised in the report's set (lift at least 1.5",
+                  "and a posterior probability of exceeding Sophocles of at",
+                  "least 0.9) are %s; raised in the spread set are %s;",
+                  "raised in both: %s. %d topics have an R-hat above 1.1",
+                  "among the chains from Eric's starts and %d among the",
+                  "chains from unrelated starts, so the chains disagree",
+                  "about as much whether or not they share an origin: the",
+                  "poor mixing is the walk's, not the starts', and 10,000",
+                  "steps are not enough for one chain to represent the",
+                  "posterior. The largest R-hat in the spread set, %.2f for",
+                  "%s, is one chain's excess (its chains run from %.2f to",
+                  "%.2f). Wrong-vengeance-err has lift %.2f in the spread",
+                  "set, interval %.2f to %.2f, above Sophocles but under the",
+                  "1.5 that counts as raised, and its eight chains run from",
+                  "%.2f to %.2f; marriage-couch-bed falls to %.2f.")
+cat(sprintf(sentence, agreement, sum(!is.na(starts$lift_spread)),
+            paste(rows$topic[rows$raised], collapse = ", "),
+            paste(spread_raised, collapse = ", "),
+            if (length(both_raised)) paste(both_raised, collapse = ", ")
+            else "none",
+            mixed_eric, mixed_spread, worst$rhat_spread, worst$topic,
+            worst$chain_q05, worst$chain_q95,
+            vengeance$lift_spread, vengeance$lift_spread_q05,
+            vengeance$lift_spread_q95, vengeance$chain_q05,
+            vengeance$chain_q95, marriage$lift_spread), "\n")
 ```
 
 ## A third judge
