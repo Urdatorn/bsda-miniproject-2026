@@ -201,10 +201,10 @@ The data for the topic modelling workflow consists of a bag-of-lemmata matrix co
 \section{Models and methods}
 \label{models}
 
-\subsection{Analytic Dirichlet-multinomial with unmixed topics}
+\subsection{Hard topics: conjugate posterior}
 
 Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters
-(word2vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; two
+(Word2Vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; two
 rare-lemma clusters and four function-word clusters dropped, leaving 34). Each
 cluster is named by the English glosses of
 the three non-cognate lemmata nearest its centroid, for example \textit{lament-pitiable-groan} or
@@ -218,21 +218,16 @@ The Dirichlet is conjugate to the multinomial, so the posterior is exact,
 
 \[\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\alpha \mathbf 1 + \mathbf n).\]
 
-To sample from this posterior in R it is enough to draw from \texttt{rgamma} and normalise. A \textbf{cell} (one lacuna, one restorer) is
-the equal mixture of its documents' posteriors: its spread is the spread
-between restorations plus the Dirichlet uncertainty of each. Sophocles' extant
-trimeters are treated the same way, and a cell is compared with them by
-$P(\theta_k^{\text{cell}} > \theta_k^{\text{Soph}})$ over paired draws and by
-the lift of the posterior means.
+To sample from this posterior in R it is enough to draw from \texttt{rgamma} and normalise.
 
-\subsection{Amortized latent Dirichlet allocation with mixed topics}
+\subsection{Soft topics: MCMC posterior}
 
 TBA
 
 \section{Results}
 \label{results}
 
-Results for the analytic topic model is visualized in \autoref{heatmap}.
+Results for the hard-topic Dirichlet-Multinomial model is visualized in \autoref{heatmap}.
 
 
 \section{Conclusions}
@@ -259,7 +254,7 @@ This experiment was carried out under the aegis of a long-term research program 
 \section{Heatmap of posterior mean relative to Sophocles}
 \label{heatmap}
 
-In the heatmap below, the y-axis contains the topics, named after the two lemmata closest to the word2vec centroid. The x-axis has the papyrus line numbers, and for each number three different restoration methods. 
+In the heatmap below, the y-axis contains the topics, named after the two lemmata closest to the Word2Vec centroid. The x-axis has the papyrus line numbers, and for each number three different restoration methods. 
 
 \includegraphics[width=1\linewidth]{figures/lift_heatmap.pdf}
 
@@ -326,7 +321,7 @@ The content of the prompt sent to Stoicheia to infer an imputation then looks li
 At each step, the character-level diffusion model Stoicheia \citep{cullhed2026stoicheiacharacterlevelmaskeddiffusion} is making a proposal to a small word span, which is accepted with probability $\operatorname{min}(1, r)$, where the acceptance ratio $r$ depends on both deterministic orthographic, linguistic and stylistic checks based on the known author's use, and the qualitative judgement of an open-source chatbot LLM.
 
 \newpage
-\section{The 34 unsupervised \texttt{word2vec} topics}
+\section{The 34 unsupervised Word2Vec topics}
 
 \begin{table*}[htbp]
 \centering
@@ -372,7 +367,7 @@ contest-rivalry-wrestling & ἀγών-ἅμιλλα-πάλη & agōn-hamilla-pal
 \bottomrule
 \end{tabular*}
 \caption{The 34 unsupervised topics, in order of their mass in the three tragedians. A topic is named by the three
-non-cognate lemmata nearest its centroid in the word2vec space; the English glosses are the labels used in the
+non-cognate lemmata nearest its centroid in the Word2Vec space; the English glosses are the labels used in the
 analysis. The last columns give the cluster's share of the 2532 topic-bearing lemmata of the vocabulary and of their 53931
 tokens in the three tragedians; each column sums to 100.}
 \label{tab:topics}
