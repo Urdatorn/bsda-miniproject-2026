@@ -49,6 +49,8 @@ def main(out_path):
     ax.set_xticks(xs + gaps)
     ax.set_xticklabels(labels + ["…"] * len(gaps), rotation=55, ha="right", fontsize=7)
     ax.set_xlim(-0.6, x + 0.4)
+    ax.set_yscale("log")
+    ax.set_ylim(1e-5, 0.1)
     ax.tick_params(axis="y", labelsize=7)
     ax.set_ylabel(r"$\phi_{k,w}$", fontsize=8)
     for side in ("top", "right"):
