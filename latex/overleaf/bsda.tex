@@ -219,7 +219,8 @@ As a case study, we use the famous papyrus \textit{P.Oxy 5292} first published i
 The imputations come from a judge-steered Metropolis walk over restorations
 of the seventeen damaged verses (vv.~13--29): the character-level diffusion
 model Stoicheia proposes a replacement for a short span, formal metrical and
-orthographic rules filter it, and an LLM judge (Qwen3-235B-A22B-Instruct-2507)
+orthographic rules filter it, and an open-weight LLM judge\footnote{Qwen3-235B-A22B-Instruct-2507,
+\url{https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507}.}
 accepts or rejects it by a Metropolis--Hastings step (\autoref{walk}).
 Sixteen chains start from eight reconstructions by Eric Cullhed, and a state is
 recorded every ten steps after a burn-in of 300, giving 17\,120 restorations.
