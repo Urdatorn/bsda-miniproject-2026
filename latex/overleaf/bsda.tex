@@ -106,6 +106,36 @@
 % Mina custom-spaket
 \usepackage{epigraph}
 
+% Stan code: listings with a small Stan language definition
+\usepackage{listings}
+\lstdefinelanguage{Stan}{
+  morekeywords={data,transformed,parameters,model,generated,quantities,
+    functions,for,in,if,else,while,target,return,print,reject},
+  morekeywords=[2]{int,real,vector,row_vector,matrix,simplex,array,
+    unit_vector,ordered,positive_ordered,cov_matrix,corr_matrix,lower,upper},
+  morekeywords=[3]{dirichlet,normal,gamma,beta,multinomial,categorical,
+    rep_vector,log,exp,log_sum_exp,sum,softmax},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+}
+\lstset{
+  language=Stan,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\bfseries\color{blue!60!black},
+  keywordstyle=[2]\color{teal!70!black},
+  keywordstyle=[3]\color{purple!70!black},
+  commentstyle=\itshape\color{gray},
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+  frame=single,
+  framerule=0.3pt,
+  rulecolor=\color{gray!60},
+  aboveskip=1ex,
+  belowskip=1ex,
+}
+
 \begin{document}
 
 \twocolumn[
@@ -212,7 +242,29 @@ To sample from this posterior in R it is enough to draw from \texttt{rgamma} and
 
 \subsection{Soft topics: MCMC posterior}
 
-TBA
+With the topic--word matrix $\phi$ fixed, the posterior of a document's topic
+mixture $\theta$ is sampled with NUTS in Stan, one document at a time
+(\texttt{lda\_given\_phi.stan}):
+
+\begin{lstlisting}
+data {
+  int<lower=1> N;
+  int<lower=1> K;
+  matrix[N, K] logphi; // log phi[:, w_n] for each lemma
+}
+parameters {
+  simplex[K] theta; // lives in R^{K-1}
+}
+model {
+  // prior
+  theta ~ dirichlet(rep_vector(1, K)); // not necessary
+
+  // likelihood
+  vector[K] log_theta = log(theta);
+  for (n in 1:N)
+    target += log_sum_exp(log_theta + logphi[n]');
+}
+\end{lstlisting}
 
 \section{Results}
 \label{results}
@@ -244,12 +296,11 @@ This experiment was carried out under the aegis of a long-term research program 
 \section{The papyrus}
 \label{papyrus}
 
-\begin{figure}[!ht]
-\centering
+P.Oxy 5292 \citep{slattery2016tereus}. The first three lines of the right column overlap with the end of a section of Sophocles' \textit{Tereus} preserved by Stobaeus, which is how we know the context of the otherwise lost lines that follow.
+
+\begin{center}
 \includegraphics[height=0.75\textheight,width=\linewidth,keepaspectratio]{figures/POxy5292.jpg}
-\caption{P.Oxy 5292 \cite{slattery2016tereus}. The first three lines of the right column overlap with the end of a section of Sophocles' \textit{Tereus} preserved by Stobaeus, which is how we know the context of the otherwise lost lines that follow.}
-\label{poxy5292}
-\end{figure}
+\end{center}
 
 \newpage
 \section{Heatmap of posterior mean relative to Sophocles}
@@ -324,7 +375,7 @@ At each step, the character-level diffusion model Stoicheia \citep{cullhed2026st
 \newpage
 \section{The walk and the pipeline, step by step}\label{flowchart}
 
-\autoref{fig:flowchart} lays out one step of the walk of \autoref{walk} as it
+The flow chart below lays out one step of the walk of \autoref{walk} as it
 was run for every set of imputations in this report, and what happens to the
 recorded states afterwards. The judge is Qwen3-235B-A22B-Instruct-2507 at
 $1/T_{\text{judge}} = 4$; the style term is switched off
@@ -342,18 +393,17 @@ Sophocles by the hard and soft models of \autoref{models}; the chain
 checks (drift, $\hat R$, Eric's starts against unrelated starts, and the
 Qwen judges against a Claude Sonnet 5.5 pilot) close the pipeline.
 
-\begin{figure*}[p]
-\centering
-\includegraphics[height=0.93\textheight,width=\linewidth,keepaspectratio]{figures/walk_flowchart.pdf}
-\caption{One step of the judge-steered Metropolis walk (top, with the loop
-back to the proposal on the right), the sets of starting texts, and the path
-from recorded states to the Bayesian models. Blue: the character-level
+The chart shows one step of the judge-steered Metropolis walk (top, with the
+loop back to the proposal on the right), the sets of starting texts, and the
+path from recorded states to the Bayesian models. Blue: the character-level
 diffusion proposer; orange: the LLM judge and the acceptance; green: the
 modelling pipeline. The side notes record the acceptance rates of the three
 judges, the rule set, the economies used for the priced judge, and the mixing
-diagnosis.}
-\label{fig:flowchart}
-\end{figure*}
+diagnosis.
+
+\begin{center}
+\includegraphics[height=0.93\textheight,width=\linewidth,keepaspectratio]{figures/walk_flowchart.pdf}
+\end{center}
 
 \newpage
 \section{The 34 unsupervised Word2Vec topics}
