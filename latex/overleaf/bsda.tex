@@ -256,13 +256,17 @@ is exact and is sampled by normalised gamma draws.
 
 \subsection{Soft topics: MCMC posterior}
 
-Hard clusters put every occurrence of a lemma into one topic, although
-frequent words such as \textgreek{θεός} belong to many. The soft model gives each
-topic a distribution $\phi_k$ over the vocabulary, fitted once by a seeded
+Hard clusters put every occurrence of a lemma into one topic, although a
+frequent word can serve several. The soft model gives each topic a
+distribution $\phi_k$ over the vocabulary (\cref{fig:phi}), fitted once by a seeded
 latent Dirichlet allocation \citep{blei2003latent} on Aeschylus and Euripides
 only (tomotopy, \citealt{lee2022tomotopy}), so that Sophocles is a test corpus
 like the restorations. Each hard cluster seeds one topic with a strong prior
-on its lemmata, and four free topics take up what the clusters miss. With
+on its lemmata, and four free topics take up what the clusters miss.
+\textgreek{θεός}, god, which the hard model puts in \textit{god-true-lord}
+alone, is now split between two topics: given the word, the free topic
+\textit{god-word-do} has probability 0.80 and \textit{god-true-lord} 0.18
+($\phi_{k,w}$ normalised over $k$). With
 $\phi$ fixed, a document's lemmata are drawn from the mixture
 $\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\mathbf 1)$, and
 the posterior
@@ -271,6 +275,16 @@ the posterior
 has no closed form. It is sampled with NUTS in Stan
 \citep{carpenter2017stan}, one document at a time, by the program shown in the
 frame (diagnostics in \autoref{diagnostics}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/phi_marriage.pdf}
+\caption{Part of $\phi_k$ for \textit{marriage-couch-bed}, lemmata in
+vocabulary order. Most of the 3,128 lemmata, like the first five, get about
+$3\cdot10^{-5}$; the mass sits on a few, such as \textgreek{γάμος} and
+\textgreek{λέκτρον}, marriage and the marriage bed.}
+\label{fig:phi}
+\end{figure}
 
 \begin{lstlisting}[float=tp]
 data {
@@ -376,9 +390,8 @@ population that overlaps heavily with Sophocles'.
 (range 0.83--1.63) and only \textit{persuade-man-king} is raised (1.63,
 interval 1.54--1.76). \textit{god-true-lord} falls to 1.16 and
 \textit{marriage-couch-bed} to 1.22. The reason is visible in $\phi$: the most
-frequent words of tragedy leave their clusters for the free topics. \textgreek{θεός}
-has probability 0.80 under a free topic and 0.18 under \textit{god-true-lord},
-so the hard model's excess of \textgreek{θεός} is no longer an excess of the
+frequent words of tragedy leave their clusters for the free topics, as
+\textgreek{θεός} does for \textit{god-word-do}, so the hard model's excess of \textgreek{θεός} is no longer an excess of the
 god topic. \textit{wrong-vengeance-err} is the one raised topic of the hard
 model that stays above all three baselines under the soft model too (lifts
 1.18, 1.17 and 1.08).
@@ -425,14 +438,6 @@ P.Oxy 5292 \citep{slattery2016tereus}. The first three lines of the right column
 \end{center}
 
 \newpage
-\section{Heatmap of posterior mean relative to Sophocles}
-\label{heatmap}
-
-In the heatmap below, the y-axis contains the topics, named after the two lemmata closest to the Word2Vec centroid. The x-axis has the papyrus line numbers, and for each number three different restoration methods. 
-
-\includegraphics[width=1\linewidth]{figures/lift_heatmap.pdf}
-
-
 \section{Input to Stoicheia}
 
 Stoicheia is the first imputation model for papyri that does not require inputting the exact number of characters missing. Instead one can input a desired span. In our case, a plausible span can easily be estimated using the mean length of equivalent verse lines in Sophocles' preserved plays, for which see \autoref{tab:trimeter-lengths}.
