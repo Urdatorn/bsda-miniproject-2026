@@ -44,6 +44,12 @@ and Euripides and against Classical Attic, and Sophocles against the latter
 two, with the lift's 90 % interval over the posterior draws of the two mean
 profiles), and theta_draws.npz (the kept draws of every document, for the
 dataset, not for git).
+
+The prior check.  --alpha sets the concentration of the Dirichlet prior on
+theta (1, the flat prior, is the report's); --phi reuses the phi_matrix.csv.gz
+of an earlier run instead of fitting the LDA again, so that only the prior
+changes; --no-draws skips theta_draws.npz.  slurm/soft_prior.slurm runs 0.1
+and 2 this way into results/soft/alpha_0.1 and results/soft/alpha_2.
 """
 import argparse, gzip, json, os, shutil, tempfile, time, unicodedata
 from collections import Counter, defaultdict
@@ -116,12 +122,12 @@ GLOSS = {"παῖς": "child", "πατήρ": "father", "δόμος": "house", "�
 WORKER = {}
 
 
-def worker_init(exe_file, logphi_path, chains, warmup, samples, keep):
-    """each worker holds the compiled program and the log phi matrix once"""
+def worker_init(exe_file, logphi_path, chains, warmup, samples, keep, alpha):
+    """each worker holds the compiled program, the log phi matrix and the prior's concentration once"""
     import cmdstanpy, logging
     cmdstanpy.utils.get_logger().setLevel(logging.WARNING)                              # no line per chain in the log
     WORKER.update(model=cmdstanpy.CmdStanModel(exe_file=exe_file), logphi=np.load(logphi_path),
-                  chains=chains, warmup=warmup, samples=samples, keep=keep)
+                  chains=chains, warmup=warmup, samples=samples, keep=keep, alpha=alpha)
 
 
 def fit_one(job):
@@ -130,7 +136,7 @@ def fit_one(job):
     logphi = WORKER["logphi"]; K = logphi.shape[1]; t0 = time.time()
     tmp = tempfile.mkdtemp(prefix="soft-")                                             # CmdStan's csv files, removed at once
     try:
-        fit = WORKER["model"].sample(data={"N": len(words), "K": K, "logphi": logphi[words].tolist()},
+        fit = WORKER["model"].sample(data={"N": len(words), "K": K, "logphi": logphi[words].tolist(), "alpha": WORKER["alpha"]},
                                      chains=WORKER["chains"], parallel_chains=1, iter_warmup=WORKER["warmup"],
                                      iter_sampling=WORKER["samples"], seed=int(seed), output_dir=tmp,
                                      show_progress=False, show_console=False)
@@ -146,6 +152,18 @@ def fit_one(job):
     return i, theta[::step][:WORKER["keep"]].astype(np.float32), diagnostics
 
 
+def read_phi(path, vocab):
+    """the K x V matrix written by an earlier run, checked against the vocabulary -> (names, phi)"""
+    with gzip.open(path, "rt", encoding="utf-8") as f:
+        header = f.readline().rstrip("\n").split(",")
+        assert header[1:] == vocab, f"{path} is from another vocabulary ({len(header) - 1} lemmata, the dataset has {len(vocab)})"
+        names, rows = [], []
+        for line in f:
+            cells = line.rstrip("\n").split(","); names.append(cells[0]); rows.append([float(v) for v in cells[1:]])
+    phi = np.array(rows); phi /= phi.sum(1, keepdims=True)
+    return names, phi
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/soft")
@@ -159,6 +177,9 @@ def main():
     ap.add_argument("--max-docs", type=int, default=0, help="documents read per set, sampled at random if more (0 = all); for dry runs")
     ap.add_argument("--seed", type=int, default=917)
     ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
+    ap.add_argument("--alpha", type=float, default=1.0, help="concentration of the Dirichlet prior on theta (1 = flat, the report's)")
+    ap.add_argument("--phi", default=None, help="phi_matrix.csv.gz of an earlier run to reuse instead of fitting the LDA (the prior check)")
+    ap.add_argument("--no-draws", action="store_true", help="do not write theta_draws.npz")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     rng = np.random.default_rng(a.seed)
     vocab, cluster, docs, tragic = load(a.data, a.chain_set); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
@@ -180,44 +201,50 @@ def main():
     seeds = {c: [vocab[i] for i in range(V) if cluster[i] == c] for c, _ in mass.most_common()}
     H = len(seeds); K = H + a.free; names = list(seeds) + [f"free {j}" for j in range(a.free)]   # renamed below
     print(f"{H} seeded topics (the clusters) + {a.free} free", flush=True)
-    lda = tp.LDAModel(tw=tp.TermWeight.ONE, k=K, alpha=0.1, eta=0.01, seed=a.seed)
-    for d in tragic: lda.add_doc([vocab[i] for i in d])
-    found = {}
-    for j, (name, words) in enumerate(seeds.items()):
-        found[name] = []
-        for w in (unicodedata.normalize("NFC", w.lower()) for w in words):
-            if w in wid:
-                prior = [0.01] * K; prior[j] = a.seed_strength; lda.set_word_prior(w, prior); found[name].append(w)
-    print("seed lemmata in the vocabulary: " + "; ".join(f"{n}: {len(v)}/{len(seeds[n])}" for n, v in list(found.items())[:12]) + (" ..." if H > 12 else ""), flush=True)
-    lda.train(a.iters, workers=8)
-    order = {w: i for i, w in enumerate(lda.used_vocabs)}
-    phi = np.full((K, V), 1e-8)
-    for k in range(K):
-        d = lda.get_topic_word_dist(k)
-        for w, i in wid.items():
-            if w in order: phi[k, i] = d[order[w]]
-    phi /= phi.sum(1, keepdims=True); logphi = np.log(phi).T                               # (V, K)
-    # a free topic is named by the English glosses of its three most probable
-    # lemmata, as a seeded topic is named by its cluster's label lemmata
-    for j in range(a.free):
-        words = [w for w, _ in lda.get_topic_words(H + j, top_n=3)]
-        missing = [w for w in words if w not in GLOSS]
-        if missing: print(f"  no English gloss for {' '.join(missing)}: add it to GLOSS in soft_model.py", flush=True)
-        names[H + j] = "-".join(GLOSS.get(w, w) for w in words)
-    assert len(set(names)) == K, "two topics got the same name"
-    with gzip.open(f"{a.out}/phi_matrix.csv.gz", "wt", encoding="utf-8") as f:          # K rows, one column per lemma
-        f.write("topic," + ",".join(vocab) + "\n")
-        for k in range(K): f.write(names[k] + "," + ",".join(f"{v:.6g}" for v in phi[k]) + "\n")
-    top = {names[k]: [w for w, _ in lda.get_topic_words(k, top_n=15)] for k in range(K)}
-    json.dump({"names": names, "top_words": top, "ll_per_word": lda.ll_per_word, "seeds_found": found, "vocab_size": V}, open(f"{a.out}/phi.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    for k in range(K): print(f"  {names[k]:18s} " + " ".join(top[names[k]][:10]), flush=True)
+    if a.phi:
+        names, phi = read_phi(a.phi, vocab)
+        assert len(names) == K and names[:H] == list(seeds), f"{a.phi} has other topics than this run's seeds"
+        logphi = np.log(phi).T                                                           # (V, K)
+        print(f"phi reused from {a.phi}; prior Dirichlet({a.alpha:g})", flush=True)
+    else:
+        lda = tp.LDAModel(tw=tp.TermWeight.ONE, k=K, alpha=0.1, eta=0.01, seed=a.seed)
+        for d in tragic: lda.add_doc([vocab[i] for i in d])
+        found = {}
+        for j, (name, words) in enumerate(seeds.items()):
+            found[name] = []
+            for w in (unicodedata.normalize("NFC", w.lower()) for w in words):
+                if w in wid:
+                    prior = [0.01] * K; prior[j] = a.seed_strength; lda.set_word_prior(w, prior); found[name].append(w)
+        print("seed lemmata in the vocabulary: " + "; ".join(f"{n}: {len(v)}/{len(seeds[n])}" for n, v in list(found.items())[:12]) + (" ..." if H > 12 else ""), flush=True)
+        lda.train(a.iters, workers=8)
+        order = {w: i for i, w in enumerate(lda.used_vocabs)}
+        phi = np.full((K, V), 1e-8)
+        for k in range(K):
+            d = lda.get_topic_word_dist(k)
+            for w, i in wid.items():
+                if w in order: phi[k, i] = d[order[w]]
+        phi /= phi.sum(1, keepdims=True); logphi = np.log(phi).T                               # (V, K)
+        # a free topic is named by the English glosses of its three most probable
+        # lemmata, as a seeded topic is named by its cluster's label lemmata
+        for j in range(a.free):
+            words = [w for w, _ in lda.get_topic_words(H + j, top_n=3)]
+            missing = [w for w in words if w not in GLOSS]
+            if missing: print(f"  no English gloss for {' '.join(missing)}: add it to GLOSS in soft_model.py", flush=True)
+            names[H + j] = "-".join(GLOSS.get(w, w) for w in words)
+        assert len(set(names)) == K, "two topics got the same name"
+        with gzip.open(f"{a.out}/phi_matrix.csv.gz", "wt", encoding="utf-8") as f:          # K rows, one column per lemma
+            f.write("topic," + ",".join(vocab) + "\n")
+            for k in range(K): f.write(names[k] + "," + ",".join(f"{v:.6g}" for v in phi[k]) + "\n")
+        top = {names[k]: [w for w, _ in lda.get_topic_words(k, top_n=15)] for k in range(K)}
+        json.dump({"names": names, "top_words": top, "ll_per_word": lda.ll_per_word, "seeds_found": found, "vocab_size": V}, open(f"{a.out}/phi.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        for k in range(K): print(f"  {names[k]:18s} " + " ".join(top[names[k]][:10]), flush=True)
 
     # ---- every document of every set through NUTS
     scratch = tempfile.mkdtemp(prefix="soft-logphi-"); logphi_path = os.path.join(scratch, "logphi.npy"); np.save(logphi_path, logphi)
     draws, diagnostics = {}, []
     sets = [name for name in ("sophocles", "imputations", "tragedians", "attic") if name in docs]
-    print(f"sampling {sum(len(docs[n]) for n in sets)} documents with {a.workers} workers: {a.chains} chains x ({a.warmup} + {a.samples}) iterations each, {a.keep} draws kept", flush=True)
-    with Pool(a.workers, initializer=worker_init, initargs=(model.exe_file, logphi_path, a.chains, a.warmup, a.samples, a.keep)) as pool:
+    print(f"sampling {sum(len(docs[n]) for n in sets)} documents with {a.workers} workers: {a.chains} chains x ({a.warmup} + {a.samples}) iterations each, {a.keep} draws kept; prior Dirichlet({a.alpha:g})", flush=True)
+    with Pool(a.workers, initializer=worker_init, initargs=(model.exe_file, logphi_path, a.chains, a.warmup, a.samples, a.keep, a.alpha)) as pool:
         for offset, name in enumerate(sets):
             word_lists = docs[name]; jobs = [(i, w, a.seed * 1000 + offset * 100000 + i) for i, w in enumerate(word_lists)]
             P3 = np.zeros((len(jobs), a.keep, K), np.float32); rows = [None] * len(jobs); t0 = time.time(); done = 0; last_log = t0
@@ -240,7 +267,8 @@ def main():
         rs = [r for r in diagnostics if r["source"] == name]
         print(f"  {name}: {len(rs)} documents; R-hat > 1.01 in {sum(r['max_rhat'] > 1.01 for r in rs)}, bulk ESS < 400 in {sum(r['min_ess_bulk'] < 400 for r in rs)}, "
               f"divergences in {sum(r['divergences'] > 0 for r in rs)}, tree-depth hits in {sum(r['treedepth_hits'] > 0 for r in rs)}; median {np.median([r['seconds'] for r in rs]):.1f} s per document", flush=True)
-    np.savez_compressed(f"{a.out}/theta_draws.npz", names=np.array(names), **{name: draws[name].astype(np.float16) for name in sets})
+    if not a.no_draws:
+        np.savez_compressed(f"{a.out}/theta_draws.npz", names=np.array(names), **{name: draws[name].astype(np.float16) for name in sets})
 
     # ---- two documents with their posterior summary, refitted with rstan in the report
     check = []
