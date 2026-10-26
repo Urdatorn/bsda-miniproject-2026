@@ -106,43 +106,6 @@
 % Mina custom-spaket
 \usepackage{epigraph}
 
-% Stan programs: listings with a small Stan language definition (keywords,
-% types and the distribution and maths functions the model uses)
-\usepackage{listings}
-\lstdefinelanguage{Stan}{
-  morekeywords={data,transformed,parameters,model,generated,quantities,
-    functions,for,in,if,else,while,target,lower,upper,return,print,reject},
-  morekeywords=[2]{int,real,vector,row_vector,matrix,simplex,array,
-    unit_vector,ordered,positive_ordered,cov_matrix,corr_matrix,
-    cholesky_factor_cov,cholesky_factor_corr},
-  morekeywords=[3]{dirichlet,normal,lognormal,exponential,gamma,beta,
-    multinomial,categorical,poisson,binomial,rep_vector,rep_matrix,log,exp,
-    log_sum_exp,sum,mean,softmax,log_softmax,to_vector},
-  sensitive=true,
-  morecomment=[l]{//},
-  morecomment=[s]{/*}{*/},
-  morestring=[b]",
-}
-\lstset{
-  language=Stan,
-  basicstyle=\ttfamily\footnotesize,
-  keywordstyle=\bfseries\color{blue!60!black},
-  keywordstyle=[2]\color{teal!70!black},
-  keywordstyle=[3]\color{purple!70!black},
-  commentstyle=\itshape\color{gray},
-  stringstyle=\color{orange!80!black},
-  showstringspaces=false,
-  columns=fullflexible,
-  keepspaces=true,
-  breaklines=true,
-  frame=single,
-  framerule=0.3pt,
-  rulecolor=\color{gray!60},
-  xleftmargin=2mm,
-  aboveskip=1ex,
-  belowskip=1ex,
-}
-
 \begin{document}
 
 \twocolumn[
@@ -264,18 +227,7 @@ the lift of the posterior means.
 
 \subsection{Amortized latent Dirichlet allocation with mixed topics}
 
-The soft model keeps the topic--word matrix $\phi$ fixed and asks, for each
-document on its own, for the posterior of its topic mixture
-$\theta \in \Delta^{K-1}$. A lemma $w_n$ is drawn from the mixture
-$\sum_k \theta_k \phi_{k, w_n}$, so the log-likelihood of a document is
-$\sum_n \log \sum_k \theta_k \phi_{k, w_n}$, and under a flat Dirichlet prior
-the posterior has no closed form: it is sampled with NUTS, one document per
-fit. The Stan program is short, since $\phi$ enters only through the
-$N \times K$ matrix of $\log \phi_{k, w_n}$ that is handed over as data
-(\texttt{lda\_given\_phi.stan}, the file the reports fit):
-
-\lstinputlisting[caption={The soft model: LDA with a fixed topic--word matrix,
-one document at a time.}, label={lst:stan}]{lda_given_phi.stan}
+TBA
 
 \section{Results}
 \label{results}
