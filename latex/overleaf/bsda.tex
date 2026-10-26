@@ -578,29 +578,50 @@ The chains do not mix within that budget (\autoref{diagnostics}).
 \newpage
 \section{Sampler and chain diagnostics}\label{diagnostics}
 
-\paragraph{The soft model in Stan.} Every document of the four sets was
-sampled separately: 17\,120 imputations, 443 Sophoclean windows, 1\,174
-windows of Aeschylus and Euripides and 23\,328 of Classical Attic, 42\,065
-fits in all, each with four chains of 500 warm-up and 500 sampling iterations
-(CmdStan, about two seconds per document). No fit had a divergent transition
-or reached the maximum tree depth. The largest split $\hat R$ over all fits
-and topics is 1.020, and 476 fits (1.1\,\%) have one above 1.01; the smallest
-bulk effective sample size is 514 of 2\,000 draws. One imputation and one
-Sophoclean window, refitted with rstan from 4\,000 draws, reproduce the stored
-posterior means of their five largest topics to within 0.006.
+\paragraph{The soft model in Stan.} Every document was fitted separately
+with four chains of 500 warm-up and 500 sampling iterations (2\,000 draws).
 
-\paragraph{The walk.} The walk's chains are compared by the classic
-Gelman--Rubin $\hat R$ of every topic's share over the steps all chains cover
-\citep[§11.4]{gelman2013bda3}. Among the sixteen chains from Eric Cullhed's
-starts, 28 of the 34 topics have $\hat R > 1.1$ (largest 1.51, for
-\textit{lament-pitiable-groan}); among eight chains from unrelated starts, 22
-do. The chains have not mixed in 10\,000 steps, and they disagree as much
-whether or not they share an origin, so the poor mixing belongs to the walk,
-not to the starts. The lift of \textit{wrong-vengeance-err} runs from 0.74 to
-3.00 over the sixteen chains (5th to 95th percentile), which is why the hard
-model's intervals resample whole chains. There is no systematic drift after
-the burn-in: fitted over windows of 1\,000 steps, the median absolute slope
-of a topic's lift is 0.033 per 1\,000 steps, the steepest 0.107
+\begin{center}
+\begin{tabular}{lrrrrrr}
+\toprule
+& & & Max.\ tree & Largest & Fits with & Smallest \\
+Documents & Fits & Divergences & depth hits & $\hat R$ & $\hat R > 1.01$ & bulk ESS \\
+\midrule
+Imputations & 17\,120 & 0 & 0 & 1.020 & 203 & 593 \\
+Sophocles & 443 & 0 & 0 & 1.014 & 4 & 1\,046 \\
+Aeschylus and Euripides & 1\,174 & 0 & 0 & 1.015 & 15 & 646 \\
+Classical Attic & 23\,328 & 0 & 0 & 1.017 & 254 & 514 \\
+\midrule
+All & 42\,065 & 0 & 0 & 1.020 & 476 & 514 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent One imputation and one Sophoclean window, refitted with rstan from
+4\,000 draws, reproduce the posterior means of their five largest topics to
+within 0.006.
+
+\paragraph{The walk.} The chains are compared by the Gelman--Rubin $\hat R$
+of every topic's share \citep[§11.4]{gelman2013bda3}, in the set from Eric
+Cullhed's starts and in a set from unrelated starts.
+
+\begin{center}
+\begin{tabular}{lrrlr}
+\toprule
+& & Topics with & & \textit{wrong-vengeance-err}, \\
+Starts & Chains & $\hat R > 1.1$ & Largest $\hat R$ & chain lifts \\
+\midrule
+Eric Cullhed's & 16 & 28 of 34 & 1.51 (\textit{lament-pitiable-groan}) & 0.74--3.00 \\
+Unrelated & 8 & 22 of 34 & 3.07 (\textit{fire-flame-flash}) & 0.98--2.04 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The chains have not mixed in 10\,000 steps, whether or not they
+share an origin, which is why the hard model's intervals resample whole
+chains (chain lifts: 5th to 95th percentile). There is no systematic drift
+after the burn-in: over windows of 1\,000 steps the median absolute slope of
+a topic's lift is 0.033 per 1\,000 steps, the steepest 0.107
 (\textit{contest-rivalry-wrestling}).
 
 \newpage
