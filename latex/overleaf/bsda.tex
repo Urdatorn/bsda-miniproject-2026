@@ -322,6 +322,40 @@ The content of the prompt sent to Stoicheia to infer an imputation then looks li
 At each step, the character-level diffusion model Stoicheia \citep{cullhed2026stoicheiacharacterlevelmaskeddiffusion} is making a proposal to a small word span, which is accepted with probability $\operatorname{min}(1, r)$, where the acceptance ratio $r$ depends on both deterministic orthographic, linguistic and stylistic checks based on the known author's use, and the qualitative judgement of an open-source chatbot LLM.
 
 \newpage
+\section{The walk and the pipeline, step by step}\label{flowchart}
+
+\autoref{fig:flowchart} lays out one step of the walk of \autoref{walk} as it
+was run for every set of imputations in this report, and what happens to the
+recorded states afterwards. The judge is Qwen3-235B-A22B-Instruct-2507 at
+$1/T_{\text{judge}} = 4$; the style term is switched off
+($1/T_{\text{formal}} = 0$), so the walk samples Stoicheia's own distribution
+under the formal constraints and the judge's coherence preference, and nothing
+in it selects for Sophoclean style. Sixteen chains start from Eric Cullhed's
+eight reconstructions, which are variants of one text; twenty-four more start
+from late states of earlier chains chosen so that every two starts differ in
+nearly all their restored words, which is what lets the chain diagnostics tell
+the walk's own mixing from the starts' kinship. Every chain runs 10\,000 steps
+in four segments of 2\,500, each continuing the last state of the one before,
+and keeps one state in ten after a burn-in of 300. The recorded states are
+lemmatised, reduced to bags of topic-bearing lemmata and compared with
+Sophocles by the hard and soft models of \autoref{models}; the chain
+checks (drift, $\hat R$, Eric's starts against unrelated starts, and the
+Qwen judges against a Claude Sonnet 5.5 pilot) close the pipeline.
+
+\begin{figure*}[p]
+\centering
+\includegraphics[height=0.93\textheight,width=\linewidth,keepaspectratio]{figures/walk_flowchart.pdf}
+\caption{One step of the judge-steered Metropolis walk (top, with the loop
+back to the proposal on the right), the sets of starting texts, and the path
+from recorded states to the Bayesian models. Blue: the character-level
+diffusion proposer; orange: the LLM judge and the acceptance; green: the
+modelling pipeline. The side notes record the acceptance rates of the three
+judges, the rule set, the economies used for the priced judge, and the mixing
+diagnosis.}
+\label{fig:flowchart}
+\end{figure*}
+
+\newpage
 \section{The 34 unsupervised Word2Vec topics}
 
 \begin{table*}[htbp]
