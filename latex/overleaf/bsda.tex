@@ -263,7 +263,18 @@ Hard clusters put every occurrence of a lemma into one topic, although a
 frequent word can serve several. The soft model gives each topic a
 distribution $\phi_k$ over the vocabulary (\cref{fig:phi}), fitted once by a seeded
 latent Dirichlet allocation \citep{blei2003latent} on Aeschylus and Euripides
-only (tomotopy, \citealt{lee2022tomotopy}), so that Sophocles is a test corpus
+only (tomotopy, \citealt{lee2022tomotopy}),\footnote{In LDA each
+document $d$ has topic shares $\theta_d \sim \mathrm{Dirichlet}(\alpha)$ and
+each topic a word distribution $\phi_k \sim \mathrm{Dirichlet}(\beta_k)$;
+every lemma token first draws a topic $z \sim \theta_d$, then the lemma from
+$\phi_z$. Tomotopy fits this by collapsed Gibbs sampling: $\theta$ and $\phi$
+are integrated out, each token's topic is redrawn in turn given all the
+others (1\,000 sweeps), and $\phi_{k,w} \propto n_{k,w} + \beta_{k,w}$ is read
+off the final counts $n$. Seeding changes only the prior: a lemma of
+cluster $k$ has $\beta_{k,w} = 200$, two hundred pseudo-occurrences in its own
+topic, and $0.01$ in every other, while unclustered lemmata and the four free
+topics get $0.01$ throughout. Here $\alpha = 0.1$, $K = 38$, and the documents
+are the 1\,174 windows of Aeschylus and Euripides.} so that Sophocles is a test corpus
 like the restorations. Each hard cluster seeds one topic with a strong prior
 on its lemmata, and four free topics take up what the clusters miss.
 \textgreek{θεός}, god, which the hard model puts in \textit{god-true-lord}
