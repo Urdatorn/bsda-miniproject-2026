@@ -1,5 +1,5 @@
 """The paper's illustration of a soft topic: part of phi_k for
-marriage-couch-bed, one column wide (figure_style.py).
+marriage-couch-bed, one column wide, text set like the body text (figure_style.paper).
 
 The x axis follows the vocabulary's own (alphabetical) order: its first five
 lemmata, then five of the topic's own lemmata where they fall, with gaps
@@ -10,7 +10,7 @@ Usage: python scripts/paper_phi_figure.py latex/overleaf/figures/phi_marriage.pd
 """
 import csv, gzip, sys
 
-from figure_style import apply, COLUMN_WIDTH, OKABE_ITO
+from figure_style import paper, save, COLUMN_WIDTH, OKABE_ITO
 
 TOPIC = "marriage-couch-bed"
 HEAD = 5                                                    # first lemmata of the vocabulary
@@ -27,7 +27,7 @@ def phi_row(path, topic):
 
 
 def main(out_path):
-    apply()
+    paper()
     import matplotlib.pyplot as plt
 
     vocab, phi = phi_row("results/soft/phi_matrix.csv.gz", TOPIC)
@@ -38,25 +38,26 @@ def main(out_path):
         if i and j > index[i - 1] + 1:                      # skipped lemmata: leave a slot for "…"
             gaps.append(x)
             x += 1
-        labels.append(vocab[j])
+        labels.append(r"\textgreek{%s}" % vocab[j])
         heights.append(phi[j])
         xs.append(x)
         x += 1
     gaps.append(x)                                          # the vocabulary trails off
 
-    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 1.7))
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.1), layout="constrained")
     ax.bar(xs, heights, width=0.7, color=OKABE_ITO[1])
-    ax.set_xticks(xs + gaps)
-    ax.set_xticklabels(labels + ["…"] * len(gaps), rotation=55, ha="right", fontsize=7)
+    ax.set_xticks(xs)
+    ax.set_xticklabels(labels, rotation=55, ha="right", rotation_mode="anchor")
+    for g in gaps:                                          # skipped lemmata, upright on the axis
+        ax.text(g, -0.04, r"\dots", transform=ax.get_xaxis_transform(), ha="center", va="top")
     ax.set_xlim(-0.6, x + 0.4)
     ax.set_yscale("log")
     ax.set_ylim(1e-5, 0.1)
-    ax.tick_params(axis="y", labelsize=7)
-    ax.set_ylabel(r"$\phi_{k,w}$", fontsize=8)
+    ax.set_ylabel(r"$\phi_{k,w}$")
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
-    fig.savefig(out_path, bbox_inches="tight")
-    print(f"{TOPIC}: {', '.join(f'{l} {h:.2g}' for l, h in zip(labels, heights))} -> {out_path}")
+    save(fig, out_path)
+    print(f"{TOPIC}: {len(labels)} lemmata -> {out_path}")
 
 
 if __name__ == "__main__":

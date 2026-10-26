@@ -67,3 +67,36 @@ def apply():
         "xtick.major.width": 0.5, "ytick.major.width": 0.5, "savefig.dpi": 300, "figure.dpi": 100,
         "pdf.fonttype": 42, "axes.unicode_minus": False,
         "axes.prop_cycle": matplotlib.cycler(color=OKABE_ITO)})     # colour-blind safe default colours
+
+
+PAPER_FONTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "latex", "overleaf", "fonts")
+PAPER_PREAMBLE = "\n".join([
+    r"\usepackage{fontspec}",
+    r"\setmainfont{NewCM10}[Extension=.otf, UprightFont=*-Book, BoldFont=*-Bold, ItalicFont=*-Italic]",  # = NewComputerModern10 in the paper
+    r"\newfontfamily\greekfont[Path=" + PAPER_FONTS + r"/, UprightFont=*, BoldFont=GFSDidotBold.otf,"
+    r" ItalicFont=GFSDidotItalic.otf, Script=Greek, Scale=MatchLowercase]{GFSDidot.otf}",
+    r"\usepackage{polyglossia}",
+    r"\setdefaultlanguage{english}",
+    r"\setotherlanguage[variant=ancient]{greek}",
+    r"\usepackage{amsmath}",
+])
+
+
+def paper():
+    """The paper's rule: every text in a figure is typeset like the body text of
+    latex/overleaf/bsda.tex, 10 pt NewCM10 with Greek in GFS Didot (wrap it in
+    \\textgreek{...}) and Computer Modern maths.  LuaLaTeX sets the text through the
+    pgf backend with the paper's own font preamble, so the match is exact; save
+    with save() at the width the figure has in the paper, so it is not rescaled."""
+    apply()
+    size = 10
+    matplotlib.rcParams.update({
+        "pgf.texsystem": "lualatex", "pgf.rcfonts": False, "pgf.preamble": PAPER_PREAMBLE,
+        "font.family": "serif", "font.size": size, "axes.titlesize": size, "axes.labelsize": size,
+        "xtick.labelsize": size, "ytick.labelsize": size, "legend.fontsize": size, "figure.titlesize": size})
+
+
+def save(fig, out_path):
+    """save at exactly the figure's size (no tight bbox, which would change the
+    width and so the scale at which LaTeX includes it)"""
+    fig.savefig(out_path, backend="pgf")
