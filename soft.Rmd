@@ -602,8 +602,10 @@ read_prior <- function(alpha) {
   lifts <- read.csv(file.path(dir, "comparisons.csv"), encoding = "UTF-8")
   lifts <- filter(lifts, comparison == "imputations vs sophocles")
   lifts$alpha <- alpha
+  means <- read.csv(file.path(dir, "profiles.csv"), encoding = "UTF-8")
   list(lifts = lifts,
-       diagnostics = read.csv(gzfile(file.path(dir, "diagnostics.csv.gz"))))
+       diagnostics = read.csv(gzfile(file.path(dir, "diagnostics.csv.gz"))),
+       seeded_mass = sum(means$mean[means$source == "imputations"]))
 }
 priors <- lapply(names(prior_dirs), read_prior)
 names(priors) <- names(prior_dirs)
@@ -666,14 +668,27 @@ raised_under <- function(alpha) {
 }
 raised_sets <- lapply(names(prior_dirs), raised_under)
 names(raised_sets) <- names(prior_dirs)
+or_none <- function(topics) {
+  if (length(topics) == 0) "none" else paste(topics, collapse = ", ")
+}
 shift <- abs(log(wide$sparse) - log(wide$even))
 moved <- wide[which.max(shift), ]
+# the slope of a prior's log lifts on the flat prior's: 1 would mean the
+# same lifts, 2 that every lift is squared
+slope <- function(column) coef(lm(log(column) ~ log(wide$flat)))[2]
+slope_sparse <- slope(wide$sparse)
+slope_even <- slope(wide$even)
+seeded_mass <- sapply(priors, `[[`, "seeded_mass")
+# the topics whose interval is off 1 under the flat prior: do they keep
+# their side of 1 under the other priors?
+flat_sorted <- flat[match(wide$topic, flat$topic), ]
+settled <- flat_sorted$lift_q05 > 1 | flat_sorted$lift_q95 < 1
+same_side <- function(column) sum(((column > 1) == (wide$flat > 1))[settled])
 cat(sprintf(paste(
   "Raised (P >= 0.9 and lift >= 1.5) under Dirichlet(0.1): %s;",
   "under Dirichlet(1): %s; under Dirichlet(2): %s.\n\n"),
-  paste(raised_sets[["0.1"]], collapse = ", "),
-  paste(raised_sets[["1"]], collapse = ", "),
-  paste(raised_sets[["2"]], collapse = ", ")))
+  or_none(raised_sets[["0.1"]]), or_none(raised_sets[["1"]]),
+  or_none(raised_sets[["2"]])))
 cat(sprintf(paste(
   "The correlation of the log lifts with the flat prior's is %.3f for",
   "Dirichlet(0.1) and %.3f for Dirichlet(2). The topic that moves most",
@@ -681,8 +696,53 @@ cat(sprintf(paste(
   "prior).\n\n"),
   cor(log(wide$sparse), log(wide$flat)), cor(log(wide$even), log(wide$flat)),
   moved$topic, moved$sparse, moved$even, moved$flat))
+cat(sprintf(paste(
+  "Regressing a prior's log lifts on the flat prior's gives a slope of",
+  "%.2f for Dirichlet(0.1) and %.2f for Dirichlet(2); the seeded topics",
+  "hold %.0f %%, %.0f %% and %.0f %% of the imputations' mean profile under",
+  "0.1, 1 and 2.\n\n"),
+  slope_sparse, slope_even, 100 * seeded_mass[["0.1"]],
+  100 * seeded_mass[["1"]], 100 * seeded_mass[["2"]]))
 knitr::kable(wide, digits = 2, row.names = FALSE,
              col.names = c("topic", "Dirichlet(0.1)", "Dirichlet(1)",
                            "Dirichlet(2)"),
              caption = "Lift against Sophocles under the three priors")
 ```
+
+So the prior sets the scale of the lifts and leaves their order alone. The
+log lifts under the three priors correlate at
+`r sprintf("%.2f", cor(log(wide$sparse), log(wide$flat)))` and
+`r sprintf("%.3f", cor(log(wide$even), log(wide$flat)))` with the flat
+prior's; of the `r sum(settled)` topics whose interval is off 1 under the
+flat prior, `r same_side(wide$sparse)` keep their side of 1 under
+Dirichlet(0.1) and `r same_side(wide$even)` under Dirichlet(2). But every
+log lift is multiplied by about
+`r sprintf("%.1f", slope_sparse)` under Dirichlet(0.1) and by about
+`r sprintf("%.1f", slope_even)` under Dirichlet(2). The reason is
+shrinkage. The Dirichlet prior acts as $\alpha K$ pseudo-lemmata spread
+evenly over the topics, against the `r round(mean(imputations$n_lemmata))`
+or so real lemmata of a document: `r sprintf("%.1f", 0.1 * K)`
+pseudo-lemmata at $\alpha = 0.1$, `r K` at the flat prior and `r 2 * K` at
+$\alpha = 2$. Under the flat prior the prior already weighs more than the
+document in every posterior mean, so the mean profiles of the imputations
+and of Sophocles are both pulled towards the uniform profile and their
+ratio towards 1; the sparse prior lets each document commit to a few topics
+and the differences between the sets come out in full. A fixed threshold on
+the lift, the 1.5 of the raised set, is therefore a statement relative to
+the prior: it is met by two topics at 0.1, by one at 1 and by none at 2,
+while the sign of every well-determined lift and the order of the topics are
+the same under all three. The posterior probability
+$P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$ is unaffected,
+being a statement about order.
+
+Two reservations about the sparse prior. Its posteriors are hard to sample:
+nearly every document has $\hat R$ above 1.01 and a bulk effective sample
+size under 400 of 2000 draws, so its lifts carry Monte Carlo error that the
+others do not, and a few documents show divergent transitions. And under
+it the four free topics, broad topics fitted without seeds, take
+`r sprintf("%.0f", 100 * (1 - seeded_mass[["0.1"]]))` % of the imputations'
+mean profile against `r sprintf("%.0f", 100 * (1 - seeded_mass[["1"]]))` %
+under the flat prior: a document that must choose few topics chooses the
+broad ones. The flat prior is kept for the report, with the understanding
+that its lifts are conservative in size and that the order of the topics,
+not the size of the lifts, is what the three priors agree on.
