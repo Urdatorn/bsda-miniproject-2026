@@ -224,7 +224,7 @@ The data for the topic modelling workflow consists of a bag-of-lemmata matrix co
 \subsection{Hard topics: conjugate posterior}
 
 Every lemma of the vocabulary belongs to exactly one of $K$ semantic clusters
-(Word2Vec on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; two
+(Word2Vec, \citealt{mikolov2013efficient}, on the lemmatised Greek corpus, Ward's method, cut at $K = 40$; two
 rare-lemma clusters and four function-word clusters dropped, leaving 34). Each
 cluster is named by the English glosses of
 the three non-cognate lemmata nearest its centroid, for example \textit{lament-pitiable-groan} or
@@ -243,7 +243,7 @@ To sample from this posterior in R it is enough to draw from \texttt{rgamma} and
 \subsection{Soft topics: MCMC posterior}
 
 With the topic--word matrix $\phi$ fixed, the posterior of a document's topic
-mixture $\theta$ is sampled with NUTS in Stan, one document at a time
+mixture $\theta$ is sampled with NUTS in Stan \citep{carpenter2017stan}, one document at a time
 (\texttt{lda\_given\_phi.stan}):
 
 \begin{lstlisting}
