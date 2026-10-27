@@ -30,7 +30,7 @@ def main(out_path):
     paper()
     import matplotlib.pyplot as plt
 
-    vocab, phi = phi_row("results/soft/phi_matrix.csv.gz", TOPIC)
+    vocab, phi = phi_row("results/soft/pooled/phi_matrix.csv.gz", TOPIC)
     index = list(range(HEAD)) + sorted(vocab.index(w) for w in OWN)
     labels, heights, xs, gaps = [], [], [], []
     x = 0

@@ -4,11 +4,11 @@ One circle per seeded topic in a grid ordered by the focus cell's mean
 profile under the soft model (the circle's area), coloured by the log2 lift
 of that mean against a baseline, in full colour with the lift printed where
 the lift's 90 % interval over the posterior draws of the two mean profiles
-excludes 1.  The comparisons come from results/soft/comparisons.csv
-(scripts/soft_model.py): the imputations against Sophocles, against Aeschylus and
+excludes 1.  The comparisons come from results/soft/pooled/comparisons.csv
+(scripts/soft_pool.py): the imputations against Sophocles, against Aeschylus and
 Euripides and against Classical Attic; Sophocles against the latter two.
 
-  python scripts/soft_circles.py --soft results/soft --figures figures
+  python scripts/soft_circles.py --soft results/soft/pooled --figures figures
 
 writes soft_circles_<focus>_vs_<baseline>.png, one text-width figure each.
 """
@@ -23,7 +23,7 @@ BASELINE = {"sophocles": "Sophocles", "tragedians": "Aeschylus and Euripides", "
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--soft", default="results/soft")
+    ap.add_argument("--soft", default="results/soft/pooled")
     ap.add_argument("--figures", default="figures")
     a = ap.parse_args()
     os.makedirs(a.figures, exist_ok=True)

@@ -4,7 +4,8 @@ topic, under the hard and the soft model, one column wide, text set like the bod
 Hard: rates per thousand topic lemmata, 90 % interval from resampling the
 imputations by chain and Sophocles by window (results/hard/topic_circles.csv).
 Soft: ratio of the two mean profiles, 90 % interval over the posterior draws
-(results/soft/comparisons.csv). Topics ordered by the hard lift.
+pooled over twenty states of phi
+(results/soft/pooled/comparisons.csv). Topics ordered by the hard lift.
 
 Usage: python scripts/paper_lift_figure.py latex/overleaf/figures/lift_hard_soft.pdf
 """
@@ -26,7 +27,7 @@ def main(out_path):
     import matplotlib.pyplot as plt
 
     hard = lifts("results/hard/topic_circles.csv")
-    soft = lifts("results/soft/comparisons.csv")
+    soft = lifts("results/soft/pooled/comparisons.csv")
     topics = sorted(hard, key=lambda t: hard[t][0])          # largest hard lift on top
     floor = 0.02                                            # a lift of zero sits at the left edge
 

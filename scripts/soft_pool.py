@@ -21,8 +21,12 @@ that the report can be knitted against it unchanged (params$results):
                     lift_chain_q05, lift_chain_q95 and p_chain_above from a
                     bootstrap that resamples the imputations by walk chain and
                     the baseline by window, with a state of phi drawn at random
-                    per replicate: the dependence between the snapshots of one
-                    chain, which the posterior intervals ignore
+                    per replicate and the posterior noise of the two mean
+                    profiles added back (a random draw's deviation from the
+                    mean of its state): the dependence between the snapshots of
+                    one chain, which the posterior intervals ignore, on top of
+                    what the posterior intervals carry
+  lifts_by_state.csv  the lift of every comparison at every single state
   diagnostics.csv.gz  one row per document with the worst of Stan's
                     diagnostics over the states (largest R-hat, smallest bulk
                     ESS, divergences summed)
@@ -90,24 +94,30 @@ def main():
     doc_means = {s: np.stack([z[f"doc_mean_{s}"].astype(np.float64) for z in draws]) for s in sets}      # (D, n_docs, K)
     print(f"chain bootstrap: {len(chain_ids)} chains of the imputations, {a.bootstrap} replicates", flush=True)
 
+    # the posterior noise of a set's mean profile at a state: a draw of the mean profile minus the mean of the
+    # documents' posterior means; the bootstrap adds it back to its resampled means (the resampled set has as
+    # many chains or windows as the real one, so the noise has about the right size)
+    noise = {s: np.stack([z[f"mean_{s}"].astype(np.float64) - doc_means[s][i].mean(0) for i, z in enumerate(draws)]) for s in sets}  # (D, keep, K)
+
     def chain_bootstrap(base):
         ratios = np.empty((a.bootstrap, H))
         for b in range(a.bootstrap):
-            d = rng.integers(D)
+            d = rng.integers(D); i = rng.integers(keep)
             picked = np.concatenate([members[c] for c in rng.choice(chain_ids, len(chain_ids), replace=True)])
-            imp = doc_means["imputations"][d][picked].mean(0)
-            windows = doc_means[base][d][rng.integers(0, n_docs[base], n_docs[base])].mean(0)
+            imp = doc_means["imputations"][d][picked].mean(0) + noise["imputations"][d, i]
+            windows = doc_means[base][d][rng.integers(0, n_docs[base], n_docs[base])].mean(0) + noise[base][d, i]
             ratios[b] = imp[:H] / windows[:H]
         return ratios
 
     # ---- the comparisons, paired within a state; lift at the single states; the chain bootstrap for the imputations
-    rows = []
+    rows = []; by_state = []
     for focus, base in (("imputations", "sophocles"), ("imputations", "tragedians"), ("imputations", "attic"), ("sophocles", "tragedians"), ("sophocles", "attic")):
         if focus not in sets or base not in sets: continue
         F, B = mean_draws[focus][:, :H], mean_draws[base][:, :H]; ratio = F / B
         per_state_lift = np.stack([F[state_of_draw == d].mean(0) / B[state_of_draw == d].mean(0) for d in range(D)])
         p_doc = p_document(focus, base)
         boot = chain_bootstrap(base) if focus == "imputations" else None
+        by_state += [{"topic": names[k], "comparison": f"{focus} vs {base}", "state": d, "lift": per_state_lift[d, k]} for d in range(D) for k in range(H)]
         for k in range(H):
             rows.append({"topic": names[k], "comparison": f"{focus} vs {base}", "rate_focus": F.mean(0)[k], "rate_baseline": B.mean(0)[k],
                          "lift": F.mean(0)[k] / B.mean(0)[k], "lift_q05": np.quantile(ratio[:, k], 0.05), "lift_q95": np.quantile(ratio[:, k], 0.95),
@@ -118,6 +128,7 @@ def main():
                          "p_chain_above": (boot[:, k] > 1).mean() if boot is not None else np.nan})
     comparisons = pd.DataFrame(rows)
     comparisons.to_csv(f"{a.out}/comparisons.csv", index=False, float_format="%.4f")
+    pd.DataFrame(by_state).to_csv(f"{a.out}/lifts_by_state.csv", index=False, float_format="%.4f")
     for name, t in comparisons.groupby("comparison", sort=False):
         off = t[(t.lift_q05 > 1) | (t.lift_q95 < 1)].sort_values("lift", ascending=False)
         line = f"  {name}: {len(off)} topics with a posterior interval off 1"
@@ -133,13 +144,17 @@ def main():
                                                                   treedepth_hits=("treedepth_hits", "sum"), seconds=("seconds", "mean")).reset_index()
     with gzip.open(f"{a.out}/diagnostics.csv.gz", "wt") as f:
         worst.to_csv(f, index=False, float_format="%.4f")
-    by_state = diag.groupby(["state", "source"]).agg(documents=("document", "size"), rhat_over_1_01=("max_rhat", lambda x: int((x > 1.01).sum())),
+    by_state_diag = diag.groupby(["state", "source"]).agg(documents=("document", "size"), rhat_over_1_01=("max_rhat", lambda x: int((x > 1.01).sum())),
                                                      ess_under_400=("min_ess_bulk", lambda x: int((x < 400).sum())),
-                                                     divergent=("divergences", lambda x: int((x > 0).sum())), worst_rhat=("max_rhat", "max"),
+                                                     divergent=("divergences", lambda x: int((x > 0).sum())),
+                                                     treedepth=("treedepth_hits", lambda x: int((x > 0).sum())), worst_rhat=("max_rhat", "max"),
                                                      least_ess=("min_ess_bulk", "min"), seconds=("seconds", "median")).reset_index()
-    by_state.to_csv(f"{a.out}/diagnostics_by_draw.csv", index=False, float_format="%.4f")
+    by_state_diag.to_csv(f"{a.out}/diagnostics_by_draw.csv", index=False, float_format="%.4f")
     print(f"  diagnostics over {D} states: R-hat > 1.01 in {(worst.max_rhat > 1.01).sum()} of {len(worst)} documents at their worst state, "
-          f"bulk ESS < 400 in {(worst.min_ess_bulk < 400).sum()}, divergences in {(worst.divergences > 0).sum()}", flush=True)
+          f"bulk ESS < 400 in {(worst.min_ess_bulk < 400).sum()}, divergences in {(worst.divergences > 0).sum()}; "
+          f"per state (median): R-hat > 1.01 in {by_state_diag.groupby('state').rhat_over_1_01.sum().median():.0f}, "
+          f"ESS < 400 in {by_state_diag.groupby('state').ess_under_400.sum().median():.0f}, divergent in {by_state_diag.groupby('state').divergent.sum().median():.0f}, "
+          f"tree depth hit in {by_state_diag.groupby('state').treedepth.sum().median():.0f}", flush=True)
 
     # ---- phi, alpha and the refit documents
     for name in ("phi.json", "phi_matrix.csv.gz"): shutil.copy(os.path.join(a.lda, name), a.out)

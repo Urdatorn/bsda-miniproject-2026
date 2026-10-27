@@ -11,7 +11,7 @@ mainfont: Times New Roman
 fontsize: 10pt
 geometry: margin=2cm
 params:
-  results: "results/soft"
+  results: "results/soft/pooled"
   data: "data"
   check_iter: 2000
 ---
@@ -74,16 +74,39 @@ follow the hard report one by one, so that the two can be read side by side.
 
 A document is one whole restoration of the seventeen lost verses: its $N$
 content lemmata, however many there are, drawn from the mixture
-$\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\mathbf 1)$,
-the flat prior; the last section tries two other concentrations.
-The topic-word distributions $\phi$ ($K \times V$) are **soft**: a lemma has
+$\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\alpha)$. The
+topic-word distributions $\phi$ ($K \times V$) are **soft**: a lemma has
 probability under several topics, so every word is a mixture and the
-posterior $p(\theta \mid \text{document})$ has no closed form. $\phi$ is
-fitted once on Aeschylus and Euripides by a seeded latent Dirichlet
-allocation (tomotopy), so that Sophocles, the baseline, is a test corpus
-like the restorations and $\phi$ is not fitted on the text it is then
-compared with; each of the unsupervised clusters of the hard model seeds one
-topic with a strong word prior on all its lemmata, plus a few free topics.
+posterior $p(\theta \mid \text{document})$ has no closed form. The model is
+fitted in two stages, and the second never feeds back into the first (a
+*cut* model in Plummer's sense, 2015): nothing of Sophocles or of the
+restorations reaches $\phi$, so the baseline is a test corpus like the
+restorations and $\phi$ is not fitted on the text it is then compared with.
+
+**Stage one** is a seeded latent Dirichlet allocation (tomotopy, collapsed
+Gibbs sampling) on the windows of Aeschylus and Euripides. Each of the
+unsupervised clusters of the hard model seeds one topic with a strong word
+prior on all its lemmata, and four free topics are fitted without seeds.
+The LDA also estimates its own $\alpha$, one concentration per topic, by
+maximising the marginal likelihood every ten sweeps (the empirical Bayes
+of the usual LDA implementations), and that vector is the prior on $\theta$
+in stage two: $\phi$ and $\alpha$ are then the pair under which the tragedy
+corpus was fitted, not $\phi$ with a prior chosen by hand; the last section
+sets three hand-chosen priors beside it. The sampler runs single-threaded
+from a fixed seed, so the fit reproduces, for 10,000 sweeps of burn-in,
+after which twenty states of the chain, 500 sweeps apart, are kept:
+$(\phi_j, \alpha_j)$ for $j = 1, \dots, 20$. The report's $\phi$ is thus not
+one Gibbs state but twenty, and what moves between them is the uncertainty
+in $\phi$ that a single state would hide. What they cannot show is another
+mode of the LDA, since all twenty come from one chain with the same seeds.
+
+**Stage two** samples every document's $\theta$ exactly, given one state,
+with Stan, and does so once per state; the posterior reported is the mixture
+
+$$p(\theta \mid w_{1:N}) \approx \frac{1}{20} \sum_{j=1}^{20}
+  p(\theta \mid w_{1:N}, \phi_j, \alpha_j),$$
+
+and every interval below pools the draws of the twenty states.
 
 The documents are those of the hard report: the imputations, one document per
 untilted snapshot, and Sophocles' extant trimeters in windows of seventeen,
@@ -95,45 +118,60 @@ of the means, and a **random document** against a random window,
 $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$. A topic is raised when
 the mean-profile probability is at least 0.9 and the lift at least 1.5.
 
-**Sampling.** With $\phi$ fixed, the posterior of one document is the
-density on the simplex
+**Sampling.** With $\phi$ and $\alpha$ fixed, the posterior of one document
+is the density on the simplex
 
-$$p(\theta \mid w_{1:N}) \propto \prod_{n=1}^{N} \sum_{k=1}^{K}
-  \theta_k\, \phi_{k w_n},$$
+$$p(\theta \mid w_{1:N}) \propto \mathrm{Dirichlet}(\theta \mid \alpha)
+  \prod_{n=1}^{N} \sum_{k=1}^{K} \theta_k\, \phi_{k w_n},$$
 
 $K - 1 = 37$ free dimensions and at most 58 terms, which Stan's NUTS samples
-exactly in about a second. The program is `lda_given_phi.stan`:
+exactly in some seconds. The program is `lda_given_phi.stan`:
 
 ```{r stan_program, echo = FALSE, comment = ""}
 cat(readLines("lda_given_phi.stan"), sep = "\n")
 ```
 
-Every document of every set is sampled with four chains of 500 warmup and
-500 sampling iterations, by one CmdStan process per core of a GH200 node
-(`scripts/soft_model.py`, `slurm/soft_model.slurm`); 100 draws of each
-document are kept, and Stan's diagnostics for every fit, the split
+The learned $\alpha$ is below 1 on every seeded topic, and a Dirichlet
+density with $\alpha_k < 1$ is unbounded at the corners of the simplex,
+where $\theta_k \to 0$. At Stan's default target acceptance of 0.8 nearly
+every document showed divergent transitions. The usual remedies were tried
+on a handful of documents, sampling $\theta$ through independent gamma
+variates and a dense mass matrix, and neither bought anything over the plain
+simplex once the target acceptance was raised to 0.99, which is what the
+runs use, at the price of a smaller step size and more leapfrog steps per
+draw. Every document of every set is sampled with four chains of 500 warmup
+and 1,000 sampling iterations, by one CmdStan process per core of a GH200
+node, once per state (`scripts/soft_model.py`, `slurm/soft_draws.slurm`, an
+array of twenty tasks of about two hours each); 100 draws of each document
+are kept per state, and Stan's diagnostics for every fit, the split
 $\hat R$, the bulk effective sample size, divergent transitions and
-tree-depth hits, are recorded. The posterior is exact up to Monte Carlo
+tree-depth hits, are recorded. `scripts/soft_pool.py` pools the twenty runs
+into the files this report reads. The posterior is exact up to Monte Carlo
 error, so there is nothing to calibrate: the checks are the diagnostics.
 
 # Data
 
-The GPU script reads the same dataset as the hard report
+The GPU scripts read the same dataset as the hard report
 (`Urdatorn/bsda-miniproject-2026`: the bags of content lemmata, the
 vocabulary with its cluster labels, the corpus of the three tragedians, the
-baseline windows) and writes to `results/soft/` the diagnostics of every
-fit (`diagnostics.csv.gz`), two documents with their posterior summary for
-the refit below (`check_documents.json`), the mean profiles of the four
-sets of documents, the imputations, Sophocles and the two further
-baselines, with the imputations' lift (`profiles.csv`), and the comparisons
-between the sets
-(`comparisons.csv`). The topics themselves, the
-topic-word matrix with its top lemmata (`phi.json`, and the whole matrix
-`phi_matrix.csv.gz`), and the kept draws of every document
-(`theta_draws.npz`) go to the dataset's `soft/` folder, not to the
-repository; this document downloads the two phi files into `results/soft/`
-when they are absent. It stops here, with a note, if the run has not been
-made yet.
+baseline windows). Stage one writes to `results/soft/lda/` the twenty states
+of $\phi$ and $\alpha$ (`phi_draws.npz`, kept in the dataset's `soft/`
+folder, not in the repository) and the mean of the states with its top
+lemmata and the mean $\alpha$ (`phi.json`, `phi_matrix.csv.gz`). Stage two
+writes one folder per state, `results/soft/draws/d00` to `d19`, and
+`scripts/soft_pool.py` pools them into `results/soft/pooled/`, which this
+report reads: the diagnostics of every document, the worst over the states
+(`diagnostics.csv.gz`), and the counts per state
+(`diagnostics_by_draw.csv`); two documents with their posterior summary for
+the refit below (`check_documents.json`, from the first state); the mean
+profiles of the four sets of documents, the imputations, Sophocles and the
+two further baselines, with the imputations' lift (`profiles.csv`); and the
+comparisons between the sets with intervals of three kinds
+(`comparisons.csv`, with every lift at every single state in
+`lifts_by_state.csv`). The four runs of the prior check
+(`results/soft/mean_alpha_*`) hold the same files under the mean $\phi$.
+This document downloads the two phi files into the results folder when they
+are absent, and stops here, with a note, if the run has not been made yet.
 
 ```{r load, include = FALSE}
 hub <- "https://huggingface.co/datasets/Urdatorn/bsda-miniproject-2026"
@@ -161,7 +199,8 @@ if (file.exists(phi_path) && fromJSON(phi_path)$vocab_size != V) {
   fetch_phi()
 }
 needed <- c("phi.json", "phi_matrix.csv.gz", "diagnostics.csv.gz",
-            "check_documents.json", "profiles.csv", "comparisons.csv")
+            "diagnostics_by_draw.csv", "check_documents.json", "profiles.csv",
+            "comparisons.csv", "lifts_by_state.csv", "pooled.json")
 missing <- needed[!file.exists(file.path(results_dir, needed))]
 if (length(missing) == 0 && fromJSON(phi_path)$vocab_size != V) {
   cat("The phi in", results_dir, "is from another vocabulary (",
@@ -180,6 +219,10 @@ profiles <- read.csv(file.path(results_dir, "profiles.csv"),
 diagnostics <- read.csv(gzfile(file.path(results_dir, "diagnostics.csv.gz")))
 comparisons <- read.csv(file.path(results_dir, "comparisons.csv"),
                         encoding = "UTF-8")
+by_state <- read.csv(file.path(results_dir, "diagnostics_by_draw.csv"))
+lifts_by_state <- read.csv(file.path(results_dir, "lifts_by_state.csv"),
+                           encoding = "UTF-8")
+pooled <- fromJSON(file.path(results_dir, "pooled.json"))
 
 phi_matrix <- read.csv(gzfile(file.path(results_dir, "phi_matrix.csv.gz")),
                        row.names = 1, check.names = FALSE,
@@ -205,13 +248,21 @@ figure <- function(paths) {
 
 `r H` seeded topics and `r K - H` free topics on a vocabulary of
 `r phi$vocab_size` lemmata; the LDA's log-likelihood per word is
-`r round(phi$ll_per_word, 3)`.
+`r round(phi$ll_per_word, 3)` at the last state, and `r pooled$states`
+states were kept. The learned $\alpha$, averaged over the states, runs from
+`r sprintf("%.2f", min(phi$alpha[1:H]))` to
+`r sprintf("%.2f", max(phi$alpha[1:H]))` on the seeded topics and from
+`r sprintf("%.1f", min(phi$alpha[-(1:H)]))` to
+`r sprintf("%.1f", max(phi$alpha[-(1:H)]))` on the free ones, and sums to
+`r sprintf("%.1f", sum(phi$alpha))`: the prior alone gives the four free
+topics `r sprintf("%.0f", 100 * sum(phi$alpha[-(1:H)]) / sum(phi$alpha))` %
+of a document.
 
 # The topics
 
 The ten top lemmata of every topic as the seeded LDA fitted them on
-Aeschylus and Euripides, with the number of seed lemmata found in the
-vocabulary.
+Aeschylus and Euripides (the mean of the twenty states), with the number of
+seed lemmata found in the vocabulary and the topic's learned $\alpha_k$.
 
 ```{r topics, results = "asis"}
 for (k in seq_len(K)) {
@@ -219,10 +270,11 @@ for (k in seq_len(K)) {
   top_words <- paste(head(phi$top_words[[topic]], 10), collapse = " ")
   if (k <= H) {
     n_seeds <- length(phi$seeds_found[[topic]])
-    cat("- **", topic, "** (", n_seeds, " seeds): ", top_words, "\n",
-        sep = "")
+    cat("- **", topic, "** (", n_seeds, " seeds, $\\alpha_k$ = ",
+        sprintf("%.2f", phi$alpha[k]), "): ", top_words, "\n", sep = "")
   } else {
-    cat("- **", topic, "** (free): ", top_words, "\n", sep = "")
+    cat("- **", topic, "** (free, $\\alpha_k$ = ",
+        sprintf("%.1f", phi$alpha[k]), "): ", top_words, "\n", sep = "")
   }
 }
 ```
@@ -268,10 +320,34 @@ knitr::kable(movers, digits = 2, row.names = FALSE,
 
 # The posterior
 
-Stan's diagnostics over every document that was sampled: how many fits have
-a split $\hat R$ above 1.01 for any topic, a bulk effective sample size
-under 400 for any topic (of 2000 draws), any divergent transition, or any
-tree-depth hit, with the worst values and the time per document.
+Stan's diagnostics over every document that was sampled, twenty times each,
+once per state. The first table counts, within a state and for each set,
+the documents whose fit had a split $\hat R$ above 1.01 for any topic, a
+bulk effective sample size under 400 for any topic (of 4,000 draws), any
+divergent transition or any tree-depth hit, as the median and the largest
+count over the twenty states, with the worst values seen and the median
+time per document. The second counts a document once if any of its twenty
+fits was flagged, so it is the stricter of the two.
+
+```{r diagnostics_by_state}
+state_counts <- by_state %>%
+  group_by(source) %>%
+  summarise(documents = first(documents),
+            rhat_over_1.01 = sprintf("%.0f to %d", median(rhat_over_1_01),
+                                     max(rhat_over_1_01)),
+            ess_under_400 = sprintf("%.0f to %d", median(ess_under_400),
+                                    max(ess_under_400)),
+            divergent = sprintf("%.0f to %d", median(divergent),
+                                max(divergent)),
+            treedepth = sprintf("%.0f to %d", median(treedepth),
+                                max(treedepth)),
+            worst_rhat = max(worst_rhat),
+            least_ess = min(least_ess),
+            seconds = median(seconds))
+knitr::kable(state_counts, digits = 3,
+             caption = paste("Stan's diagnostics within a state: the median",
+                             "to the largest count over the twenty states"))
+```
 
 ```{r diagnostics}
 diagnostics_table <- diagnostics %>%
@@ -282,31 +358,50 @@ diagnostics_table <- diagnostics %>%
             divergent = sum(divergences > 0),
             treedepth = sum(treedepth_hits > 0),
             worst_rhat = max(max_rhat),
-            least_ess = min(min_ess_bulk),
-            seconds = median(seconds))
+            least_ess = min(min_ess_bulk))
 knitr::kable(diagnostics_table, digits = 3,
-             caption = "Stan's diagnostics, counted over the documents")
+             caption = paste("The same, a document counted once if flagged",
+                             "at any state"))
 ```
 
-The same diagnostics as bayesplot draws them, one value per document: its
-largest $\hat R$ over the topics, and its smallest bulk effective sample
-size as a share of the 2000 draws.
+Under the learned prior the sampler has a harder time than under a flat
+one, and the section on the prior shows the same documents sampled without
+a single flag under $\mathrm{Dirichlet}(\mathbf 1)$. A seeded topic with
+an $\alpha_k$ of 0.1 or 0.2 is, in a document that does not use it,
+posterior mass piled against $\theta_k = 0$ with a thin tail; a chain that
+strays into the tail for a while shows up as an $\hat R$ above 1.01 and a
+small effective sample size for that topic, in about a tenth of the
+documents at any one state. The tree-depth hits are the price of the target
+acceptance of 0.99: a small step size exhausts the ten doublings of NUTS's
+trajectory in some documents, which costs time but, unlike a divergence,
+does not bias the draw. What the report uses is the mean profile over
+hundreds or thousands of documents, in which the Monte Carlo error of one
+document's mean is averaged away; the agreement between the twenty states,
+each a separate run, in the section on the intervals below is the check on
+that.
+
+The same diagnostics as bayesplot draws them, one value per document at
+its worst state: its largest $\hat R$ over the topics, and its smallest
+bulk effective sample size as a share of the 4,000 draws.
 
 ```{r diagnostics_plot, fig.height = 2.6}
 mcmc_rhat_hist(diagnostics$max_rhat) +
-  labs(title = "Largest split R-hat over the topics, one per document")
-mcmc_neff_hist(diagnostics$min_ess_bulk / 2000) +
-  labs(title = "Smallest bulk ESS over the topics, one per document")
+  labs(title = paste("Largest split R-hat over the topics and states,",
+                     "one per document"))
+mcmc_neff_hist(diagnostics$min_ess_bulk / 4000) +
+  labs(title = paste("Smallest bulk ESS over the topics and states,",
+                     "one per document"))
 ```
 
 ## Two documents refitted here
 
 One snapshot of the imputations and one window of Sophocles, drawn at random by
 the GPU script, are sampled again here with `rstan` from the same program,
-the same $\phi$ and the same $\alpha$ (the GPU script stores the document's
-rows of $\log \phi$ and the prior beside its summary), so that the chains can
-be looked at, and the stored summary (from 100 kept draws) is set beside the
-fresh one (from `r 4 * params$check_iter / 2` draws).
+the same $\phi$ and the same $\alpha$, those of the first state (the GPU
+script stores the document's rows of $\log \phi$ and the prior beside its
+summary), so that the chains can be looked at, and the stored summary (from
+100 kept draws) is set beside the fresh one (from
+`r 4 * params$check_iter / 2` draws).
 
 ```{r check_model}
 check_model <- stan_model("lda_given_phi.stan")
@@ -449,9 +544,10 @@ Euripides and Classical Attic (`data/attic_windows.parquet`, windows of 30
 lemmata of the Attic authors before Alexander), every window sampled like
 the restorations: the baseline's mean profile is compared with the imputations'
 draw by draw, and a lift's 90 % interval is that of the ratio of the two
-mean profiles over the posterior draws, not a bootstrap.
-`scripts/soft_circles.py` draws the grids from
-`results/soft/comparisons.csv`. The area of a circle runs from the
+mean profiles over the posterior draws of the twenty states, focus and
+baseline paired within a state; the section after the next adds the
+bootstrap. `scripts/soft_circles.py` draws the grids from
+`results/soft/pooled/comparisons.csv`. The area of a circle runs from the
 smallest mean share to the largest: the shares of 34 topics lie within
 a factor of two of each other, and circles proportional to the share
 itself would all look alike.
@@ -580,27 +676,204 @@ top_five <- rbind(head(arrange(sophocles_rows, desc(mean)), 5)[, columns],
 knitr::kable(top_five, digits = 3, row.names = FALSE)
 ```
 
+# What the intervals leave out
+
+The 90 % intervals so far are posterior intervals of the mean profile given
+$\phi$: they carry the uncertainty of every document's $\theta$ and, since
+the draws of twenty states are pooled, the uncertainty in $\phi$ that the
+Gibbs chain shows. Two things remain to be looked at. The first is what a
+single state of $\phi$ would have hidden; the second is the dependence
+between the restorations, which the posterior treats as independent
+documents given $\phi$, although the snapshots of one walk chain share most
+of their text.
+
+## Twenty states of phi against one
+
+The lift of every seeded topic against Sophocles: the pooled 90 % interval
+(vermillion), the lift at each of the twenty single states (grey dots),
+and the interval of the plug-in run under the mean $\phi$ and the mean
+$\alpha$ (blue, `results/soft/mean_alpha_lda`), the run that one state
+would have given.
+
+```{r phi_plot, fig.height = 5.5}
+plugin_dir <- file.path(dirname(results_dir), "mean_alpha_lda")
+plugin <- read.csv(file.path(plugin_dir, "comparisons.csv"),
+                   encoding = "UTF-8")
+plugin <- filter(plugin, comparison == "imputations vs sophocles")
+pooled_lifts <- filter(comparisons, comparison == "imputations vs sophocles")
+topic_order <- pooled_lifts$topic[order(pooled_lifts$lift)]
+both <- bind_rows(mutate(pooled_lifts, run = "pooled over twenty states"),
+                  mutate(plugin, run = "plug-in: mean phi, mean alpha"))
+both$topic <- factor(both$topic, levels = topic_order)
+state_lifts <- filter(lifts_by_state,
+                      comparison == "imputations vs sophocles")
+state_lifts$topic <- factor(state_lifts$topic, levels = topic_order)
+ggplot(both, aes(x = lift, y = topic, colour = run)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_point(data = state_lifts, aes(x = lift, y = topic), inherit.aes = FALSE,
+             colour = "grey55", size = 0.6, alpha = 0.7,
+             position = position_nudge(y = 0.22)) +
+  geom_pointrange(aes(xmin = lift_q05, xmax = lift_q95),
+                  size = 0.25, linewidth = 0.4,
+                  position = position_dodge(width = 0.5)) +
+  scale_x_log10() +
+  scale_colour_manual(values = c(okabe_ito[["blue"]],
+                                 okabe_ito[["vermillion"]]), name = NULL) +
+  labs(x = "lift of the mean profile against Sophocles (log scale)",
+       y = NULL) +
+  theme(legend.position = "bottom")
+```
+
+```{r phi_summary, results = "asis"}
+log_width <- function(low, high) log(high / low)
+pooled_width <- median(log_width(pooled_lifts$lift_q05, pooled_lifts$lift_q95))
+plugin_width <- median(log_width(plugin$lift_q05, plugin$lift_q95))
+state_range <- state_lifts %>%
+  group_by(topic) %>%
+  summarise(low = min(lift), high = max(lift))
+state_width <- median(log_width(state_range$low, state_range$high))
+off_one <- function(rows) sum(rows$lift_q05 > 1 | rows$lift_q95 < 1)
+top_topic <- pooled_lifts$topic[which.max(pooled_lifts$lift)]
+top_range <- filter(state_range, topic == top_topic)
+cat(sprintf(paste(
+  "The lift of %s lies between %.2f and %.2f over the twenty states;",
+  "for the median topic the twenty lifts span a factor of %.2f. The median",
+  "90 %% interval is a factor of %.2f wide pooled and %.2f under the",
+  "plug-in run (%.0f %% wider on the log scale); %d topics have an interval",
+  "off 1 pooled, %d under the plug-in run.\n"),
+  top_topic, top_range$low, top_range$high, exp(state_width),
+  exp(pooled_width), exp(plugin_width),
+  100 * (pooled_width / plugin_width - 1), off_one(pooled_lifts),
+  off_one(plugin)))
+```
+
+The states agree with each other. The twenty lifts of a topic are spread
+over a factor of `r sprintf("%.2f", exp(state_width))` for the median
+topic, inside its posterior interval, and pooling the states widens the
+median interval by
+`r sprintf("%.0f", 100 * (pooled_width / plugin_width - 1))` % on the log
+scale against the plug-in run. The raised set is the same under both, the
+point estimates nearly so. The uncertainty in $\phi$ is real and is now in
+the intervals, but it is small next to the posterior uncertainty of the
+profiles, which the plug-in run already carries. One caveat was stated
+above: twenty states of one chain show the spread within a mode of the LDA,
+not between modes.
+
+## The dependence between restorations
+
+The imputations are `r imputations$n_docs[1]` snapshots of
+`r pooled$chains` chains of the walk, and consecutive snapshots of a chain
+differ by a few verses. The posterior of the mean profile shrinks with the
+number of documents as if they were independent; the hard report meets this
+with a bootstrap by chain, and the same is done here: `r pooled$bootstrap`
+replicates, each with the imputations resampled by chain, Sophocles'
+windows resampled, a state of $\phi$ drawn at random, and the posterior
+noise of the two mean profiles added back (a random draw's deviation from
+the mean of its state), so that the bootstrap interval carries everything
+the posterior interval does and the dependence on top. With
+`r pooled$chains` chains it is a coarse bootstrap, but an honest one. The
+plot sets the two intervals side by side, with the probability of the lift
+being above 1 under each.
+
+```{r chain_plot, fig.height = 5.5}
+chain <- pooled_lifts
+chain$topic <- factor(chain$topic, levels = topic_order)
+intervals <- bind_rows(
+  data.frame(topic = chain$topic, lift = chain$lift, low = chain$lift_q05,
+             high = chain$lift_q95, p = chain$p_above,
+             kind = "posterior, pooled over the states"),
+  data.frame(topic = chain$topic, lift = chain$lift, low = chain$lift_chain_q05,
+             high = chain$lift_chain_q95, p = chain$p_chain_above,
+             kind = "chain bootstrap"))
+intervals$kind <- factor(intervals$kind,
+                         levels = c("posterior, pooled over the states",
+                                    "chain bootstrap"))
+ggplot(intervals, aes(x = lift, y = topic, colour = kind)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_pointrange(aes(xmin = low, xmax = high), size = 0.25, linewidth = 0.4,
+                  position = position_dodge(width = 0.5)) +
+  geom_text(aes(x = 3.2, label = sprintf("%.2f", p)), size = 2,
+            family = figure_font, position = position_dodge(width = 0.5),
+            show.legend = FALSE) +
+  scale_x_log10(breaks = c(0.5, 1, 2), limits = c(0.35, 3.6)) +
+  scale_colour_manual(values = c(okabe_ito[["vermillion"]],
+                                 okabe_ito[["green"]]), name = NULL) +
+  labs(x = "lift against Sophocles (log scale); at the right, P(lift > 1)",
+       y = NULL) +
+  theme(legend.position = "bottom")
+```
+
+```{r chain_summary, results = "asis"}
+chain_width <- median(log_width(chain$lift_chain_q05, chain$lift_chain_q95))
+off_chain <- sum(chain$lift_chain_q05 > 1 | chain$lift_chain_q95 < 1)
+raised_chain <- filter(chain, p_chain_above >= 0.9, lift >= 1.5)
+raised_chain <- as.character(arrange(raised_chain, desc(lift))$topic)
+# the topics the two intervals disagree on: off 1 under one, covering 1
+# under the other
+posterior_off <- chain$lift_q05 > 1 | chain$lift_q95 < 1
+bootstrap_off <- chain$lift_chain_q05 > 1 | chain$lift_chain_q95 < 1
+lost <- as.character(chain$topic[posterior_off & !bootstrap_off])
+gained <- as.character(chain$topic[!posterior_off & bootstrap_off])
+or_none <- function(topics) {
+  if (length(topics) == 0) "none" else paste(topics, collapse = ", ")
+}
+cat(sprintf(paste(
+  "The median chain-bootstrap interval is a factor of %.2f wide against",
+  "%.2f for the posterior interval; %d topics have a bootstrap interval",
+  "off 1 against %d. Off 1 under the posterior but not under the",
+  "bootstrap: %s. The reverse: %s. Raised with the bootstrap's probability",
+  "in place of the posterior's: %s.\n"),
+  exp(chain_width), exp(pooled_width), off_chain, off_one(pooled_lifts),
+  or_none(lost), or_none(gained), or_none(raised_chain)))
+top_rows <- head(arrange(chain, desc(lift)), 4)
+knitr::kable(top_rows[, c("topic", "lift", "lift_q05", "lift_q95", "p_above",
+                          "lift_chain_q05", "lift_chain_q95",
+                          "p_chain_above")],
+             digits = 3, row.names = FALSE,
+             col.names = c("topic", "lift", "q05", "q95", "P(> 1)",
+                           "chain q05", "chain q95", "chain P(> 1)"),
+             caption = paste("The four largest lifts under the posterior",
+                             "interval and the chain bootstrap"))
+```
+
+The dependence between the restorations matters more than the uncertainty
+in $\phi$. The bootstrap interval of the median topic is a factor of
+`r sprintf("%.2f", exp(chain_width))` wide against
+`r sprintf("%.2f", exp(pooled_width))` for the posterior interval, and
+`r length(lost)` topics whose posterior interval is off 1 have a bootstrap
+interval that covers it. The topic with the largest lift,
+*`r top_topic`*, keeps its interval off 1 and its probability under both;
+the topics behind it are where the two readings part. Where the hard report
+had only the bootstrap, the soft model has both, and the bootstrap is the
+interval to quote for a claim about the walk as a whole, the posterior
+interval for a claim about these `r imputations$n_docs[1]` documents.
+
 # The prior
 
 The Stan program has one modelling choice of its own, the prior on
-$\theta$, and the report takes the flat $\mathrm{Dirichlet}(\mathbf 1)$.
-With $K - 1 = 37$ free dimensions and some 30 to 40 lemmata per document
-the prior is not nothing: it decides how much of a document's mass a topic
-may hold on the strength of a single lemma. Two other concentrations are
-run through the same pipeline with the same $\phi$
-(`slurm/soft_prior.slurm`): $\mathrm{Dirichlet}(0.1)$, which favours
-documents made of a few topics, and $\mathrm{Dirichlet}(2)$, which favours
-even mixtures. What matters is whether the lifts, the raised set and the
-order of the topics survive the change.
+$\theta$, and the report takes the $\alpha$ the LDA estimated on the tragedy
+corpus. With $K - 1 = 37$ free dimensions and some 30 to 40 lemmata per
+document the prior is not nothing: it decides how much of a document's mass
+a topic may hold on the strength of a single lemma, and the learned
+$\alpha$ is a strong statement, below 1 on every seeded topic and between 4
+and 9 on the four free ones. Three hand-chosen priors are run through the
+same pipeline under the same mean $\phi$ (tasks 20 to 23 of
+`slurm/soft_draws.slurm`, into `results/soft/mean_alpha_*`): the flat
+$\mathrm{Dirichlet}(\mathbf 1)$; $\mathrm{Dirichlet}(0.1)$, which favours
+documents made of a few topics; and $\mathrm{Dirichlet}(2)$, which favours
+even mixtures. The learned prior under the mean $\phi$ is the fourth run,
+so that only the prior moves between them. What matters is whether the
+lifts, the raised set and the order of the topics survive the change.
 
 ```{r prior_sets}
-prior_dirs <- c("0.1" = file.path(results_dir, "alpha_0.1"),
-                "1" = results_dir,
-                "2" = file.path(results_dir, "alpha_2"))
+prior_dirs <- c("learned" = file.path(dirname(results_dir), "mean_alpha_lda"),
+                "1" = file.path(dirname(results_dir), "mean_alpha_1"),
+                "0.1" = file.path(dirname(results_dir), "mean_alpha_0.1"),
+                "2" = file.path(dirname(results_dir), "mean_alpha_2"))
 prior_done <- file.exists(file.path(prior_dirs, "comparisons.csv"))
 ```
 
-```{r prior_missing, results = "asis", eval = !all(prior_done)}
+```{r prior_missing, results = "asis", echo = FALSE, eval = !all(prior_done)}
 cat("The prior check has not been run yet: missing",
     paste(prior_dirs[!prior_done], collapse = ", "), "\n")
 ```
@@ -620,12 +893,13 @@ priors <- lapply(names(prior_dirs), read_prior)
 names(priors) <- names(prior_dirs)
 prior_lifts <- bind_rows(lapply(priors, `[[`, "lifts"))
 prior_lifts$alpha <- factor(prior_lifts$alpha, levels = names(prior_dirs))
-flat <- filter(prior_lifts, alpha == "1")
+learned <- filter(prior_lifts, alpha == "learned")
 ```
 
 Stan's diagnostics under each prior, counted over the documents as above.
-A sparse prior puts mass near the corners of the simplex, where the
-sampler has a harder time.
+A prior with concentrations below 1 puts mass against the faces of the
+simplex, where the sampler has a harder time; the two priors at or above 1
+sample without a flag.
 
 ```{r prior_diagnostics, eval = all(prior_done)}
 prior_diagnostics <- bind_rows(lapply(names(priors), function(alpha) {
@@ -634,30 +908,33 @@ prior_diagnostics <- bind_rows(lapply(names(priors), function(alpha) {
              rhat_over_1.01 = sum(d$max_rhat > 1.01),
              ess_under_400 = sum(d$min_ess_bulk < 400),
              divergent = sum(d$divergences > 0),
+             treedepth = sum(d$treedepth_hits > 0),
              worst_rhat = max(d$max_rhat),
              least_ess = min(d$min_ess_bulk),
              seconds = median(d$seconds))
 }))
 knitr::kable(prior_diagnostics, digits = 3,
-             caption = "Stan's diagnostics under the three priors")
+             caption = "Stan's diagnostics under the four priors")
 ```
 
-The lift of every seeded topic against Sophocles under the three priors,
-with its 90 % interval, ordered by the lift under the flat prior.
+The lift of every seeded topic against Sophocles under the four priors,
+with its 90 % interval, ordered by the lift under the learned prior.
 
-```{r prior_plot, eval = all(prior_done), fig.height = 5.5}
+```{r prior_plot, eval = all(prior_done), fig.height = 6}
 prior_lifts$topic <- factor(prior_lifts$topic,
-                            levels = flat$topic[order(flat$lift)])
-prior_colours <- c("0.1" = okabe_ito[["vermillion"]], "1" = "grey40",
-                   "2" = okabe_ito[["blue"]])
+                            levels = learned$topic[order(learned$lift)])
+prior_colours <- c("learned" = okabe_ito[["vermillion"]], "1" = "grey40",
+                   "0.1" = okabe_ito[["orange"]], "2" = okabe_ito[["blue"]])
 ggplot(prior_lifts, aes(x = lift, y = topic, colour = alpha)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_pointrange(aes(xmin = lift_q05, xmax = lift_q95),
                   size = 0.25, linewidth = 0.4,
-                  position = position_dodge(width = 0.6)) +
+                  position = position_dodge(width = 0.7)) +
   scale_x_log10() +
   scale_colour_manual(values = prior_colours,
-                      name = "concentration of the Dirichlet prior") +
+                      labels = c("learned", "Dirichlet(1)", "Dirichlet(0.1)",
+                                 "Dirichlet(2)"),
+                      name = "prior on theta") +
   labs(x = "lift of the mean profile against Sophocles (log scale)",
        y = NULL) +
   theme(legend.position = "bottom")
@@ -666,92 +943,106 @@ ggplot(prior_lifts, aes(x = lift, y = topic, colour = alpha)) +
 ```{r prior_summary, eval = all(prior_done), results = "asis"}
 lift_under <- function(alpha) {
   rows <- filter(prior_lifts, alpha == !!alpha)
-  rows$lift[match(flat$topic, rows$topic)]
+  rows$lift[match(learned$topic, rows$topic)]
 }
-wide <- data.frame(topic = flat$topic, sparse = lift_under("0.1"),
-                   flat = lift_under("1"), even = lift_under("2"))
-wide <- arrange(wide, desc(flat))
+wide <- data.frame(topic = learned$topic, learned = lift_under("learned"),
+                   flat = lift_under("1"), sparse = lift_under("0.1"),
+                   even = lift_under("2"))
+wide <- arrange(wide, desc(learned))
 raised_under <- function(alpha) {
   rows <- filter(prior_lifts, alpha == !!alpha, p_above >= 0.9, lift >= 1.5)
   as.character(arrange(rows, desc(lift))$topic)
 }
 raised_sets <- lapply(names(prior_dirs), raised_under)
 names(raised_sets) <- names(prior_dirs)
-or_none <- function(topics) {
-  if (length(topics) == 0) "none" else paste(topics, collapse = ", ")
+# the slope of a prior's log lifts on the learned prior's: 1 would mean the
+# same lifts, 1/2 that every lift is square-rooted
+slope <- function(column) {
+  unname(coef(lm(log(column) ~ log(wide$learned)))[2])
 }
-shift <- abs(log(wide$sparse) - log(wide$even))
-moved <- wide[which.max(shift), ]
-# the slope of a prior's log lifts on the flat prior's: 1 would mean the
-# same lifts, 2 that every lift is squared
-slope <- function(column) coef(lm(log(column) ~ log(wide$flat)))[2]
-slope_sparse <- slope(wide$sparse)
-slope_even <- slope(wide$even)
+slopes <- sapply(wide[, c("flat", "sparse", "even")], slope)
+correlations <- sapply(wide[, c("flat", "sparse", "even")],
+                       function(column) cor(log(column), log(wide$learned)))
 seeded_mass <- sapply(priors, `[[`, "seeded_mass")
-# the topics whose interval is off 1 under the flat prior: do they keep
+# the topics whose interval is off 1 under the learned prior: do they keep
 # their side of 1 under the other priors?
-flat_sorted <- flat[match(wide$topic, flat$topic), ]
-settled <- flat_sorted$lift_q05 > 1 | flat_sorted$lift_q95 < 1
-same_side <- function(column) sum(((column > 1) == (wide$flat > 1))[settled])
+learned_sorted <- learned[match(wide$topic, learned$topic), ]
+settled <- learned_sorted$lift_q05 > 1 | learned_sorted$lift_q95 < 1
+same_side <- function(column) {
+  sum(((column > 1) == (wide$learned > 1))[settled])
+}
+sides <- sapply(wide[, c("flat", "sparse", "even")], same_side)
 cat(sprintf(paste(
-  "Raised (P >= 0.9 and lift >= 1.5) under Dirichlet(0.1): %s;",
-  "under Dirichlet(1): %s; under Dirichlet(2): %s.\n\n"),
-  or_none(raised_sets[["0.1"]]), or_none(raised_sets[["1"]]),
-  or_none(raised_sets[["2"]])))
+  "Raised (P >= 0.9 and lift >= 1.5) under the learned prior: %s; under",
+  "Dirichlet(1): %s; under Dirichlet(0.1): %s; under Dirichlet(2): %s.\n\n"),
+  or_none(raised_sets[["learned"]]), or_none(raised_sets[["1"]]),
+  or_none(raised_sets[["0.1"]]), or_none(raised_sets[["2"]])))
 cat(sprintf(paste(
-  "The correlation of the log lifts with the flat prior's is %.3f for",
-  "Dirichlet(0.1) and %.3f for Dirichlet(2). The topic that moves most",
-  "between 0.1 and 2 is %s, from %.2f to %.2f (%.2f under the flat",
-  "prior).\n\n"),
-  cor(log(wide$sparse), log(wide$flat)), cor(log(wide$even), log(wide$flat)),
-  moved$topic, moved$sparse, moved$even, moved$flat))
-cat(sprintf(paste(
-  "Regressing a prior's log lifts on the flat prior's gives a slope of",
-  "%.2f for Dirichlet(0.1) and %.2f for Dirichlet(2); the seeded topics",
-  "hold %.0f %%, %.0f %% and %.0f %% of the imputations' mean profile under",
-  "0.1, 1 and 2.\n\n"),
-  slope_sparse, slope_even, 100 * seeded_mass[["0.1"]],
-  100 * seeded_mass[["1"]], 100 * seeded_mass[["2"]]))
+  "The correlation of the log lifts with the learned prior's is %.3f for",
+  "Dirichlet(1), %.3f for Dirichlet(0.1) and %.3f for Dirichlet(2);",
+  "regressing a prior's log lifts on the learned prior's gives slopes of",
+  "%.2f, %.2f and %.2f. Of the %d topics whose interval is off 1 under",
+  "the learned prior, %d, %d and %d keep their side of 1. The seeded",
+  "topics hold %.0f %%, %.0f %%, %.0f %% and %.0f %% of the imputations'",
+  "mean profile under the learned prior, 1, 0.1 and 2.\n\n"),
+  correlations[["flat"]], correlations[["sparse"]], correlations[["even"]],
+  slopes[["flat"]], slopes[["sparse"]], slopes[["even"]], sum(settled),
+  sides[["flat"]], sides[["sparse"]], sides[["even"]],
+  100 * seeded_mass[["learned"]], 100 * seeded_mass[["1"]],
+  100 * seeded_mass[["0.1"]], 100 * seeded_mass[["2"]]))
 knitr::kable(wide, digits = 2, row.names = FALSE,
-             col.names = c("topic", "Dirichlet(0.1)", "Dirichlet(1)",
-                           "Dirichlet(2)"),
-             caption = "Lift against Sophocles under the three priors")
+             col.names = c("topic", "learned", "Dirichlet(1)",
+                           "Dirichlet(0.1)", "Dirichlet(2)"),
+             caption = "Lift against Sophocles under the four priors")
 ```
 
-So the prior sets the scale of the lifts and leaves their order alone. The
-log lifts under the three priors correlate at
-`r sprintf("%.2f", cor(log(wide$sparse), log(wide$flat)))` and
-`r sprintf("%.3f", cor(log(wide$even), log(wide$flat)))` with the flat
-prior's; of the `r sum(settled)` topics whose interval is off 1 under the
-flat prior, `r same_side(wide$sparse)` keep their side of 1 under
-Dirichlet(0.1) and `r same_side(wide$even)` under Dirichlet(2). But every
-log lift is multiplied by about
-`r sprintf("%.1f", slope_sparse)` under Dirichlet(0.1) and by about
-`r sprintf("%.1f", slope_even)` under Dirichlet(2). The reason is
-shrinkage. The Dirichlet prior acts as $\alpha K$ pseudo-lemmata spread
-evenly over the topics, against the `r round(mean(imputations$n_lemmata))`
-or so real lemmata of a document: `r sprintf("%.1f", 0.1 * K)`
-pseudo-lemmata at $\alpha = 0.1$, `r K` at the flat prior and `r 2 * K` at
-$\alpha = 2$. Under the flat prior the prior already weighs more than the
-document in every posterior mean, so the mean profiles of the imputations
-and of Sophocles are both pulled towards the uniform profile and their
-ratio towards 1; the sparse prior lets each document commit to a few topics
-and the differences between the sets come out in full. A fixed threshold on
-the lift, the 1.5 of the raised set, is therefore a statement relative to
-the prior: it is met by two topics at 0.1, by one at 1 and by none at 2,
-while the sign of every well-determined lift and the order of the topics are
-the same under all three. The posterior probability
-$P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$ is unaffected,
-being a statement about order.
+Three things the four runs show. First, the prior sets the scale of the
+lifts: every log lift is multiplied by about
+`r sprintf("%.1f", slopes[["flat"]])` under the flat prior and by about
+`r sprintf("%.1f", slopes[["even"]])` under Dirichlet(2), and by about
+`r sprintf("%.1f", slopes[["sparse"]])` under Dirichlet(0.1). The reason is
+shrinkage. A Dirichlet prior acts as $\sum_k \alpha_k$ pseudo-lemmata laid
+on the topics in proportion to $\alpha$, against the
+`r round(mean(imputations$n_lemmata))` or so real lemmata of a document:
+`r K` pseudo-lemmata at the flat prior, `r 2 * K` at $\alpha = 2$,
+`r sprintf("%.1f", 0.1 * K)` at $\alpha = 0.1$ and
+`r sprintf("%.1f", sum(phi$alpha))` under the learned prior, of which only
+`r sprintf("%.1f", sum(phi$alpha[1:H]))` fall on the seeded topics. Under
+the flat prior the prior already weighs more than the document, both mean
+profiles are pulled towards the uniform profile and their ratio towards 1;
+the learned prior leaves each seeded topic almost nothing unless the
+document's lemmata call for it, and the differences between the sets come
+out in full. A fixed threshold on the lift, the 1.5 of the raised set, is
+therefore a statement relative to the prior, while
+$P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$, a statement
+about order, is not.
 
-Two reservations about the sparse prior. Its posteriors are hard to sample:
-nearly every document has $\hat R$ above 1.01 and a bulk effective sample
-size under 400 of 2000 draws, so its lifts carry Monte Carlo error that the
-others do not, and a few documents show divergent transitions. And under
-it the four free topics, broad topics fitted without seeds, take
-`r sprintf("%.0f", 100 * (1 - seeded_mass[["0.1"]]))` % of the imputations'
-mean profile against `r sprintf("%.0f", 100 * (1 - seeded_mass[["1"]]))` %
-under the flat prior: a document that must choose few topics chooses the
-broad ones. The flat prior is kept for the report, with the understanding
-that its lifts are conservative in size and that the order of the topics,
-not the size of the lifts, is what the three priors agree on.
+Second, the learned prior is not a symmetric prior at some other scale. Its
+log lifts correlate at `r sprintf("%.2f", correlations[["sparse"]])` with
+Dirichlet(0.1)'s and at `r sprintf("%.2f", correlations[["flat"]])` with
+the flat prior's, where the symmetric priors correlate with each other
+above 0.95; of the `r sum(settled)` topics whose interval is off 1 under
+the learned prior, `r sides[["flat"]]` keep their side of 1 under the flat
+prior and `r sides[["sparse"]]` under Dirichlet(0.1). Topic by topic,
+$\alpha_k$ runs from `r sprintf("%.2f", min(phi$alpha[1:H]))` to
+`r sprintf("%.2f", max(phi$alpha[1:H]))`, so a topic with a small
+$\alpha_k$ is read as under the sparse prior and one with a large
+$\alpha_k$ as under a prior nearer the flat one: the learned prior has
+different ideas about which topics a thirty-lemma document can hold at
+all, and it took them from Aeschylus and Euripides.
+
+Third, the free topics. Under the learned prior the four free topics,
+broad topics fitted without seeds, take
+`r sprintf("%.0f", 100 * (1 - seeded_mass[["learned"]]))` % of the
+imputations' mean profile, against
+`r sprintf("%.0f", 100 * (1 - seeded_mass[["1"]]))` % under the flat prior,
+because their $\alpha_k$ are large: the LDA found that most of a tragic
+window is best explained by them, and says so in its prior. The seeded
+topics then share the remaining quarter, and their lifts are ratios of
+small shares, which is one reason the learned prior's intervals are wider
+and its sampling harder. The learned prior is kept for the report because
+it is the prior under which $\phi$ was fitted, with the understanding that
+its lifts are the largest of the four and its order of the topics is the
+one that differs most from the symmetric priors' consensus; the sign of
+nearly every well-determined lift, and the topic at the top, are the same
+under all four.
