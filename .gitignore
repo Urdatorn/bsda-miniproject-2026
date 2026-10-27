@@ -4,11 +4,14 @@ __pycache__/
 .logs/
 # figure_style.py unpacks fonts/times.zip here
 fonts/times/
-# the compiled Stan program and every document's draws (the draws go to the Hugging Face dataset)
+# the compiled Stan program and the bulk of the soft model's results: every
+# document's draws, the states of phi, the pooled draws of each stage-2 run
+# (soft_pool.py reads them on the cluster; the pooled summaries are committed)
 lda_given_phi
 lda_given_phi.hpp
 lda_given_phi.rds
-results/soft/theta_draws.npz
+results/soft/**/theta_draws.npz
+results/soft/**/set_draws.npz
+results/soft/lda/phi_draws.npz
+results/soft/draws/*/diagnostics.csv.gz
 .DS_Store
-results/soft/phi.json
-results/soft/phi_matrix.csv.gz

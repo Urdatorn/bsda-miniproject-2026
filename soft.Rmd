@@ -302,10 +302,11 @@ mcmc_neff_hist(diagnostics$min_ess_bulk / 2000) +
 ## Two documents refitted here
 
 One snapshot of the imputations and one window of Sophocles, drawn at random by
-the GPU script, are sampled again here with `rstan` from the same program
-and the same $\phi$, so that the chains can be looked at, and the stored
-summary (from 100 kept draws) is set beside the fresh one (from
-`r 4 * params$check_iter / 2` draws).
+the GPU script, are sampled again here with `rstan` from the same program,
+the same $\phi$ and the same $\alpha$ (the GPU script stores the document's
+rows of $\log \phi$ and the prior beside its summary), so that the chains can
+be looked at, and the stored summary (from 100 kept draws) is set beside the
+fresh one (from `r 4 * params$check_iter / 2` draws).
 
 ```{r check_model}
 check_model <- stan_model("lda_given_phi.stan")
@@ -314,13 +315,21 @@ check_set <- fromJSON(file.path(results_dir, "check_documents.json"),
 ```
 
 ```{r check_fits, results = "asis", fig.height = 3.5}
+check_alpha <- unlist(check_set$alpha)
+if (is.null(check_alpha)) check_alpha <- rep(1, K)   # runs before the prior
 for (document in check_set$documents) {
   lemmata <- unlist(document$lemma_idx) + 1          # R counts from 1
-  stan_data <- list(N = length(lemmata), K = K, alpha = 1,
-                    logphi = t(log(phi_matrix[, lemmata])))
+  if (is.null(document$logphi)) {                    # runs before it was stored
+    logphi <- t(log(phi_matrix[, lemmata]))
+  } else {
+    logphi <- do.call(rbind, lapply(document$logphi, unlist))
+  }
+  stan_data <- list(N = length(lemmata), K = K, alpha = check_alpha,
+                    logphi = logphi)
   fit <- sampling(check_model, data = stan_data, chains = 4,
                   iter = params$check_iter, warmup = params$check_iter / 2,
-                  refresh = 0, seed = 917)
+                  refresh = 0, seed = 917,
+                  control = list(adapt_delta = 0.99))
   fit_summary <- summary(fit, pars = "theta")$summary
   stored_mean <- unlist(document$mean)
   largest <- order(stored_mean, decreasing = TRUE)[1:5]

@@ -11,12 +11,17 @@
 #SBATCH --output=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026/.logs/%x-%j.out
 #SBATCH --error=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026/.logs/%x-%j.err
 
-# The soft model: seeded LDA for phi, then every document's posterior by NUTS
-# (CmdStan, one process per core).  The GPU is only the price of admission to
-# the partition; the work is on the Grace cores.  The dataset must be in data/
-# (`hf download Urdatorn/bsda-miniproject-2026 --repo-type dataset --local-dir
-# data`); the nodes have network, so the job could fetch it itself.
+# The soft model in one go: stage 1 (the seeded LDA for phi and alpha, unless
+# results/soft/lda already holds it) and stage 2 under the mean phi and the
+# LDA's alpha, every document's posterior by NUTS (CmdStan, one process per
+# core), into results/soft/run.  The GPU is only the price of admission to the
+# partition; the work is on the Grace cores.  The report's results come from
+# slurm/soft_draws.slurm (one stage-2 run per state of phi, pooled by
+# scripts/soft_pool.py); this script is for a single run with other settings.
+# The dataset must be in data/ (`hf download Urdatorn/bsda-miniproject-2026
+# --repo-type dataset --local-dir data`).
 #   sbatch slurm/soft_model.slurm
+#   sbatch slurm/soft_model.slurm --alpha 1 --out results/soft/run_flat
 set -Eeuo pipefail
 trap 'status=$?; echo "[$(date --iso-8601=seconds)] FATAL line=${LINENO} command=${BASH_COMMAND} status=${status}" >&2; exit "$status"' ERR
 repo=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026

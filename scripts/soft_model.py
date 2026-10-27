@@ -2,54 +2,77 @@
 """The soft model: seeded topics with soft topic-word distributions, exact posterior by NUTS.
 
 Generative model (a seeded LDA, BDA3 §22.3 as a Dirichlet-multinomial mixture):
-the topic-word distributions phi (K x V) are fitted once with tomotopy on
-tragedy, with one topic seeded per unsupervised cluster of the vocabulary (the
-clusters of the hard model, each seeded with all its lemmata), plus --free
-unseeded topics.  A document is one whole restoration of the seventeen lost
-verses: its N content lemmata, however many there are, drawn from the mixture
-sum_k theta_k phi_k with theta ~ Dirichlet(1) on the simplex.  phi is fitted on
-Aeschylus and Euripides only, so that Sophocles' windows, the baseline, are
-test documents like the restorations and phi is not fitted on the very text it
-is then compared with.
+the topic-word distributions phi (K x V) are fitted with tomotopy on tragedy,
+with one topic seeded per unsupervised cluster of the vocabulary (the clusters
+of the hard model, each seeded with all its lemmata), plus --free unseeded
+topics.  A document is one whole restoration of the seventeen lost verses: its
+N content lemmata, however many there are, drawn from the mixture
+sum_k theta_k phi_k with theta ~ Dirichlet(alpha) on the simplex.  phi and
+alpha are fitted on Aeschylus and Euripides only, so that Sophocles' windows,
+the baseline, are test documents like the restorations and phi is not fitted
+on the very text it is then compared with.
 
-The posterior.  With phi fixed, p(theta | document) of one document is the
-(K-1)-dimensional density prod_n sum_k theta_k phi[k, w_n] on the simplex, and
-Stan's NUTS samples it exactly in about a second: the program is
-lda_given_phi.stan (data: the N x K matrix of log phi for the document's
-lemmata).  Every document of every set (the imputations' snapshots, Sophocles'
-windows, the windows of Aeschylus and Euripides and of Classical Attic) is
-sampled with --chains chains of --warmup + --samples iterations by a pool of
---workers CmdStan processes, --keep draws of each are kept, and Stan's own
-diagnostics (split R-hat, bulk ESS, divergent transitions, tree-depth hits) are
-recorded for every document.
+Two stages, the model cut between them (phi and alpha are not informed by the
+test documents):
 
-The documents.  The imputations are the object: one document per untilted snapshot
-(one chain at one step, all seventeen verses).  Sophocles' extant trimeters in
-windows of seventeen are the baseline, the same shape as the lacuna.  Only
-restored text enters a document; the surviving letters of a damaged verse are
-never counted.  The imputations are read on two levels, as in the hard model: its mean
-profile (the documents' posteriors averaged draw by draw), compared with
-Sophocles' by P(mean_k^imp > mean_k^Soph) and the lift of the means, and a
-random document against a random window of Sophocles,
+  1. The LDA (--lda DIR, fitted when DIR/phi_draws.npz is missing or with
+     --refit-lda; --fit-lda-only stops here).  Collapsed Gibbs sampling,
+     single-threaded so that the seed reproduces it, --iters sweeps of burn-in,
+     then --phi-draws states of the chain --draw-spacing sweeps apart.  Each
+     state gives phi (the smoothed topic-word distributions given the current
+     assignments) and alpha (tomotopy re-estimates the Dirichlet concentration
+     of every topic by maximum marginal likelihood every ten sweeps, so alpha
+     is an empirical-Bayes estimate, not a posterior draw).  Writes
+     phi_draws.npz (every state), phi_matrix.csv.gz and phi.json (the mean
+     over states, with alpha, read by the report).
+
+  2. The posterior of every document.  With phi fixed, p(theta | document) is
+     the (K-1)-dimensional density prod_n sum_k theta_k phi[k, w_n] times the
+     Dirichlet prior on the simplex, and Stan's NUTS samples it exactly in a
+     few seconds: the program is lda_given_phi.stan (data: the N x K matrix of
+     log phi for the document's lemmata and the vector alpha) at --adapt-delta
+     0.99: with alpha_k < 1 the density is unbounded at the corners of the
+     simplex, and 0.8 leaves a few divergent transitions per document where
+     0.99 leaves none (sampling theta through log-gammas did no better).  --phi picks the
+     state ('mean', the default, or the index of a draw), --alpha the prior
+     ('lda', the LDA's own alpha, or a number for a symmetric Dirichlet).
+     Every document of every set (the imputations' snapshots, Sophocles'
+     windows, the windows of Aeschylus and Euripides and of Classical Attic) is
+     sampled with --chains chains of --warmup + --samples iterations by a pool
+     of --workers CmdStan processes, --keep draws of each are kept, and Stan's
+     own diagnostics (split R-hat, bulk ESS, divergent transitions, tree-depth
+     hits) are recorded for every document.
+
+Running stage 2 once per state of stage 1 (slurm/soft_draws.slurm, one array
+task per draw) and pooling the runs (scripts/soft_pool.py) carries the
+uncertainty in phi into the report's intervals; running it under the mean phi
+with --alpha 1, 0.1 and 2 beside 'lda' is the prior check.
+
+The documents.  The imputations are the object: one document per untilted
+snapshot (one chain at one step, all seventeen verses).  Sophocles' extant
+trimeters in windows of seventeen are the baseline, the same shape as the
+lacuna.  Only restored text enters a document; the surviving letters of a
+damaged verse are never counted.  The imputations are read on two levels, as
+in the hard model: their mean profile (the documents' posteriors averaged draw
+by draw), compared with Sophocles' by P(mean_k^imp > mean_k^Soph) and the lift
+of the means, and a random document against a random window of Sophocles,
 P(theta_k^doc > theta_k^window).
 
 Usage (a GH200 node for its cores; CMDSTAN must point at the aarch64 CmdStan):
-  python scripts/soft_model.py --data data --out results/soft
-Writes phi.json (topics; a free topic is named by the glosses of its three top lemmata) and phi_matrix.csv.gz (K x V, read by the report and
-the lemma map), diagnostics.csv.gz (one row per document), check_documents.json
-(two documents with their posterior summary, refitted with rstan in the
-report), profiles.csv (the mean profiles of the imputations and of Sophocles, with the
-imputations' lift), comparisons.csv (the imputations against Sophocles, against Aeschylus
-and Euripides and against Classical Attic, and Sophocles against the latter
-two, with the lift's 90 % interval over the posterior draws of the two mean
-profiles), and theta_draws.npz (the kept draws of every document, for the
-dataset, not for git).
-
-The prior check.  --alpha sets the concentration of the Dirichlet prior on
-theta (1, the flat prior, is the report's); --phi reuses the phi_matrix.csv.gz
-of an earlier run instead of fitting the LDA again, so that only the prior
-changes; --no-draws skips theta_draws.npz.  slurm/soft_prior.slurm runs 0.1
-and 2 this way into results/soft/alpha_0.1 and results/soft/alpha_2.
+  python scripts/soft_model.py --data data --lda results/soft/lda --fit-lda-only
+  python scripts/soft_model.py --data data --lda results/soft/lda --phi 3 --out results/soft/draws/d03
+  python scripts/soft_model.py --data data --lda results/soft/lda --phi mean --alpha 1 --out results/soft/mean_alpha_1
+Stage 2 writes to --out: diagnostics.csv.gz (one row per document),
+check_documents.json (two documents with their data and posterior summary,
+refitted with rstan in the report), profiles.csv (the mean profiles of the
+sets with the imputations' lift), comparisons.csv (the imputations against
+Sophocles, against Aeschylus and Euripides and against Classical Attic, and
+Sophocles against the latter two, with the lift's 90 % interval over the
+posterior draws of the two mean profiles), set_draws.npz (the draws of every
+set's mean profile, every document's posterior mean, a subsample of documents
+with all their draws, and the chain and step of every imputation: what
+soft_pool.py pools) and, unless --no-draws, theta_draws.npz (the kept draws
+of every document, for the dataset, not for git).
 """
 import argparse, gzip, json, os, shutil, tempfile, time, unicodedata
 from collections import Counter, defaultdict
@@ -59,6 +82,7 @@ import numpy as np, pyarrow.parquet as pq
 FIRST, LAST = 13, 29
 WINDOW = LAST - FIRST + 1          # seventeen verses
 TRAGEDIANS = ("sophocles", "aeschylus", "euripides")
+SETS = ("sophocles", "imputations", "tragedians", "attic")
 
 
 # --- the data: bags of lemmata from the Hugging Face dataset, read into documents ---
@@ -82,7 +106,8 @@ def windows(rows, size=WINDOW):
 def load(data_dir, chain_set=None):
     """vocab (the lemmata, index = column of a bag), cluster (the topic of each lemma or None),
     docs: {"sophocles": windows, "imputations": snapshots, "tragedians": the windows of Aeschylus and Euripides (also the LDA's
-    corpus), "attic": the Classical Attic windows of 30 lemmata}, and the windows of Aeschylus and Euripides for the LDA"""
+    corpus), "attic": the Classical Attic windows of 30 lemmata}, the windows of Aeschylus and Euripides for the LDA, and
+    keys: (chain_set, chain, step) of every imputation, in the order of docs["imputations"]"""
     vocab = json.load(open(os.path.join(data_dir, "vocab.json"), encoding="utf-8"))
     corpus = pq.read_table(os.path.join(data_dir, "corpus.parquet"))
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet"))
@@ -99,35 +124,121 @@ def load(data_dir, chain_set=None):
     snapshot = defaultdict(list)
     for key_set, key_chain, key_step, lemmata in zip(imputations["chain_set"].to_pylist(), imputations["chain"].to_pylist(), imputations["iteration"].to_pylist(), row_lemmata(imputations)):
         snapshot[(key_set, key_chain, key_step)] += lemmata
-    docs["imputations"] = [snapshot[k] for k in sorted(snapshot, key=str)]
+    keys = [k for k in sorted(snapshot, key=str) if snapshot[k]]                      # a document needs at least one lemma
+    docs["imputations"] = [snapshot[k] for k in keys]
     docs["tragedians"] = list(tragic)
     attic_path = os.path.join(data_dir, "attic_windows.parquet")
     if os.path.exists(attic_path):
         docs["attic"] = row_lemmata(pq.read_table(attic_path))
     else:
         print(f"no {attic_path}: the Classical Attic baseline is skipped (scripts/window_baselines.py writes it)", flush=True)
-    docs = {name: [d for d in ds if d] for name, ds in docs.items()}                  # a document needs at least one lemma
-    return [r["lemma"] for r in vocab], [r["cluster_K40"] for r in vocab], docs, tragic
+    docs = {name: [d for d in ds if d] for name, ds in docs.items()}
+    return [r["lemma"] for r in vocab], [r["cluster_K40"] for r in vocab], docs, tragic, keys
 
 
-# --- the exact posterior of one document: NUTS on lda_given_phi.stan, in a pool of CmdStan processes ---
+# --- stage 1: the seeded LDA on Aeschylus and Euripides, several states of its Gibbs chain ---
 # English glosses for naming the free topics (extend when a new lemma turns up)
 GLOSS = {"παῖς": "child", "πατήρ": "father", "δόμος": "house", "θεός": "god", "βροτός": "mortal", "πρῶτος": "first",
          "κακός": "evil", "λόγος": "word", "φίλος": "friend", "χείρ": "hand", "πόλις": "city", "χθών": "earth",
          "θνῄσκω": "die", "γυνή": "woman", "τέκνον": "child", "μήτηρ": "mother", "κτείνω": "kill", "οἶκος": "home",
          "σοφός": "wise", "χάρις": "grace", "πείθω": "persuade", "ἄγω": "lead", "δίκη": "justice", "ὄμμα": "eye",
          "ἀνήρ": "man", "καλός": "fine", "δράω": "do", "ξένος": "stranger", "τύχη": "fortune", "ὁράω": "see",
-         "γῆ": "land", "νεκρός": "corpse", "στρατός": "army", "δόρυ": "spear", "πούς": "foot"}
+         "γῆ": "land", "νεκρός": "corpse", "στρατός": "army", "δόρυ": "spear", "πούς": "foot", "ἔχω": "have",
+         "λέγω": "say", "φέρω": "carry", "μέγας": "great", "πᾶς": "all", "εἶδον": "see", "δίδωμι": "give"}
 
+
+def seeded_topics(vocab, cluster, tragic):
+    """one seeded topic per cluster of the hard model, in order of tragic mass -> {label: lemmata}"""
+    mass = Counter(cluster[w] for d in tragic for w in d if cluster[w])
+    return {c: [vocab[i] for i in range(len(vocab)) if cluster[i] == c] for c, _ in mass.most_common()}
+
+
+def fit_lda(a, vocab, cluster, tragic, out):
+    """the seeded LDA on Aeschylus and Euripides; writes phi_draws.npz, phi_matrix.csv.gz and phi.json to out"""
+    import tomotopy as tp
+    os.makedirs(out, exist_ok=True)
+    V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
+    seeds = seeded_topics(vocab, cluster, tragic)
+    H = len(seeds); K = H + a.free; names = list(seeds) + [f"free {j}" for j in range(a.free)]   # renamed below
+    print(f"{H} seeded topics (the clusters) + {a.free} free; {len(tragic)} windows, {sum(len(d) for d in tragic)} lemmata", flush=True)
+    # alpha starts at 0.1 for every topic and is re-estimated every optim_interval sweeps
+    lda = tp.LDAModel(tw=tp.TermWeight.ONE, k=K, alpha=0.1, eta=0.01, seed=a.seed)
+    lda.optim_interval = 10
+    for d in tragic: lda.add_doc([vocab[i] for i in d])
+    found = {}
+    for j, (name, words) in enumerate(seeds.items()):
+        found[name] = []
+        for w in (unicodedata.normalize("NFC", w.lower()) for w in words):
+            if w in wid:
+                prior = [0.01] * K; prior[j] = a.seed_strength; lda.set_word_prior(w, prior); found[name].append(w)
+    print("seed lemmata in the vocabulary: " + "; ".join(f"{n}: {len(v)}/{len(seeds[n])}" for n, v in list(found.items())[:12]) + (" ..." if H > 12 else ""), flush=True)
+    t0 = time.time()
+    lda.train(a.iters, workers=a.lda_workers)                                           # burn-in
+    print(f"burn-in of {a.iters} sweeps in {time.time() - t0:.0f} s; ll/word {lda.ll_per_word:.4f}; alpha: seeded mean {np.mean(lda.alpha[:H]):.3f}, free mean {np.mean(lda.alpha[H:]):.3f}", flush=True)
+    order = {w: i for i, w in enumerate(lda.used_vocabs)}
+    column = np.array([order.get(w, -1) for w in vocab])                                # -1: not in the LDA's vocabulary
+
+    def state():
+        """phi at the current state of the chain: the smoothed topic-word distributions given the assignments"""
+        phi = np.full((K, V), 1e-8)
+        for k in range(K):
+            dist = np.asarray(lda.get_topic_word_dist(k))
+            phi[k, column >= 0] = dist[column[column >= 0]]
+        return phi / phi.sum(1, keepdims=True)
+
+    phi_draws, alpha_draws, ll = [], [], []
+    for j in range(a.phi_draws):
+        if j: lda.train(a.draw_spacing, workers=a.lda_workers)
+        phi_draws.append(state()); alpha_draws.append(np.array(lda.alpha, dtype=np.float64)); ll.append(lda.ll_per_word)
+        print(f"  state {j}: sweep {a.iters + j * a.draw_spacing}, ll/word {ll[-1]:.4f}, alpha seeded {alpha_draws[-1][:H].mean():.3f} free {alpha_draws[-1][H:].mean():.3f} ({time.time() - t0:.0f} s)", flush=True)
+    phi_draws = np.array(phi_draws); alpha_draws = np.array(alpha_draws)
+    phi = phi_draws.mean(0); phi /= phi.sum(1, keepdims=True)
+    # a free topic is named by the English glosses of its three most probable
+    # lemmata (in the mean phi), as a seeded topic is named by its cluster's label lemmata
+    for j in range(a.free):
+        words = [vocab[i] for i in np.argsort(-phi[H + j])[:3]]
+        missing = [w for w in words if w not in GLOSS]
+        if missing: print(f"  no English gloss for {' '.join(missing)}: add it to GLOSS in soft_model.py", flush=True)
+        names[H + j] = "-".join(GLOSS.get(w, w) for w in words)
+    assert len(set(names)) == K, "two topics got the same name"
+    np.savez_compressed(f"{out}/phi_draws.npz", phi=phi_draws.astype(np.float32), alpha=alpha_draws, names=np.array(names),
+                        ll_per_word=np.array(ll), burnin=a.iters, spacing=a.draw_spacing, seeded=H)
+    with gzip.open(f"{out}/phi_matrix.csv.gz", "wt", encoding="utf-8") as f:            # K rows, one column per lemma: the mean phi
+        f.write("topic," + ",".join(vocab) + "\n")
+        for k in range(K): f.write(names[k] + "," + ",".join(f"{v:.6g}" for v in phi[k]) + "\n")
+    top = {names[k]: [vocab[i] for i in np.argsort(-phi[k])[:15]] for k in range(K)}
+    json.dump({"names": names, "seeded": H, "top_words": top, "ll_per_word": float(np.mean(ll)), "seeds_found": found, "vocab_size": V,
+               "alpha": alpha_draws.mean(0).round(5).tolist(), "alpha_draws": alpha_draws.round(5).tolist(),
+               "phi_draws": a.phi_draws, "burnin": a.iters, "draw_spacing": a.draw_spacing, "lda_workers": a.lda_workers, "seed": a.seed},
+              open(f"{out}/phi.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    for k in range(K): print(f"  {names[k]:18s} alpha {alpha_draws.mean(0)[k]:6.3f}  " + " ".join(top[names[k]][:10]), flush=True)
+    print(f"wrote {out}: {a.phi_draws} states of phi, alpha and the mean", flush=True)
+
+
+def choose_phi(lda_dir, phi_spec, alpha_spec):
+    """the phi and alpha of stage 2: phi_spec 'mean' or a draw index, alpha_spec 'lda' or a number -> names, H, phi, alpha, label"""
+    z = np.load(os.path.join(lda_dir, "phi_draws.npz"))
+    names = [str(n) for n in z["names"]]; H = int(z["seeded"])
+    if phi_spec == "mean":
+        phi = z["phi"].astype(np.float64).mean(0); alpha = z["alpha"].mean(0); label = f"mean of {len(z['phi'])} states"
+    else:
+        j = int(phi_spec); phi = z["phi"][j].astype(np.float64); alpha = z["alpha"][j]; label = f"state {j} of {len(z['phi'])}"
+    phi /= phi.sum(1, keepdims=True)
+    if alpha_spec != "lda":
+        alpha = np.full(len(names), float(alpha_spec))
+    return names, H, phi, alpha, label
+
+
+# --- stage 2: the exact posterior of one document, NUTS on lda_given_phi.stan, in a pool of CmdStan processes ---
 WORKER = {}
 
 
-def worker_init(exe_file, logphi_path, chains, warmup, samples, keep, alpha):
-    """each worker holds the compiled program, the log phi matrix and the prior's concentration once"""
+def worker_init(exe_file, logphi_path, chains, warmup, samples, keep, alpha, adapt_delta):
+    """each worker holds the compiled program, the log phi matrix and the prior once"""
     import cmdstanpy, logging
     cmdstanpy.utils.get_logger().setLevel(logging.WARNING)                              # no line per chain in the log
     WORKER.update(model=cmdstanpy.CmdStanModel(exe_file=exe_file), logphi=np.load(logphi_path),
-                  chains=chains, warmup=warmup, samples=samples, keep=keep, alpha=alpha)
+                  chains=chains, warmup=warmup, samples=samples, keep=keep, alpha=list(map(float, alpha)), adapt_delta=adapt_delta)
 
 
 def fit_one(job):
@@ -138,7 +249,7 @@ def fit_one(job):
     try:
         fit = WORKER["model"].sample(data={"N": len(words), "K": K, "logphi": logphi[words].tolist(), "alpha": WORKER["alpha"]},
                                      chains=WORKER["chains"], parallel_chains=1, iter_warmup=WORKER["warmup"],
-                                     iter_sampling=WORKER["samples"], seed=int(seed), output_dir=tmp,
+                                     iter_sampling=WORKER["samples"], seed=int(seed), output_dir=tmp, adapt_delta=WORKER["adapt_delta"],
                                      show_progress=False, show_console=False)
         theta = fit.stan_variable("theta")                                             # (chains * samples, K)
         summary = fit.summary(percentiles=(5, 95)).loc[[f"theta[{k + 1}]" for k in range(K)]]
@@ -152,42 +263,52 @@ def fit_one(job):
     return i, theta[::step][:WORKER["keep"]].astype(np.float32), diagnostics
 
 
-def read_phi(path, vocab):
-    """the K x V matrix written by an earlier run, checked against the vocabulary -> (names, phi)"""
-    with gzip.open(path, "rt", encoding="utf-8") as f:
-        header = f.readline().rstrip("\n").split(",")
-        assert header[1:] == vocab, f"{path} is from another vocabulary ({len(header) - 1} lemmata, the dataset has {len(vocab)})"
-        names, rows = [], []
-        for line in f:
-            cells = line.rstrip("\n").split(","); names.append(cells[0]); rows.append([float(v) for v in cells[1:]])
-    phi = np.array(rows); phi /= phi.sum(1, keepdims=True)
-    return names, phi
-
-
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/soft")
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--data", default="data"); ap.add_argument("--out", default="results/soft/run", help="stage 2's output directory")
     ap.add_argument("--stan", default="lda_given_phi.stan", help="the Stan program of one document's posterior")
+    ap.add_argument("--lda", default="results/soft/lda", help="stage 1's directory (phi_draws.npz, phi_matrix.csv.gz, phi.json)")
+    ap.add_argument("--refit-lda", action="store_true", help="fit the LDA again even if --lda holds one")
+    ap.add_argument("--fit-lda-only", action="store_true", help="stop after stage 1")
     ap.add_argument("--free", type=int, default=4, help="unseeded topics beside the seeded topics")
     ap.add_argument("--seed-strength", type=float, default=200.0, help="prior weight of a seed word on its topic")
-    ap.add_argument("--iters", type=int, default=1000, help="Gibbs iterations for phi")
+    ap.add_argument("--iters", type=int, default=10000, help="Gibbs sweeps of burn-in for the LDA (alpha has settled by then; 3 ms a sweep)")
+    ap.add_argument("--phi-draws", type=int, default=20, help="states of the LDA's chain kept after burn-in")
+    ap.add_argument("--draw-spacing", type=int, default=500, help="sweeps between kept states")
+    ap.add_argument("--lda-workers", type=int, default=1, help="threads for tomotopy; 1 reproduces the fit from the seed")
+    ap.add_argument("--phi", default="mean", help="the state of phi for stage 2: 'mean' or the index of a kept state")
+    ap.add_argument("--alpha", default="lda", help="the Dirichlet prior on theta: 'lda' (the LDA's alpha) or a number for a symmetric prior")
     ap.add_argument("--chains", type=int, default=4); ap.add_argument("--warmup", type=int, default=500); ap.add_argument("--samples", type=int, default=500)
+    ap.add_argument("--adapt-delta", type=float, default=0.99, help="NUTS's target acceptance; 0.8 leaves divergences under the LDA's sparse alpha, 0.99 none")
     ap.add_argument("--keep", type=int, default=100, help="posterior draws kept per document (thinned from chains x samples)")
+    ap.add_argument("--subsample", type=int, default=2000, help="documents per set whose kept draws go to set_draws.npz")
     ap.add_argument("--workers", type=int, default=int(os.environ.get("SLURM_CPUS_PER_TASK", os.cpu_count() or 4)), help="CmdStan processes side by side")
     ap.add_argument("--max-docs", type=int, default=0, help="documents read per set, sampled at random if more (0 = all); for dry runs")
+    ap.add_argument("--no-draws", action="store_true", help="do not write theta_draws.npz")
     ap.add_argument("--seed", type=int, default=917)
     ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
-    ap.add_argument("--alpha", type=float, default=1.0, help="concentration of the Dirichlet prior on theta (1 = flat, the report's)")
-    ap.add_argument("--phi", default=None, help="phi_matrix.csv.gz of an earlier run to reuse instead of fitting the LDA (the prior check)")
-    ap.add_argument("--no-draws", action="store_true", help="do not write theta_draws.npz")
-    a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
+    a = ap.parse_args()
     rng = np.random.default_rng(a.seed)
-    vocab, cluster, docs, tragic = load(a.data, a.chain_set); V = len(vocab); wid = {w: i for i, w in enumerate(vocab)}
+    vocab, cluster, docs, tragic, keys = load(a.data, a.chain_set); V = len(vocab)
     if a.max_docs:
-        docs = {name: [ds[i] for i in sorted(rng.choice(len(ds), a.max_docs, replace=False))] if len(ds) > a.max_docs else ds for name, ds in docs.items()}
+        pick = {name: sorted(rng.choice(len(ds), a.max_docs, replace=False)) if len(ds) > a.max_docs else range(len(ds)) for name, ds in docs.items()}
+        docs = {name: [ds[i] for i in pick[name]] for name, ds in docs.items()}
+        keys = [keys[i] for i in pick["imputations"]]
     lengths = {name: np.array([len(d) for d in ds]) for name, ds in docs.items()}
     print(f"vocabulary {V} lemmata; documents: " + "; ".join(f"{name} {len(ds)} (mean {lengths[name].mean():.1f} lemmata, max {lengths[name].max()})" for name, ds in docs.items())
           + f"; {len(tragic)} windows of Aeschylus and Euripides for the LDA", flush=True)
+
+    # ---- stage 1
+    if a.refit_lda or not os.path.exists(os.path.join(a.lda, "phi_draws.npz")):
+        fit_lda(a, vocab, cluster, tragic, a.lda)
+    if a.fit_lda_only:
+        return
+    names, H, phi, alpha, label = choose_phi(a.lda, a.phi, a.alpha)
+    K = len(names); logphi = np.log(phi).T                                                # (V, K)
+    assert phi.shape[1] == V, f"{a.lda} is from another vocabulary ({phi.shape[1]} lemmata, the dataset has {V})"
+    prior = f"Dirichlet({float(a.alpha):g})" if a.alpha != "lda" else f"the LDA's alpha (seeded {alpha[:H].mean():.3f}, free {alpha[H:].mean():.2f}, sum {alpha.sum():.1f})"
+    print(f"phi: {label} from {a.lda}; prior {prior}", flush=True)
+    os.makedirs(a.out, exist_ok=True)
 
     # ---- the Stan program, compiled once
     import cmdstanpy, logging
@@ -195,56 +316,12 @@ def main():
     model = cmdstanpy.CmdStanModel(stan_file=a.stan)
     print(f"CmdStan {cmdstanpy.cmdstan_version()} at {cmdstanpy.cmdstan_path()}; compiled {model.exe_file}", flush=True)
 
-    # ---- seeded LDA for phi, fitted on real tragedy only; the restorations (and Sophocles) are test documents
-    import tomotopy as tp
-    mass = Counter(cluster[w] for d in tragic for w in d if cluster[w])            # one seeded topic per cluster, in order of tragic mass
-    seeds = {c: [vocab[i] for i in range(V) if cluster[i] == c] for c, _ in mass.most_common()}
-    H = len(seeds); K = H + a.free; names = list(seeds) + [f"free {j}" for j in range(a.free)]   # renamed below
-    print(f"{H} seeded topics (the clusters) + {a.free} free", flush=True)
-    if a.phi:
-        names, phi = read_phi(a.phi, vocab)
-        assert len(names) == K and names[:H] == list(seeds), f"{a.phi} has other topics than this run's seeds"
-        logphi = np.log(phi).T                                                           # (V, K)
-        print(f"phi reused from {a.phi}; prior Dirichlet({a.alpha:g})", flush=True)
-    else:
-        lda = tp.LDAModel(tw=tp.TermWeight.ONE, k=K, alpha=0.1, eta=0.01, seed=a.seed)
-        for d in tragic: lda.add_doc([vocab[i] for i in d])
-        found = {}
-        for j, (name, words) in enumerate(seeds.items()):
-            found[name] = []
-            for w in (unicodedata.normalize("NFC", w.lower()) for w in words):
-                if w in wid:
-                    prior = [0.01] * K; prior[j] = a.seed_strength; lda.set_word_prior(w, prior); found[name].append(w)
-        print("seed lemmata in the vocabulary: " + "; ".join(f"{n}: {len(v)}/{len(seeds[n])}" for n, v in list(found.items())[:12]) + (" ..." if H > 12 else ""), flush=True)
-        lda.train(a.iters, workers=8)
-        order = {w: i for i, w in enumerate(lda.used_vocabs)}
-        phi = np.full((K, V), 1e-8)
-        for k in range(K):
-            d = lda.get_topic_word_dist(k)
-            for w, i in wid.items():
-                if w in order: phi[k, i] = d[order[w]]
-        phi /= phi.sum(1, keepdims=True); logphi = np.log(phi).T                               # (V, K)
-        # a free topic is named by the English glosses of its three most probable
-        # lemmata, as a seeded topic is named by its cluster's label lemmata
-        for j in range(a.free):
-            words = [w for w, _ in lda.get_topic_words(H + j, top_n=3)]
-            missing = [w for w in words if w not in GLOSS]
-            if missing: print(f"  no English gloss for {' '.join(missing)}: add it to GLOSS in soft_model.py", flush=True)
-            names[H + j] = "-".join(GLOSS.get(w, w) for w in words)
-        assert len(set(names)) == K, "two topics got the same name"
-        with gzip.open(f"{a.out}/phi_matrix.csv.gz", "wt", encoding="utf-8") as f:          # K rows, one column per lemma
-            f.write("topic," + ",".join(vocab) + "\n")
-            for k in range(K): f.write(names[k] + "," + ",".join(f"{v:.6g}" for v in phi[k]) + "\n")
-        top = {names[k]: [w for w, _ in lda.get_topic_words(k, top_n=15)] for k in range(K)}
-        json.dump({"names": names, "top_words": top, "ll_per_word": lda.ll_per_word, "seeds_found": found, "vocab_size": V}, open(f"{a.out}/phi.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        for k in range(K): print(f"  {names[k]:18s} " + " ".join(top[names[k]][:10]), flush=True)
-
     # ---- every document of every set through NUTS
     scratch = tempfile.mkdtemp(prefix="soft-logphi-"); logphi_path = os.path.join(scratch, "logphi.npy"); np.save(logphi_path, logphi)
     draws, diagnostics = {}, []
-    sets = [name for name in ("sophocles", "imputations", "tragedians", "attic") if name in docs]
-    print(f"sampling {sum(len(docs[n]) for n in sets)} documents with {a.workers} workers: {a.chains} chains x ({a.warmup} + {a.samples}) iterations each, {a.keep} draws kept; prior Dirichlet({a.alpha:g})", flush=True)
-    with Pool(a.workers, initializer=worker_init, initargs=(model.exe_file, logphi_path, a.chains, a.warmup, a.samples, a.keep, a.alpha)) as pool:
+    sets = [name for name in SETS if name in docs]
+    print(f"sampling {sum(len(docs[n]) for n in sets)} documents with {a.workers} workers: {a.chains} chains x ({a.warmup} + {a.samples}) iterations each at adapt_delta {a.adapt_delta}, {a.keep} draws kept", flush=True)
+    with Pool(a.workers, initializer=worker_init, initargs=(model.exe_file, logphi_path, a.chains, a.warmup, a.samples, a.keep, alpha, a.adapt_delta)) as pool:
         for offset, name in enumerate(sets):
             word_lists = docs[name]; jobs = [(i, w, a.seed * 1000 + offset * 100000 + i) for i, w in enumerate(word_lists)]
             P3 = np.zeros((len(jobs), a.keep, K), np.float32); rows = [None] * len(jobs); t0 = time.time(); done = 0; last_log = t0
@@ -270,13 +347,24 @@ def main():
     if not a.no_draws:
         np.savez_compressed(f"{a.out}/theta_draws.npz", names=np.array(names), **{name: draws[name].astype(np.float16) for name in sets})
 
-    # ---- two documents with their posterior summary, refitted with rstan in the report
+    # ---- what soft_pool.py pools: the draws of every set's mean profile, every document's posterior mean, a subsample of
+    # documents with all their draws, and the chain and step of every imputation (for resampling by chain)
+    pooled = {"names": np.array(names), "alpha": alpha, "label": np.array(label), "seeded": H,
+              "imputation_chain": np.array([f"{k[0]}/{k[1]}" for k in keys]), "imputation_step": np.array([k[2] for k in keys])}
+    for name in sets:
+        P3 = draws[name]; sub = np.sort(rng.choice(len(P3), min(len(P3), a.subsample), replace=False))
+        pooled[f"mean_{name}"] = P3.mean(0); pooled[f"doc_mean_{name}"] = P3.mean(1).astype(np.float16)
+        pooled[f"sub_{name}"] = P3[sub].astype(np.float16); pooled[f"sub_index_{name}"] = sub; pooled[f"n_lemmata_{name}"] = lengths[name]
+    np.savez_compressed(f"{a.out}/set_draws.npz", **pooled)
+
+    # ---- two documents with their data and posterior summary, refitted with rstan in the report
     check = []
     for name in ("imputations", "sophocles"):
-        i = int(rng.integers(len(docs[name]))); P = draws[name][i].astype(np.float64)
-        check.append({"source": name, "index": i, "lemma_idx": [int(w) for w in docs[name][i]], "mean": P.mean(0).round(5).tolist(),
-                      "sd": P.std(0).round(5).tolist(), "q05": np.quantile(P, 0.05, 0).round(5).tolist(), "q95": np.quantile(P, 0.95, 0).round(5).tolist()})
-    json.dump({"names": names, "draws": a.keep, "documents": check}, open(f"{a.out}/check_documents.json", "w"), indent=None)
+        i = int(rng.integers(len(docs[name]))); P = draws[name][i].astype(np.float64); words = docs[name][i]
+        check.append({"source": name, "index": i, "lemma_idx": [int(w) for w in words], "logphi": logphi[words].round(5).tolist(),
+                      "mean": P.mean(0).round(5).tolist(), "sd": P.std(0).round(5).tolist(),
+                      "q05": np.quantile(P, 0.05, 0).round(5).tolist(), "q95": np.quantile(P, 0.95, 0).round(5).tolist()})
+    json.dump({"names": names, "phi": label, "alpha": alpha.round(5).tolist(), "draws": a.keep, "documents": check}, open(f"{a.out}/check_documents.json", "w"), indent=None)
 
     # ---- the sets, each read on two levels
     def summarise(name, base=None):
@@ -325,8 +413,8 @@ def main():
                         + (f"{s['p_above_sophocles'][j]:.4f},{s['lift'][j]:.3f},{s['p_document'][j]:.4f}" if "lift" in s else ",,") + "\n")
     raised = {name: [names[k] for k in sorted((k for k in range(H) if s["p_above_sophocles"][k] >= 0.9 and s["lift"][k] >= 1.5),
                                               key=lambda k: -s["lift"][k])] for name, s in profiles.items() if "lift" in s}
-    print(f"{H} seeded and {a.free} free topics on {V} lemmata; phi on {len(tragic)} windows of Aeschylus and Euripides; "
-          f"{len(diagnostics)} documents sampled by NUTS", flush=True)
+    print(f"{H} seeded and {K - H} free topics on {V} lemmata; phi {label}; {len(diagnostics)} documents sampled by NUTS; "
+          f"free topics hold {profiles['imputations']['free_mass']:.1%} of the imputations' mass", flush=True)
     for name, s in profiles.items():
         if "lift" in s:
             top3 = sorted(range(H), key=lambda k: -s["lift"][k])[:3]
