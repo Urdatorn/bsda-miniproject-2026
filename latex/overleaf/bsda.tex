@@ -347,13 +347,13 @@ is the equal mixture of the documents' posteriors; set against a random
 Sophoclean window, $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$
 measures how far the two populations overlap (0.5 if not at all apart). The
 \textbf{lift} of topic $k$ is the ratio of the imputations' mean share to
-Sophocles', and a topic is \textbf{raised} when its lift is at least 1.5 and
-$P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}}) \ge 0.9$. The
+Sophocles'. The
 restorations are not independent, since successive states of a chain share
 most of their words; the 90\,\% intervals for a lift therefore resample
 whole chains (and Sophocles by window), and for the soft model each replicate
 also draws one of the twenty states of $\phi$ and adds back the posterior
-noise of the two profiles.
+noise of the two profiles. A topic \textbf{stands out} when this interval
+lies entirely above 1.
 
 \section{Results}
 \label{results}
@@ -363,8 +363,8 @@ noise of the two profiles.
 \includegraphics[width=\linewidth]{figures/lift_hard_soft.pdf}
 \caption{Lift of the imputations against Sophocles for every topic, with
 90\,\% intervals resampling whole chains (soft: pooled over twenty states
-of $\phi$). Dashed: no
-difference; dotted: the lift of 1.5 that counts as raised.}
+of $\phi$). Dashed: no difference. In bold: topics whose interval lies
+entirely above 1 under either model.}
 \label{fig:lift}
 \end{figure}
 
@@ -393,11 +393,11 @@ resampling whole chains, includes 1.}
 \paragraph{Hard topics.} The imputations write tragedy: of nine genres their
 topic profile is nearest to tragedy (Jensen--Shannon divergence 0.044 bits,
 against 0.082 for comedy and 0.150 for epic). It is not, however,
-Sophocles' profile (\cref{fig:lift}). Five topics are raised:
-\textit{marriage-couch-bed} (lift 1.83), \textit{god-true-lord} (1.56),
-\textit{wrong-vengeance-err} (1.55), \textit{bacchant-dance-paean} and
-\textit{light-ray-sight} (both 1.51), though the last two have intervals that
-include 1 once whole chains are resampled. The deficits are deeper than the
+Sophocles' profile (\cref{fig:lift}). Seven topics stand out:
+\textit{marriage-couch-bed} (lift 1.85), \textit{god-true-lord} (1.59),
+\textit{wrong-vengeance-err} (1.58), \textit{begin-happen-necessity} (1.34),
+\textit{temple-offer-precinct} (1.33), \textit{child-before-bestow} (1.26)
+and \textit{persuade-man-king} (1.21). The deficits are deeper than the
 excesses: the sea, rivers and Greeks against barbarians almost vanish
 (\textit{ship-sail-hull} 0.05, \textit{river-plain-afar} 0.04,
 \textit{Greek-sea-barbarian} 0.08).
@@ -406,7 +406,7 @@ The further baselines separate the unsophoclean from the untragic
 (\cref{tab:key}).
 \textit{god-true-lord} and \textit{wrong-vengeance-err} hold against all
 three, every interval above 1 (lifts 1.48--1.89).
-\textit{marriage-couch-bed} is raised against Sophocles (1.85) and Classical
+\textit{marriage-couch-bed} stands out against Sophocles (1.85) and Classical
 Attic (2.97) but falls below Aeschylus and Euripides (0.79, interval
 0.61--0.98), who use that vocabulary more than Sophocles does. Lemma by
 lemma, the excess of \textit{god-true-lord} is a single word: \textgreek{θεός}
@@ -420,11 +420,11 @@ restoration exceeds a random Sophoclean window with probability 0.37--0.66
 for every topic.
 
 \paragraph{Soft topics.} Under the soft model only
-\textit{persuade-man-king} is raised (lift 2.01, interval 1.47--2.65). It is
+\textit{persuade-man-king} stands out (lift 2.01, interval 1.47--2.65). It is
 as far above Aeschylus and Euripides (2.06) but not clearly above Classical
 Attic (1.18, interval including 1): an excess over tragedy, not over Greek
-prose and verse at large. The hard model's other raised topics fall back
-towards Sophocles, \textit{god-true-lord} to 1.11, \textit{wrong-vengeance-err}
+prose and verse at large. The other topics that stand out under the hard
+model fall back towards Sophocles, \textit{god-true-lord} to 1.11, \textit{wrong-vengeance-err}
 to 1.06 and \textit{marriage-couch-bed} to 1.04, all with intervals that
 include 1. The reason is visible in $\phi$: the most frequent words of
 tragedy leave their clusters for the free topics, which take three quarters
@@ -433,8 +433,8 @@ mostly an excess of \textgreek{θεός}, which goes to \textit{god-evil-word}.
 
 \paragraph{Robustness.} Eight chains from deliberately unrelated starts give
 a hard profile whose log lifts correlate at 0.76 with the main set's;
-\textit{god-true-lord} stays raised and \textit{wrong-vengeance-err} keeps a
-lift of 1.45 (1.38--1.54). The judge matters more: a pilot with Claude Sonnet
+\textit{god-true-lord} keeps a lift of 1.67 and \textit{wrong-vengeance-err}
+of 1.45. The judge matters more: a pilot with Claude Sonnet
 5.5 as judge correlates with the Qwen profile at only 0.30, yet
 \textit{persuade-man-king} and \textit{wrong-vengeance-err} stay above
 Sophocles. Single chains differ widely (\autoref{diagnostics}), which the
@@ -442,8 +442,8 @@ chain-resampled intervals carry.
 The soft lifts barely move between the twenty states of $\phi$ (a factor
 of 1.14 for the median topic) but scale with the prior on $\theta$, whose
 pseudo-lemmata compete with a document's thirty: a flat Dirichlet(1) shrinks
-every log lift to about 0.4 of its learned-prior value. A lift of 1.5 is thus
-relative to the prior; the order of the topics is not, and
+every log lift to about 0.4 of its learned-prior value. The size of a lift
+is thus relative to the prior; the order of the topics is not, and
 \textit{persuade-man-king} leads under all four priors tried.
 
 \section{Conclusions}

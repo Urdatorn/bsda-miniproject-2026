@@ -5,7 +5,8 @@ Hard: rates per thousand topic lemmata, 90 % interval from resampling the
 imputations by chain and Sophocles by window (results/hard/topic_circles.csv).
 Soft: ratio of the two mean profiles pooled over twenty states of phi, 90 %
 interval from the same resampling by chain, with a state of phi drawn in each
-replicate (results/soft/pooled/comparisons.csv). Topics ordered by the hard lift.
+replicate (results/soft/pooled/comparisons.csv). Topics ordered by the hard lift; a topic whose interval lies entirely above 1 under
+either model is set in bold.
 
 Usage: python scripts/paper_lift_figure.py latex/overleaf/figures/lift_hard_soft.pdf
 """
@@ -40,14 +41,14 @@ def main(out_path):
         ax.hlines(y, lo, hi, colors=colour, linewidth=0.8)
         ax.plot(mid, y, "o", color=colour, markersize=3, label=name)
     ax.axvline(1, color="grey", linestyle="--", linewidth=0.6)
-    ax.axvline(1.5, color="grey", linestyle=":", linewidth=0.6)
     ax.set_xscale("log")
     ax.set_xlim(floor, 4)
     ax.set_xticks([0.05, 0.25, 1, 4])
     ax.set_xticklabels(["0.05", "0.25", "1", "4"])
     ax.minorticks_off()
     ax.set_yticks(range(len(topics)))
-    ax.set_yticklabels(topics)
+    # a topic stands out when its 90 % interval lies entirely above 1, under either model
+    ax.set_yticklabels([r"\textbf{%s}" % t if hard[t][1] > 1 or soft[t][1] > 1 else t for t in topics])
     ax.set_ylim(-0.7, len(topics) - 0.3)
     ax.set_xlabel("lift (log scale)")
     fig.legend(loc="outside upper center", ncol=2, frameon=False, handletextpad=0.2)
