@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""The topics as a LaTeX table: English gloss, the three label lemmata, their
-transliteration, and the cluster's share of the topic-bearing lemmata and of
+"""The topics as a LaTeX table: English gloss, the three label lemmata, and the
+cluster's share of the topic-bearing lemmata and of
 their tokens in the three tragedians.
 
 The topics are read from the vocabulary of the dataset (data/vocab.json: every
@@ -10,35 +10,7 @@ own topics table from.
 
 Usage: python scripts/topics_table.py data/vocab.json latex/topics_table.tex
 """
-import json, sys, unicodedata
-
-LETTER = {"α": "a", "β": "b", "γ": "g", "δ": "d", "ε": "e", "ζ": "z", "η": "ē", "θ": "th", "ι": "i", "κ": "k", "λ": "l", "μ": "m",
-          "ν": "n", "ξ": "x", "ο": "o", "π": "p", "ρ": "r", "σ": "s", "ς": "s", "τ": "t", "υ": "y", "φ": "ph", "χ": "ch", "ψ": "ps", "ω": "ō"}
-ROUGH, SUBSCRIPT = "̔", "ͅ"
-
-
-def transliterate(word):
-    """scholarly transliteration: ē ō, h for the rough breathing, y alone and u in diphthongs, n for gamma before a velar"""
-    decomposed = unicodedata.normalize("NFD", word.lower())
-    letters, rough, subscript, k = [], set(), set(), -1
-    for c in decomposed:
-        if not unicodedata.combining(c): letters.append(c); k += 1
-        elif c == ROUGH: rough.add(k)
-        elif c == SUBSCRIPT: subscript.add(k)
-    out, j = [], 0
-    while j < len(letters):
-        c, nxt = letters[j], letters[j + 1] if j + 1 < len(letters) else ""
-        if c == "γ" and nxt in "γκξχ": out.append("n"); j += 1; continue
-        if c == "ρ" and j in rough: out.append("rh"); j += 1; continue
-        if c in "αεηιουω":
-            diphthong = c in "αεηου" and nxt in ("ι", "υ") and nxt != c
-            h = "h" if j in rough or (diphthong and j + 1 in rough) else ""
-            if diphthong: out.append(h + LETTER[c] + ("u" if nxt == "υ" else "i")); j += 2
-            else: out.append(h + LETTER[c] + ("i" if j in subscript else "")); j += 1
-            continue
-        out.append(LETTER.get(c, c)); j += 1
-    return "".join(out)
-
+import json, sys
 
 def main(vocab_path, out_path):
     vocab = json.load(open(vocab_path, encoding="utf-8"))
@@ -50,16 +22,15 @@ def main(vocab_path, out_path):
         t["size"] += 1; t["tragic_tokens"] += entry["tragic_count"]
     topics = sorted(by_label.values(), key=lambda t: -t["tragic_tokens"])     # in order of their mass in the tragedians
     n_lemmata, n_tokens = sum(t["size"] for t in topics), sum(t["tragic_tokens"] for t in topics)
-    lines = ["% The topics of the hard model: English gloss, the three label lemmata, their transliteration.",
+    lines = ["% The topics of the hard model: English gloss, the three label lemmata, and the cluster's shares.",
              "% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \\usepackage{booktabs}; spans both columns of a two-column layout.",
-             "\\begin{table*}[htbp]", "\\centering", "\\footnotesize", "\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lllrr}", "\\toprule",
-             "Topic & Label lemmata & Transliteration & Lemmata (\\%) & Tragic tokens (\\%) \\\\", "\\midrule"]
+             "\\begin{table*}[htbp]", "\\centering", "\\footnotesize", "\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}llrr}", "\\toprule",
+             "Topic & Label lemmata & Share of vocabulary (\\%) & Share of tragic tokens (\\%) \\\\", "\\midrule"]
     for t in topics:
-        transliteration = "-".join(transliterate(w) for w in t["lemmata"].split("-"))
-        lines.append(f"{t['label']} & {t['lemmata']} & {transliteration} & {100 * t['size'] / n_lemmata:.1f} & {100 * t['tragic_tokens'] / n_tokens:.1f} \\\\")
+        lines.append(f"{t['label']} & {t['lemmata']} & {100 * t['size'] / n_lemmata:.1f} & {100 * t['tragic_tokens'] / n_tokens:.1f} \\\\")
     lines += ["\\bottomrule", "\\end{tabular*}",
               f"\\caption{{The {len(topics)} unsupervised topics, in order of their mass in the three tragedians. A topic is named by the three",
-              "non-cognate lemmata nearest its centroid in the word2vec space; the English glosses are the labels used in the",
+              "non-cognate lemmata nearest its centroid in the Word2Vec space; the English glosses are the labels used in the",
               f"analysis. The last columns give the cluster's share of the {n_lemmata} topic-bearing lemmata of the vocabulary and of their {n_tokens}",
               "tokens in the three tragedians; each column sums to 100.}", "\\label{tab:topics}", "\\end{table*}"]
     open(out_path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
