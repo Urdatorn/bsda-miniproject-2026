@@ -867,6 +867,84 @@ had only the bootstrap, the soft model has both, and the bootstrap is the
 interval to quote for a claim about the walk as a whole, the posterior
 interval for a claim about these `r imputations$n_docs[1]` documents.
 
+# The lift along the walk
+
+The pooled lift averages over `r pooled$chains` chains and all their
+states. Whether the excess of *`r top_topic`* is a property of the walk as a
+whole, or of a few chains or a stretch of steps, shows when the lift is
+followed along the walk. Every fifth recorded state of every chain, one
+every 50 steps, is sampled again under the mean $\phi$ and the LDA's mean
+$\alpha$ (`scripts/soft_trajectory.py`, `slurm/soft_trajectory.slurm`, into
+`results/soft/trajectory/`). The topic's posterior mean share, averaged over
+a moving window of 1,000 steps, is divided by Sophocles' mean share under
+the same plug-in model (`results/soft/mean_alpha_lda`); the dotted line is
+the plug-in lift of all the chains together.
+
+```{r trajectory_sets}
+trajectory_path <- file.path(dirname(results_dir), "trajectory",
+                             "trajectory.csv")
+plugin_dir <- file.path(dirname(results_dir), "mean_alpha_lda")
+trajectory_done <- file.exists(trajectory_path) &&
+  file.exists(file.path(plugin_dir, "profiles.csv"))
+```
+
+```{r trajectory_missing, results = "asis", echo = FALSE, eval = !trajectory_done}
+cat("The states along the walk have not been sampled yet: missing",
+    trajectory_path, "\n")
+```
+
+```{r trajectory_read, eval = trajectory_done}
+trajectory <- read.csv(trajectory_path, check.names = FALSE,
+                       encoding = "UTF-8")
+plugin_profiles <- read.csv(file.path(plugin_dir, "profiles.csv"),
+                            encoding = "UTF-8")
+plugin_lift <- read.csv(file.path(plugin_dir, "comparisons.csv"),
+                        encoding = "UTF-8")
+sophocles_share <- plugin_profiles$mean[plugin_profiles$source == "sophocles" &
+                                          plugin_profiles$topic == top_topic]
+pooled_lift <- plugin_lift$lift[plugin_lift$comparison ==
+                                  "imputations vs sophocles" &
+                                  plugin_lift$topic == top_topic]
+# a moving window of 20 states, 1,000 steps, within each chain
+window <- 20
+along <- trajectory %>%
+  arrange(chain, step) %>%
+  group_by(chain) %>%
+  mutate(share = .data[[top_topic]],
+         moving = if (n() >= window) {
+           as.numeric(stats::filter(share, rep(1 / window, window), sides = 1))
+         } else NA_real_,
+         lift = moving / sophocles_share) %>%
+  ungroup()
+chain_lifts <- along %>%
+  group_by(chain) %>%
+  summarise(lift = mean(share) / sophocles_share)
+```
+
+```{r trajectory_plot, eval = trajectory_done, fig.height = 4.5}
+ggplot(filter(along, !is.na(lift)), aes(x = step / 1000, y = lift)) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_hline(yintercept = pooled_lift, linetype = "dotted") +
+  geom_line(colour = okabe_ito[["vermillion"]], linewidth = 0.4) +
+  facet_wrap(~ chain, ncol = 4,
+             labeller = labeller(chain = function(x) paste("chain", as.integer(x) + 1))) +
+  labs(x = "step of the walk (thousands)",
+       y = paste("lift of", top_topic, "against Sophocles"))
+```
+
+```{r trajectory_summary, eval = trajectory_done, results = "asis"}
+windows_above <- mean(along$lift > 1, na.rm = TRUE)
+cat(sprintf(paste(
+  "Over its whole run, every chain's lift of %s lies between %.2f and %.2f",
+  "(%d of %d chains above 1), and %.0f %% of the 1,000-step windows of all",
+  "chains are above 1. The %d sampled states have a split R-hat above 1.01",
+  "in %d fits and divergent transitions in %d.\n"),
+  top_topic, min(chain_lifts$lift), max(chain_lifts$lift),
+  sum(chain_lifts$lift > 1), nrow(chain_lifts), 100 * windows_above,
+  nrow(trajectory), sum(trajectory$max_rhat > 1.01),
+  sum(trajectory$divergences > 0)))
+```
+
 # The prior
 
 The Stan program has one modelling choice of its own, the prior on
