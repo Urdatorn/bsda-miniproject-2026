@@ -121,9 +121,10 @@ $P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$ for the mean
 profiles over paired draws, with the lift of the means, and
 $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$ for a random document
 against a random window of Sophocles, which measures how much the two
-populations overlap. A topic counts as **raised** when the mean-profile
-probability is at least 0.9 and the lift at least 1.5. Only the restored
-text enters a document:
+populations overlap. A topic counts as **raised** when the whole 90 %
+interval of its lift lies above 1, so that the mean-profile probability is
+at least 0.95; a threshold on the lift itself would depend on how far the
+prior shrinks the profiles. Only the restored text enters a document:
 the surviving letters of a damaged verse are never counted.
 
 # Data
@@ -332,7 +333,7 @@ rows <- data.frame(topic = topic_names,
                    lift_q05 = imputation_posterior$lift_q05,
                    lift_q95 = imputation_posterior$lift_q95,
                    p_document = imputation_posterior$p_document)
-rows$raised <- rows$p_above_sophocles >= 0.9 & rows$lift >= 1.5
+rows$raised <- rows$lift_q05 > 1
 for (column in c("mean", "q05", "q95", "p_above_sophocles", "lift",
                  "lift_q05", "lift_q95", "p_document")) {
   rows[[column]] <- round(rows[[column]], 4)
@@ -372,18 +373,18 @@ ggplot(baseline_table, aes(x = mean, y = topic)) +
 
 # Topics raised above Sophocles
 
-Topics whose mean profile is above Sophocles' with
-$P \ge 0.9$ and a lift of at least 1.5, with the lift, the posterior mean
-and, in brackets, the document-level probability
-$P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$.
+Topics whose 90 % interval of the lift lies above 1, with the lift, its
+interval, the posterior mean and, in brackets, the document-level
+probability $P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$.
 
 ```{r raised, results = "asis"}
 raised <- arrange(filter(rows, raised), desc(lift))
 if (nrow(raised) == 0) {
   cat("None.\n")
 } else {
-  items <- sprintf("%s (%.1f×, %.2f [%.2f])", raised$topic, raised$lift,
-                   raised$mean, raised$p_document)
+  items <- sprintf("%s (%.2f×, %.2f to %.2f; mean %.2f [%.2f])",
+                   raised$topic, raised$lift, raised$lift_q05,
+                   raised$lift_q95, raised$mean, raised$p_document)
   cat(paste(items, collapse = ", "), "\n")
 }
 ```
@@ -403,7 +404,7 @@ ggplot(lifts, aes(x = lift, y = topic, colour = raised)) +
                   size = 0.25, linewidth = 0.4) +
   scale_x_log10() +
   scale_colour_manual(values = c("grey60", okabe_ito[["vermillion"]]),
-                      name = "raised: P >= 0.9\nand lift >= 1.5") +
+                      name = "raised: 90 % interval\nabove 1") +
   labs(x = "lift of the mean profile against Sophocles (log scale)",
        y = NULL) +
   theme(legend.position = "bottom")
@@ -480,6 +481,25 @@ for (comparison in unique(circles$comparison)) {
 knitr::kable(baseline_rows, row.names = FALSE,
              col.names = c("comparison", "topics off 1", "largest lifts",
                            "smallest lifts"))
+```
+
+The resampled intervals are the stricter reading of the raised set. The
+posterior interval of the previous sections treats every snapshot as an
+independent document, and with thousands of them it is narrow; resampling
+by chain lets the whole of a chain drop out, which is the dependence the
+walk builds in.
+
+```{r raised_resampled, results = "asis"}
+resampled <- filter(circles, comparison == "imputations vs sophocles",
+                    lift_q05 > 1)
+resampled <- as.character(arrange(resampled, desc(lift))$topic)
+kept <- intersect(rows$topic[rows$raised], resampled)
+cat(sprintf(paste(
+  "Of the %d topics raised on the posterior interval, %d keep an interval",
+  "above 1 when the imputations are resampled by chain: %s. The others",
+  "are %s.\n"),
+  sum(rows$raised), length(kept), paste(kept, collapse = ", "),
+  paste(setdiff(rows$topic[rows$raised], kept), collapse = ", ")))
 ```
 
 The two lifts of every topic of the imputations side by side: against Sophocles
@@ -928,9 +948,7 @@ knitr::kable(starts, digits = 2, row.names = FALSE,
 # disagree on, and the topic the report singles out
 agreement <- cor(log(starts$lift_eric), log(starts$lift_spread),
                  use = "complete.obs")
-spread_raised <- starts$topic[spread_posterior$p_above[match(starts$topic,
-                                 topic_names)] >= 0.9 &
-                              starts$lift_spread >= 1.5]
+spread_raised <- starts$topic[starts$lift_spread_q05 > 1]
 both_raised <- intersect(rows$topic[rows$raised], spread_raised)
 mixed_eric <- sum(starts$rhat_eric > 1.1, na.rm = TRUE)
 mixed_spread <- sum(starts$rhat_spread > 1.1, na.rm = TRUE)
@@ -938,9 +956,9 @@ vengeance <- filter(starts, topic == "wrong-vengeance-err")
 worst <- starts[which.max(starts$rhat_spread), ]
 marriage <- filter(starts, topic == "marriage-couch-bed")
 sentence <- paste("The log lifts of the two sets correlate at %.2f over the",
-                  "%d topics. Raised in the report's set (lift at least 1.5",
-                  "and a posterior probability of exceeding Sophocles of at",
-                  "least 0.9) are %s; raised in the spread set are %s;",
+                  "%d topics. Raised in the report's set (the 90 %% interval",
+                  "of the lift above 1) are %s; raised in the spread set",
+                  "are %s;",
                   "raised in both: %s. %d topics have an R-hat above 1.1",
                   "among the chains from Eric's starts and %d among the",
                   "chains from unrelated starts, so the chains disagree",
@@ -950,9 +968,8 @@ sentence <- paste("The log lifts of the two sets correlate at %.2f over the",
                   "posterior. The largest R-hat in the spread set, %.2f for",
                   "%s, is one chain's excess (its chains run from %.2f to",
                   "%.2f). Wrong-vengeance-err has lift %.2f in the spread",
-                  "set, interval %.2f to %.2f, above Sophocles but under the",
-                  "1.5 that counts as raised, and its eight chains run from",
-                  "%.2f to %.2f; marriage-couch-bed falls to %.2f.")
+                  "set, interval %.2f to %.2f, %s, and its eight chains run",
+                  "from %.2f to %.2f; marriage-couch-bed falls to %.2f.")
 cat(sprintf(sentence, agreement, sum(!is.na(starts$lift_spread)),
             paste(rows$topic[rows$raised], collapse = ", "),
             paste(spread_raised, collapse = ", "),
@@ -961,7 +978,10 @@ cat(sprintf(sentence, agreement, sum(!is.na(starts$lift_spread)),
             mixed_eric, mixed_spread, worst$rhat_spread, worst$topic,
             worst$chain_q05, worst$chain_q95,
             vengeance$lift_spread, vengeance$lift_spread_q05,
-            vengeance$lift_spread_q95, vengeance$chain_q05,
+            vengeance$lift_spread_q95,
+            ifelse(vengeance$lift_spread_q05 > 1, "raised there too",
+                   "so not raised there"),
+            vengeance$chain_q05,
             vengeance$chain_q95, marriage$lift_spread), "\n")
 ```
 

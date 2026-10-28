@@ -411,8 +411,9 @@ def main():
             for j in range(H):
                 f.write(f"{name},{names[j]},{s['n_docs']},{s['n_lemmata']:.1f},{s['mean'][j]:.4f},{s['q05'][j]:.4f},{s['q95'][j]:.4f},{s['p_dominant_seeded'][j]:.4f},"
                         + (f"{s['p_above_sophocles'][j]:.4f},{s['lift'][j]:.3f},{s['p_document'][j]:.4f}" if "lift" in s else ",,") + "\n")
-    raised = {name: [names[k] for k in sorted((k for k in range(H) if s["p_above_sophocles"][k] >= 0.9 and s["lift"][k] >= 1.5),
-                                              key=lambda k: -s["lift"][k])] for name, s in profiles.items() if "lift" in s}
+    # raised = the 90 % interval of the lift against Sophocles lies above 1
+    raised = {name: [r["topic"] for r in sorted((r for r in comparisons if r["comparison"] == f"{name} vs sophocles" and r["lift_q05"] > 1),
+                                                key=lambda r: -r["lift"])] for name, s in profiles.items() if "lift" in s}
     print(f"{H} seeded and {K - H} free topics on {V} lemmata; phi {label}; {len(diagnostics)} documents sampled by NUTS; "
           f"free topics hold {profiles['imputations']['free_mass']:.1%} of the imputations' mass", flush=True)
     for name, s in profiles.items():

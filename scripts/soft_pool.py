@@ -26,7 +26,7 @@ that the report can be knitted against it unchanged (params$results):
                     mean of its state): the dependence between the snapshots of
                     one chain, which the posterior intervals ignore, on top of
                     what the posterior intervals carry
-  lifts_by_state.csv  the lift of every comparison at every single state
+  lifts_by_state.csv  the lift of every comparison at every single state, with that state's own 90 % interval
   diagnostics.csv.gz  one row per document with the worst of Stan's
                     diagnostics over the states (largest R-hat, smallest bulk
                     ESS, divergences summed)
@@ -115,9 +115,12 @@ def main():
         if focus not in sets or base not in sets: continue
         F, B = mean_draws[focus][:, :H], mean_draws[base][:, :H]; ratio = F / B
         per_state_lift = np.stack([F[state_of_draw == d].mean(0) / B[state_of_draw == d].mean(0) for d in range(D)])
+        per_state_q05 = np.stack([np.quantile(ratio[state_of_draw == d], 0.05, axis=0) for d in range(D)])   # the single state's own 90 % interval
+        per_state_q95 = np.stack([np.quantile(ratio[state_of_draw == d], 0.95, axis=0) for d in range(D)])
         p_doc = p_document(focus, base)
         boot = chain_bootstrap(base) if focus == "imputations" else None
-        by_state += [{"topic": names[k], "comparison": f"{focus} vs {base}", "state": d, "lift": per_state_lift[d, k]} for d in range(D) for k in range(H)]
+        by_state += [{"topic": names[k], "comparison": f"{focus} vs {base}", "state": d, "lift": per_state_lift[d, k],
+                      "lift_q05": per_state_q05[d, k], "lift_q95": per_state_q95[d, k]} for d in range(D) for k in range(H)]
         for k in range(H):
             rows.append({"topic": names[k], "comparison": f"{focus} vs {base}", "rate_focus": F.mean(0)[k], "rate_baseline": B.mean(0)[k],
                          "lift": F.mean(0)[k] / B.mean(0)[k], "lift_q05": np.quantile(ratio[:, k], 0.05), "lift_q95": np.quantile(ratio[:, k], 0.95),

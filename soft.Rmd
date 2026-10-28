@@ -115,8 +115,11 @@ profile**, the documents' posteriors averaged draw by draw, compared with
 Sophocles' by
 $P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$ and the lift
 of the means, and a **random document** against a random window,
-$P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$. A topic is raised when
-the mean-profile probability is at least 0.9 and the lift at least 1.5.
+$P(\theta_k^{\text{doc}} > \theta_k^{\text{window}})$. A topic is **raised**
+when the whole 90 % interval of its lift lies above 1, that is, when the
+posterior puts at least 95 % of its mass on the imputations' mean share
+exceeding Sophocles'. A threshold on the lift itself would be a statement
+relative to the prior, as the section on the prior shows.
 
 **Sampling.** With $\phi$ and $\alpha$ fixed, the posterior of one document
 is the density on the simplex
@@ -485,19 +488,23 @@ ggplot(baseline_table, aes(x = mean, y = topic)) +
 
 # Topics raised above Sophocles
 
-Seeded topics whose mean profile is above Sophocles' with $P \ge 0.9$ and a
-lift of at least 1.5, with the lift, the posterior mean and, in brackets,
-the document-level probability.
+Seeded topics whose 90 % interval of the lift lies above 1, with the lift,
+its interval, the posterior mean and, in brackets, the document-level
+probability.
 
 ```{r raised, results = "asis"}
-imputations$raised <- imputations$p_above_sophocles >= 0.9 &
-  imputations$lift >= 1.5
+interval <- filter(comparisons, comparison == "imputations vs sophocles")
+imputations <- inner_join(imputations,
+                          interval[, c("topic", "lift_q05", "lift_q95")],
+                          by = "topic")
+imputations$raised <- imputations$lift_q05 > 1
 raised <- arrange(filter(imputations, raised), desc(lift))
 if (nrow(raised) == 0) {
   cat("None.\n")
 } else {
-  items <- sprintf("%s (%.1f×, %.2f [%.2f])", raised$topic, raised$lift,
-                   raised$mean, raised$p_document)
+  items <- sprintf("%s (%.2f×, %.2f to %.2f; mean %.2f [%.2f])",
+                   raised$topic, raised$lift, raised$lift_q05,
+                   raised$lift_q95, raised$mean, raised$p_document)
   cat(paste(items, collapse = ", "), "\n")
 }
 ```
@@ -509,10 +516,7 @@ The lift of every topic, ordered by lift, with its 90 % interval (from
 same distance from the dashed line at 1.
 
 ```{r lifts, fig.height = 5}
-interval <- filter(comparisons, comparison == "imputations vs sophocles")
-lifts <- inner_join(imputations,
-                    interval[, c("topic", "lift_q05", "lift_q95")],
-                    by = "topic")
+lifts <- imputations
 lifts$topic <- reorder(lifts$topic, lifts$lift)
 ggplot(lifts, aes(x = lift, y = topic, colour = raised)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
@@ -520,7 +524,7 @@ ggplot(lifts, aes(x = lift, y = topic, colour = raised)) +
                   size = 0.25, linewidth = 0.4) +
   scale_x_log10() +
   scale_colour_manual(values = c("grey60", okabe_ito[["vermillion"]]),
-                      name = "raised: P >= 0.9\nand lift >= 1.5") +
+                      name = "raised: 90 % interval\nabove 1") +
   labs(x = "lift of the mean profile against Sophocles (log scale)",
        y = NULL) +
   theme(legend.position = "bottom")
@@ -733,6 +737,19 @@ state_range <- state_lifts %>%
   summarise(low = min(lift), high = max(lift))
 state_width <- median(log_width(state_range$low, state_range$high))
 off_one <- function(rows) sum(rows$lift_q05 > 1 | rows$lift_q95 < 1)
+raised_of <- function(rows) {
+  as.character(arrange(filter(rows, lift_q05 > 1), desc(lift))$topic)
+}
+or_none <- function(topics) {
+  if (length(topics) == 0) "none" else paste(topics, collapse = ", ")
+}
+same_raised <- setequal(raised_of(pooled_lifts), raised_of(plugin))
+# in how many of the twenty states each pooled raised topic is raised
+states_raised <- state_lifts %>%
+  filter(topic %in% raised_of(pooled_lifts)) %>%
+  group_by(topic) %>%
+  summarise(states = sum(lift_q05 > 1), lift = mean(lift)) %>%
+  arrange(desc(lift))
 top_topic <- pooled_lifts$topic[which.max(pooled_lifts$lift)]
 top_range <- filter(state_range, topic == top_topic)
 cat(sprintf(paste(
@@ -740,11 +757,15 @@ cat(sprintf(paste(
   "for the median topic the twenty lifts span a factor of %.2f. The median",
   "90 %% interval is a factor of %.2f wide pooled and %.2f under the",
   "plug-in run (%.0f %% wider on the log scale); %d topics have an interval",
-  "off 1 pooled, %d under the plug-in run.\n"),
+  "off 1 pooled, %d under the plug-in run. Raised pooled: %s; under the",
+  "plug-in run: %s. Counting the states one at a time, %s.\n"),
   top_topic, top_range$low, top_range$high, exp(state_width),
   exp(pooled_width), exp(plugin_width),
   100 * (pooled_width / plugin_width - 1), off_one(pooled_lifts),
-  off_one(plugin)))
+  off_one(plugin), or_none(raised_of(pooled_lifts)),
+  or_none(raised_of(plugin)),
+  paste(sprintf("%s is raised in %d of the twenty", states_raised$topic,
+                states_raised$states), collapse = ", ")))
 ```
 
 The states agree with each other. The twenty lifts of a topic are spread
@@ -752,7 +773,8 @@ over a factor of `r sprintf("%.2f", exp(state_width))` for the median
 topic, inside its posterior interval, and pooling the states widens the
 median interval by
 `r sprintf("%.0f", 100 * (pooled_width / plugin_width - 1))` % on the log
-scale against the plug-in run. The raised set is the same under both, the
+scale against the plug-in run. The raised set is
+`r if (same_raised) "the same" else "not the same"` under both, the
 point estimates nearly so. The uncertainty in $\phi$ is real and is now in
 the intervals, but it is small next to the posterior uncertainty of the
 profiles, which the plug-in run already carries. One caveat was stated
@@ -806,7 +828,7 @@ ggplot(intervals, aes(x = lift, y = topic, colour = kind)) +
 ```{r chain_summary, results = "asis"}
 chain_width <- median(log_width(chain$lift_chain_q05, chain$lift_chain_q95))
 off_chain <- sum(chain$lift_chain_q05 > 1 | chain$lift_chain_q95 < 1)
-raised_chain <- filter(chain, p_chain_above >= 0.9, lift >= 1.5)
+raised_chain <- filter(chain, lift_chain_q05 > 1)
 raised_chain <- as.character(arrange(raised_chain, desc(lift))$topic)
 # the topics the two intervals disagree on: off 1 under one, covering 1
 # under the other
@@ -814,14 +836,11 @@ posterior_off <- chain$lift_q05 > 1 | chain$lift_q95 < 1
 bootstrap_off <- chain$lift_chain_q05 > 1 | chain$lift_chain_q95 < 1
 lost <- as.character(chain$topic[posterior_off & !bootstrap_off])
 gained <- as.character(chain$topic[!posterior_off & bootstrap_off])
-or_none <- function(topics) {
-  if (length(topics) == 0) "none" else paste(topics, collapse = ", ")
-}
 cat(sprintf(paste(
   "The median chain-bootstrap interval is a factor of %.2f wide against",
   "%.2f for the posterior interval; %d topics have a bootstrap interval",
   "off 1 against %d. Off 1 under the posterior but not under the",
-  "bootstrap: %s. The reverse: %s. Raised with the bootstrap's probability",
+  "bootstrap: %s. The reverse: %s. Raised with the bootstrap's interval",
   "in place of the posterior's: %s.\n"),
   exp(chain_width), exp(pooled_width), off_chain, off_one(pooled_lifts),
   or_none(lost), or_none(gained), or_none(raised_chain)))
@@ -950,11 +969,12 @@ wide <- data.frame(topic = learned$topic, learned = lift_under("learned"),
                    even = lift_under("2"))
 wide <- arrange(wide, desc(learned))
 raised_under <- function(alpha) {
-  rows <- filter(prior_lifts, alpha == !!alpha, p_above >= 0.9, lift >= 1.5)
+  rows <- filter(prior_lifts, alpha == !!alpha, lift_q05 > 1)
   as.character(arrange(rows, desc(lift))$topic)
 }
 raised_sets <- lapply(names(prior_dirs), raised_under)
 names(raised_sets) <- names(prior_dirs)
+raised_all <- Reduce(intersect, raised_sets)
 # the slope of a prior's log lifts on the learned prior's: 1 would mean the
 # same lifts, 1/2 that every lift is square-rooted
 slope <- function(column) {
@@ -973,10 +993,12 @@ same_side <- function(column) {
 }
 sides <- sapply(wide[, c("flat", "sparse", "even")], same_side)
 cat(sprintf(paste(
-  "Raised (P >= 0.9 and lift >= 1.5) under the learned prior: %s; under",
-  "Dirichlet(1): %s; under Dirichlet(0.1): %s; under Dirichlet(2): %s.\n\n"),
+  "Raised (interval above 1) under the learned prior: %s; under",
+  "Dirichlet(1): %s; under Dirichlet(0.1): %s; under Dirichlet(2): %s;",
+  "under all four: %s.\n\n"),
   or_none(raised_sets[["learned"]]), or_none(raised_sets[["1"]]),
-  or_none(raised_sets[["0.1"]]), or_none(raised_sets[["2"]])))
+  or_none(raised_sets[["0.1"]]), or_none(raised_sets[["2"]]),
+  or_none(raised_all)))
 cat(sprintf(paste(
   "The correlation of the log lifts with the learned prior's is %.3f for",
   "Dirichlet(1), %.3f for Dirichlet(0.1) and %.3f for Dirichlet(2);",
@@ -1012,10 +1034,15 @@ the flat prior the prior already weighs more than the document, both mean
 profiles are pulled towards the uniform profile and their ratio towards 1;
 the learned prior leaves each seeded topic almost nothing unless the
 document's lemmata call for it, and the differences between the sets come
-out in full. A fixed threshold on the lift, the 1.5 of the raised set, is
-therefore a statement relative to the prior, while
-$P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$, a statement
-about order, is not.
+out in full. A fixed threshold on the lift would therefore be a statement
+relative to the prior. The raised set is defined on order instead, by an
+interval above 1, and it still moves with the prior, in the other
+direction: the symmetric priors pull the lifts towards 1 but tighten the
+intervals too, so that `r length(raised_sets[["1"]])` topics clear the
+line under Dirichlet(1) and `r length(raised_sets[["2"]])` under
+Dirichlet(2), most of them with lifts below 1.3, against
+`r length(raised_sets[["learned"]])` under the learned prior. The topics
+raised under every prior are `r or_none(raised_all)`.
 
 Second, the learned prior is not a symmetric prior at some other scale. Its
 log lifts correlate at `r sprintf("%.2f", correlations[["sparse"]])` with
