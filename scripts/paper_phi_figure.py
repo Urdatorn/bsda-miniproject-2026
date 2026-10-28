@@ -1,9 +1,9 @@
 """The paper's illustration of a soft topic: part of phi_k for
 marriage-couch-bed, one column wide, text set like the body text (figure_style.paper).
 
-The x axis follows the vocabulary in alphabetical order: its first five
-lemmata, five of the topic's own lemmata where they fall and the last lemma,
-with gaps marked by an ellipsis, so the plot shows both the near-zero floor that most
+The x axis follows the vocabulary in alphabetical order: its first lemma, five
+of the topic's own lemmata where they fall and the last lemma, with gaps
+marked by an ellipsis, so the plot shows both the near-zero floor that most
 of the 3,128 lemmata sit on and the few lemmata that carry the topic.
 
 Usage: python scripts/paper_phi_figure.py latex/overleaf/figures/phi_marriage.pdf
@@ -13,7 +13,7 @@ import csv, gzip, sys, unicodedata
 from figure_style import paper, save, COLUMN_WIDTH, OKABE_ITO
 
 TOPIC = "marriage-couch-bed"
-HEAD = 5                                                    # first lemmata of the vocabulary
+HEAD = 1                                                    # the first lemma of the vocabulary
 OWN = ["γάμος", "λέκτρον", "νύμφη", "παρθένος", "πόσις"]    # lemmata of the topic
 
 
