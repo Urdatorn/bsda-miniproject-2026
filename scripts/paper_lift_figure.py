@@ -32,7 +32,7 @@ def main(out_path):
     topics = sorted(soft, key=lambda t: soft[t][0])          # largest soft lift on top
     floor = 0.02                                            # a lift of zero sits at the left edge
 
-    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 6.6), layout="constrained")
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 6.1), layout="constrained")
     for offset, (name, values, colour) in zip((0.17, -0.17), (("hard", hard, OKABE_ITO[0]), ("soft", soft, OKABE_ITO[1]))):
         y = [i + offset for i in range(len(topics))]
         mid = [max(values[t][0], floor) for t in topics]
