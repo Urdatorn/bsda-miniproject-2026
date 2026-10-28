@@ -15,6 +15,7 @@ from figure_style import paper, save, COLUMN_WIDTH, OKABE_ITO
 TOPIC = "marriage-couch-bed"
 HEAD = 1                                                    # the first lemma of the vocabulary
 OWN = ["γάμος", "λέκτρον", "νύμφη", "παρθένος", "πόσις"]    # lemmata of the topic
+SPELLING = {"ἀατός": "ἀάατος"}                             # the lemmatiser's form in data/vocab.json, corrected for display
 
 
 def phi_row(path, topic):
@@ -46,7 +47,7 @@ def main(out_path):
         if n and rank[j] > rank[index[n - 1]] + 1:          # skipped lemmata: leave a slot for "…"
             gaps.append(x)
             x += 1
-        labels.append(r"\textgreek{%s}" % vocab[j])
+        labels.append(r"\textgreek{%s}" % SPELLING.get(vocab[j], vocab[j]))
         heights.append(phi[j])
         xs.append(x)
         x += 1
