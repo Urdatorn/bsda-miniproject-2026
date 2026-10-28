@@ -55,13 +55,14 @@ def main(out_path):
     # a broken y axis: the upper panel shows the topic's own lemmata on a linear scale,
     # the lower one the floor of about 4e-5 that most of the vocabulary sits on
     fig, (top, low) = plt.subplots(2, 1, sharex=True, figsize=(COLUMN_WIDTH, 2.2), layout="constrained",
-                                   gridspec_kw={"height_ratios": [3, 1], "hspace": 0.02})
+                                   gridspec_kw={"height_ratios": [2.4, 1]})
+    fig.get_layout_engine().set(hspace=0.16)                                     # room around the break
     for ax in (top, low):
         ax.bar(xs, heights, width=0.7, color=OKABE_ITO[1])
         ax.spines["right"].set_visible(False)
-    top.set_ylim(0.02, 0.038)
+    top.set_ylim(0.016, 0.038)                                                  # ticks clear of the break
     top.set_yticks([0.02, 0.03])
-    low.set_ylim(0, 6e-5)
+    low.set_ylim(0, 8e-5)
     low.set_yticks([0, 4e-5])
     low.set_yticklabels(["0", r"$4\cdot10^{-5}$"])
     top.spines["bottom"].set_visible(False)
