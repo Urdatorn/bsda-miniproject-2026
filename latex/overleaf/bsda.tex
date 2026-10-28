@@ -213,6 +213,13 @@ As a case study, we use the famous papyrus \textit{P.Oxy 5292} first published i
 % \epigraph{[I]dentifying the point at which "same" turns into "different" is a fundamentally subjective enterprise.}{Olson, \emph{Methodological Reflections on the Text and Action of Sophocles' \emph{Tereus}}, p.\ 184}
 % \epigraph{Some people ask "Who is to be the official guesser of priors?" and "Won't different people get different results?." The answers are "No one," and "Yes."}{Mosteller and Wallace, p.\ 303}
 
+\section{Research questions}
+\label{questions}
+
+Let us in this context define a `topic' as a probability distribution over a set vocabulary of lemmata (the normalized and uninflected dictionary form a given word token is marked as belonging to by a lemmatizer). That a certain topic $t$ `stands out' in a corpus of texts or windows of texts is then defined as the posterior probability that its mean lemma rates are closer to $t$ than the rates of some baseline are. 
+
+We are now ready to ask: are there topics that consistently stand out across chains and iterations of generated papyrus imputations? 
+
 \section{Data}
 \label{data}
 
@@ -307,11 +314,11 @@ data {
   matrix[N, K] logphi; // log phi[:, w_n] for each lemma
 }
 parameters {
-  simplex[K] theta; // lives in R^{K-1}
+  simplex[K] theta;
 }
 model {
   // prior
-  theta ~ dirichlet(rep_vector(1, K)); // not necessary
+  theta ~ dirichlet(rep_vector(1, K));
 
   // likelihood
   vector[K] log_theta = log(theta);
