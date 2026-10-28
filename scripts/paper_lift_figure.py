@@ -3,9 +3,9 @@ topic, under the hard and the soft model, one column wide, text set like the bod
 
 Hard: rates per thousand topic lemmata, 90 % interval from resampling the
 imputations by chain and Sophocles by window (results/hard/topic_circles.csv).
-Soft: ratio of the two mean profiles, 90 % interval over the posterior draws
-pooled over twenty states of phi
-(results/soft/pooled/comparisons.csv). Topics ordered by the hard lift.
+Soft: ratio of the two mean profiles pooled over twenty states of phi, 90 %
+interval from the same resampling by chain, with a state of phi drawn in each
+replicate (results/soft/pooled/comparisons.csv). Topics ordered by the hard lift.
 
 Usage: python scripts/paper_lift_figure.py latex/overleaf/figures/lift_hard_soft.pdf
 """
@@ -14,11 +14,11 @@ import csv, sys
 from figure_style import paper, save, COLUMN_WIDTH, OKABE_ITO
 
 
-def lifts(path, comparison="imputations vs sophocles"):
+def lifts(path, columns=("lift", "lift_q05", "lift_q95"), comparison="imputations vs sophocles"):
     rows = {}
     for r in csv.DictReader(open(path, encoding="utf-8")):
         if r["comparison"] == comparison:
-            rows[r["topic"]] = tuple(float(r[c]) for c in ("lift", "lift_q05", "lift_q95"))
+            rows[r["topic"]] = tuple(float(r[c]) for c in columns)
     return rows
 
 
@@ -27,7 +27,7 @@ def main(out_path):
     import matplotlib.pyplot as plt
 
     hard = lifts("results/hard/topic_circles.csv")
-    soft = lifts("results/soft/pooled/comparisons.csv")
+    soft = lifts("results/soft/pooled/comparisons.csv", ("lift", "lift_chain_q05", "lift_chain_q95"))
     topics = sorted(hard, key=lambda t: hard[t][0])          # largest hard lift on top
     floor = 0.02                                            # a lift of zero sits at the left edge
 

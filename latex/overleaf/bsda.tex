@@ -276,33 +276,43 @@ each topic a word distribution $\phi_k \sim \mathrm{Dirichlet}(\beta_k)$;
 every lemma token first draws a topic $z \sim \theta_d$, then the lemma from
 $\phi_z$. Tomotopy fits this by collapsed Gibbs sampling: $\theta$ and $\phi$
 are integrated out, each token's topic is redrawn in turn given all the
-others (1\,000 sweeps), and $\phi_{k,w} \propto n_{k,w} + \beta_{k,w}$ is read
-off the final counts $n$. Seeding changes only the prior: a lemma of
+others, and $\alpha$, one concentration per topic, is re-estimated every ten
+sweeps by maximising the marginal likelihood. After 10\,000 sweeps of
+burn-in, twenty states 500 sweeps apart are kept, and in each
+$\phi_{k,w} \propto n_{k,w} + \beta_{k,w}$ is read off the counts $n$. Seeding changes only the prior: a lemma of
 cluster $k$ has $\beta_{k,w} = 200$, two hundred pseudo-occurrences in its own
 topic, and $0.01$ in every other, while unclustered lemmata and the four free
-topics get $0.01$ throughout. Here $\alpha = 0.1$, $K = 38$, and the documents
+topics get $0.01$ throughout. Here $K = 38$, and the documents
 are the 1\,174 windows of Aeschylus and Euripides.} so that Sophocles is a test corpus
 like the restorations. Each hard cluster seeds one topic with a strong prior
 on its lemmata, and four free topics take up what the clusters miss.
 \textgreek{θεός}, god, which the hard model puts in \textit{god-true-lord}
 alone, is now split between two topics: given the word, the free topic
-\textit{god-word-do} has probability 0.80 and \textit{god-true-lord} 0.18
-($\phi_{k,w}$ normalised over $k$). With
-$\phi$ fixed, a document's lemmata are drawn from the mixture
-$\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\mathbf 1)$, and
+\textit{god-evil-word} has probability 0.82 and \textit{god-true-lord} 0.16
+($\phi_{k,w}$ normalised over $k$). The LDA also learns the prior on a
+document's topic shares, a Dirichlet($\alpha$) with one concentration per
+topic: below 1 for every seeded topic (0.04--0.57) and between 4 and 9 for
+the free ones, which a typical document is thus expected to be mostly made of.
+
+The fit has two stages, and the second never feeds back into the first (a
+cut model, \citealt{plummer2015cuts}). Given one state $(\phi, \alpha)$ of
+the LDA's chain, a document's lemmata are drawn from the mixture
+$\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\alpha)$, and
 the posterior
-\[p(\theta \mid w_{1:N}) \propto \prod_{n=1}^{N} \sum_{k=1}^{K}
-  \theta_k\, \phi_{k w_n}\]
+\[p(\theta \mid w_{1:N}) \propto \mathrm{Dirichlet}(\theta \mid \alpha)
+  \prod_{n=1}^{N} \sum_{k=1}^{K} \theta_k\, \phi_{k w_n}\]
 has no closed form. It is sampled with NUTS in Stan
 \citep{carpenter2017stan}, one document at a time, by the program shown in the
-frame (diagnostics in \autoref{diagnostics}).
+frame. This is done for each of the twenty states, and the twenty posteriors
+are pooled, so that the intervals carry the uncertainty in $\phi$ as well as
+in $\theta$ (diagnostics in \autoref{diagnostics}).
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/phi_marriage.pdf}
 \caption{Part of $\phi_k$ for \textit{marriage-couch-bed}, lemmata in
-vocabulary order. Most of the 3,128 lemmata, like the first five, get about
-$3\cdot10^{-5}$; the mass sits on a few, such as \textgreek{γάμος} and
+vocabulary order (the mean of the twenty states). Most of the 3,128
+lemmata, like the first five, get about $4\cdot10^{-5}$; the mass sits on a few, such as \textgreek{γάμος} and
 \textgreek{λέκτρον}, marriage and the marriage bed.}
 \label{fig:phi}
 \end{figure}
@@ -312,13 +322,14 @@ data {
   int<lower=1> N;
   int<lower=1> K;
   matrix[N, K] logphi; // log phi[:, w_n] for each lemma
+  vector<lower=0>[K] alpha; // the LDA's prior
 }
 parameters {
   simplex[K] theta;
 }
 model {
   // prior
-  theta ~ dirichlet(rep_vector(1, K));
+  theta ~ dirichlet(alpha);
 
   // likelihood
   vector[K] log_theta = log(theta);
@@ -339,9 +350,10 @@ measures how far the two populations overlap (0.5 if not at all apart). The
 Sophocles', and a topic is \textbf{raised} when its lift is at least 1.5 and
 $P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}}) \ge 0.9$. The
 restorations are not independent, since successive states of a chain share
-most of their words; the hard model's 90\,\% intervals for a lift therefore
-resample whole chains (and Sophocles by window), while the soft model's come
-from the posterior draws alone and are too narrow.
+most of their words; the 90\,\% intervals for a lift therefore resample
+whole chains (and Sophocles by window), and for the soft model each replicate
+also draws one of the twenty states of $\phi$ and adds back the posterior
+noise of the two profiles.
 
 \section{Results}
 \label{results}
@@ -350,7 +362,8 @@ from the posterior draws alone and are too narrow.
 \centering
 \includegraphics[width=\linewidth]{figures/lift_hard_soft.pdf}
 \caption{Lift of the imputations against Sophocles for every topic, with
-90\,\% intervals (hard: resampled by chain; soft: posterior draws). Dashed: no
+90\,\% intervals resampling whole chains (soft: pooled over twenty states
+of $\phi$). Dashed: no
 difference; dotted: the lift of 1.5 that counts as raised.}
 \label{fig:lift}
 \end{figure}
@@ -365,15 +378,15 @@ difference; dotted: the lift of 1.5 that counts as raised.}
 \cmidrule(lr){2-4}\cmidrule(lr){5-7}
 Topic & Soph. & A.\,\&\,E. & Attic & Soph. & A.\,\&\,E. & Attic \\
 \midrule
-wrong-vengeance-err & 1.58 & 1.49 & 1.61 & 1.18 & 1.17 & 1.08 \\
-god-true-lord & 1.59 & 1.89 & 1.48 & 1.16 & 1.32 & 0.99$^\circ$ \\
-marriage-couch-bed & 1.85 & 0.79 & 2.97 & 1.22 & 0.98$^\circ$ & 1.20 \\
-persuade-man-king & 1.21 & 1.19 & 1.04$^\circ$ & 1.63 & 1.65 & 1.12 \\
+wrong-vengeance-err & 1.58 & 1.49 & 1.61 & 1.06$^\circ$ & 1.08$^\circ$ & 0.99$^\circ$ \\
+god-true-lord & 1.59 & 1.89 & 1.48 & 1.11$^\circ$ & 1.41 & 0.93$^\circ$ \\
+marriage-couch-bed & 1.85 & 0.79 & 2.97 & 1.04$^\circ$ & 0.77 & 1.13$^\circ$ \\
+persuade-man-king & 1.21 & 1.19 & 1.04$^\circ$ & 2.01 & 2.06 & 1.18$^\circ$ \\
 \bottomrule
 \end{tabular}
 \caption{Lift of the imputations against the three baselines (Sophocles,
-Aeschylus and Euripides, Classical Attic). $^\circ$: the 90\,\% interval
-includes 1.}
+Aeschylus and Euripides, Classical Attic). $^\circ$: the 90\,\% interval,
+resampling whole chains, includes 1.}
 \label{tab:key}
 \end{table}
 
@@ -402,20 +415,21 @@ in Sophocles. That of \textit{wrong-vengeance-err} is spread over the matter
 of the play: \textgreek{χάρις}, \textgreek{πόνος}, \textgreek{δίκη}, \textgreek{πάθος} and \textgreek{τιμωρός}, favour,
 toil, justice, suffering and the avenger.
 
-Individually the restorations are much less distinctive than their average.
-For every topic a random restoration exceeds a random Sophoclean window with
-probability between 0.37 and 0.66: even the raised topics only tilt a
-population that overlaps heavily with Sophocles'.
+Individually the restorations are far less distinctive: a random
+restoration exceeds a random Sophoclean window with probability 0.37--0.66
+for every topic.
 
-\paragraph{Soft topics.} Under the soft model the lifts shrink towards 1
-(range 0.83--1.63) and only \textit{persuade-man-king} is raised (1.63,
-interval 1.54--1.76). \textit{god-true-lord} falls to 1.16 and
-\textit{marriage-couch-bed} to 1.22. The reason is visible in $\phi$: the most
-frequent words of tragedy leave their clusters for the free topics, as
-\textgreek{θεός} does for \textit{god-word-do}, so the hard model's excess of \textgreek{θεός} is no longer an excess of the
-god topic. \textit{wrong-vengeance-err} is the one raised topic of the hard
-model that stays above all three baselines under the soft model too (lifts
-1.18, 1.17 and 1.08).
+\paragraph{Soft topics.} Under the soft model only
+\textit{persuade-man-king} is raised (lift 2.01, interval 1.47--2.65). It is
+as far above Aeschylus and Euripides (2.06) but not clearly above Classical
+Attic (1.18, interval including 1): an excess over tragedy, not over Greek
+prose and verse at large. The hard model's other raised topics fall back
+towards Sophocles, \textit{god-true-lord} to 1.11, \textit{wrong-vengeance-err}
+to 1.06 and \textit{marriage-couch-bed} to 1.04, all with intervals that
+include 1. The reason is visible in $\phi$: the most frequent words of
+tragedy leave their clusters for the free topics, which take three quarters
+of the imputations' mean profile; the hard model's excess of the god topic was
+mostly an excess of \textgreek{θεός}, which goes to \textit{god-evil-word}.
 
 \paragraph{Robustness.} Eight chains from deliberately unrelated starts give
 a hard profile whose log lifts correlate at 0.76 with the main set's;
@@ -423,10 +437,14 @@ a hard profile whose log lifts correlate at 0.76 with the main set's;
 lift of 1.45 (1.38--1.54). The judge matters more: a pilot with Claude Sonnet
 5.5 as judge correlates with the Qwen profile at only 0.30, yet
 \textit{persuade-man-king} and \textit{wrong-vengeance-err} stay above
-Sophocles. Single chains differ widely, the lift of
-\textit{wrong-vengeance-err} ranging from 0.74 to 3.00 over the sixteen
-chains, so the pooled profile is an average over chains that have not mixed;
-the chain-resampled intervals carry that uncertainty (\autoref{diagnostics}).
+Sophocles. Single chains differ widely (\autoref{diagnostics}), which the
+chain-resampled intervals carry.
+The soft lifts barely move between the twenty states of $\phi$ (a factor
+of 1.14 for the median topic) but scale with the prior on $\theta$, whose
+pseudo-lemmata compete with a document's thirty: a flat Dirichlet(1) shrinks
+every log lift to about 0.4 of its learned-prior value. A lift of 1.5 is thus
+relative to the prior; the order of the topics is not, and
+\textit{persuade-man-king} leads under all four priors tried.
 
 \section{Conclusions}
 \label{conclusions}
@@ -597,27 +615,39 @@ The chains do not mix within that budget (\autoref{diagnostics}).
 \section{Sampler and chain diagnostics}\label{diagnostics}
 
 \paragraph{The soft model in Stan.} Every document was fitted separately
-with four chains of 500 warm-up and 500 sampling iterations (2\,000 draws).
+for each of the twenty states of $(\phi, \alpha)$, with four chains of 500
+warm-up and 1\,000 sampling iterations (4\,000 draws) at a target acceptance
+of 0.99: with the learned $\alpha_k$ below 1 the prior density is unbounded at
+the faces of the simplex, and Stan's default of 0.8 left divergences in
+nearly every document. The table counts the documents flagged within one
+state (the median over the twenty states), and the worst values over all
+states.
 
 \begin{center}
-\begin{tabular}{lrrrrrr}
+\begin{tabular}{lrrrrrrr}
 \toprule
-& & & Max.\ tree & Largest & Fits with & Smallest \\
-Documents & Fits & Divergences & depth hits & $\hat R$ & $\hat R > 1.01$ & bulk ESS \\
+& & \multicolumn{4}{c}{Flagged documents per state (median)} & Largest & Smallest \\
+\cmidrule(lr){3-6}
+Set & Documents & $\hat R > 1.01$ & ESS $< 400$ & Divergent & Tree depth & $\hat R$ & bulk ESS \\
 \midrule
-Imputations & 17\,120 & 0 & 0 & 1.020 & 203 & 593 \\
-Sophocles & 443 & 0 & 0 & 1.014 & 4 & 1\,046 \\
-Aeschylus and Euripides & 1\,174 & 0 & 0 & 1.015 & 15 & 646 \\
-Classical Attic & 23\,328 & 0 & 0 & 1.017 & 254 & 514 \\
-\midrule
-All & 42\,065 & 0 & 0 & 1.020 & 476 & 514 \\
+Imputations & 17\,120 & 1\,390 & 446 & 8 & 345 & 1.46 & 8 \\
+Sophocles & 443 & 60 & 29 & 0 & 21 & 1.22 & 13 \\
+Aeschylus and Euripides & 1\,174 & 165 & 93 & 1 & 36 & 1.32 & 10 \\
+Classical Attic & 23\,328 & 2\,541 & 1\,088 & 12 & 600 & 1.50 & 7 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\noindent One imputation and one Sophoclean window, refitted with rstan from
-4\,000 draws, reproduce the posterior means of their five largest topics to
-within 0.006.
+\noindent About a tenth of the documents have, at a given state, a topic
+whose chains disagree: a seeded topic with $\alpha_k$ of 0.1 or 0.2 that the
+document does not use piles its mass against $\theta_k = 0$, with a thin
+tail that a chain may stray into. Under a flat Dirichlet(1) prior the same
+documents sample without a single flag. The lifts average over hundreds or
+thousands of documents, in which one document's Monte Carlo error is
+averaged away, and the twenty states, each a separate run, agree
+(\autoref{results}). One imputation and one Sophoclean window, refitted with
+rstan, reproduce the posterior means of their five largest topics to within
+0.01.
 
 \paragraph{The walk.} The chains are compared by the Gelman--Rubin $\hat R$
 of every topic's share \citep[§11.4]{gelman2013bda3}, in the set from Eric
@@ -636,7 +666,7 @@ Unrelated & 8 & 22 of 34 & 3.07 (\textit{fire-flame-flash}) & 0.98--2.04 \\
 \end{center}
 
 \noindent The chains have not mixed in 10\,000 steps, whether or not they
-share an origin, which is why the hard model's intervals resample whole
+share an origin, which is why both models' intervals resample whole
 chains (chain lifts: 5th to 95th percentile). There is no systematic drift
 after the burn-in: over windows of 1\,000 steps the median absolute slope of
 a topic's lift is 0.033 per 1\,000 steps, the steepest 0.107
