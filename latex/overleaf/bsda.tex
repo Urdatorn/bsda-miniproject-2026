@@ -274,9 +274,10 @@ only (tomotopy, \citealt{lee2022tomotopy}),\footnote{In LDA each
 document $d$ has topic shares $\theta_d \sim \mathrm{Dirichlet}(\alpha)$ and
 each topic a word distribution $\phi_k \sim \mathrm{Dirichlet}(\beta_k)$;
 every lemma token first draws a topic $z \sim \theta_d$, then the lemma from
-$\phi_z$. Tomotopy fits this by collapsed Gibbs sampling: $\theta$ and $\phi$
-are integrated out, each token's topic is redrawn in turn given all the
-others, and $\alpha$, one concentration per topic, is re-estimated every ten
+$\phi_z$. Tomotopy fits this by collapsed Gibbs sampling
+\citep{geman1984stochastic}: $\theta$ and $\phi$ are integrated out, and each
+token's topic, a discrete variable that HMC cannot sample since it needs a
+gradient, is redrawn in turn from its full conditional given all the others, and $\alpha$, one concentration per topic, is re-estimated every ten
 sweeps by maximising the marginal likelihood. After 10\,000 sweeps of
 burn-in, twenty states 500 sweeps apart are kept, and in each
 $\phi_{k,w} \propto n_{k,w} + \beta_{k,w}$ is read off the counts $n$. Seeding changes only the prior: a lemma of
