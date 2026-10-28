@@ -396,14 +396,19 @@ entirely above 1; italic: entirely below 1.}
 \label{tab:key}
 \end{table}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/trajectory_persuade.pdf}
+\caption{Soft lift of \textit{persuade-man-king} against Sophocles along
+four chains (windows of 1,000 steps). Dotted: all sixteen chains.}
+\label{fig:trajectory}
+\end{figure}
+
 \paragraph{Hard topics.} The imputations write tragedy: of nine genres their
 topic profile is nearest to tragedy (Jensen--Shannon divergence 0.044 bits,
 against 0.082 for comedy and 0.150 for epic). It is not, however,
-Sophocles' profile (\cref{fig:lift}). Seven topics stand out above it:
-\textit{marriage-couch-bed} (lift 1.85), \textit{god-true-lord} (1.59),
-\textit{wrong-vengeance-err} (1.58), \textit{begin-happen-necessity} (1.34),
-\textit{temple-offer-precinct} (1.33), \textit{child-before-bestow} (1.26)
-and \textit{persuade-man-king} (1.21). Fourteen stand out below it, the sea and its
+Sophocles' profile (\cref{fig:lift}). Seven topics stand out above it, led
+by \textit{marriage-couch-bed} (lift 1.85), and fourteen below, the sea and its
 rivers almost vanishing (\textit{ship-sail-hull} 0.05,
 \textit{river-plain-afar} 0.04).
 
@@ -428,7 +433,9 @@ Attic (1.18, interval including 1): an excess over tragedy, not over Greek
 at large. Its excess is one of oaths: per thousand lemmata the
 restorations have \textgreek{ὄμνυμι}, swear, 14.4 times against 0.2 in
 Sophocles and \textgreek{ὅρκος}, oath, 5.1 against 0.4, a theme the papyrus
-itself sets with \textgreek{ὅρκον γάρ} at the start of v.~23. The other topics that stand out under the hard
+itself sets with \textgreek{ὅρκον γάρ} at the start of v.~23. Nor is it
+one chain's: 15 of the 16 chains lie above Sophocles over their whole run,
+though they wander (0.67--4.29, \cref{fig:trajectory}). The other topics that stand out under the hard
 model fall back towards Sophocles, \textit{god-true-lord} to 1.11, \textit{wrong-vengeance-err}
 to 1.06 and \textit{marriage-couch-bed} to 1.04, all with intervals that
 include 1. The reason is visible in $\phi$: the most frequent words of
@@ -436,16 +443,14 @@ tragedy leave their clusters for the free topics, which take three quarters
 of the imputations' mean profile; the hard model's excess of the god topic was
 mostly an excess of \textgreek{θεός}, which goes to \textit{god-evil-word}.
 
-\paragraph{Robustness.} Eight chains from unrelated starts give hard log lifts that correlate at
-0.76 with the main set's. The judge matters more: a pilot with Claude Sonnet
-5.5 as judge correlates with the Qwen profile at only 0.30, yet
-\textit{persuade-man-king} and \textit{wrong-vengeance-err} stay above
-Sophocles.
-The soft lifts barely move between the states of $\phi$ but scale with the prior on $\theta$, whose
+\paragraph{Robustness.} Chains from unrelated starts give hard log lifts
+that correlate at 0.76 with the main set's; a pilot with Claude Sonnet 5.5 as
+judge, at only 0.30, yet \textit{persuade-man-king} and
+\textit{wrong-vengeance-err} stay above Sophocles. The soft lifts barely move
+between the states of $\phi$ but scale with the prior on $\theta$, whose
 pseudo-lemmata compete with a document's thirty: a flat Dirichlet(1) shrinks
-every log lift to about 0.4 of its learned-prior value. The size of a lift
-is thus relative to the prior; the order of the topics is not, and
-\textit{persuade-man-king} leads under all four priors tried.
+every log lift to about 0.4 of its learned-prior value. The order does not
+move, and \textit{persuade-man-king} leads under all four priors tried.
 
 \section{Conclusions}
 \label{conclusions}
