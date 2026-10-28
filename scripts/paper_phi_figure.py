@@ -16,6 +16,8 @@ TOPIC = "marriage-couch-bed"
 HEAD = 1                                                    # the first lemma of the vocabulary
 OWN = ["γάμος", "λέκτρον", "νύμφη", "παρθένος", "πόσις"]    # lemmata of the topic
 SPELLING = {"ἀατός": "ἀάατος"}                             # the lemmatiser's form in data/vocab.json, corrected for display
+GLOSS = {"ἀατός": "inviolable", "γάμος": "marriage", "λέκτρον": "bed", "νύμφη": "bride", "παρθένος": "maiden",
+         "πόσις": "husband", "ὠφέλημα": "benefit"}
 
 
 def phi_row(path, topic):
@@ -47,7 +49,7 @@ def main(out_path):
         if n and rank[j] > rank[index[n - 1]] + 1:          # skipped lemmata: leave a slot for "…"
             gaps.append(x)
             x += 1
-        labels.append(r"\textgreek{%s}" % SPELLING.get(vocab[j], vocab[j]))
+        labels.append("\\textgreek{%s}\n(%s)" % (SPELLING.get(vocab[j], vocab[j]), GLOSS[vocab[j]]))   # the gloss on a second line
         heights.append(phi[j])
         xs.append(x)
         x += 1
@@ -73,7 +75,7 @@ def main(out_path):
     top.plot([0], [0], transform=top.transAxes, **mark)                         # the break, on the y axis
     low.plot([0], [1], transform=low.transAxes, **mark)
     low.set_xticks(xs)
-    low.set_xticklabels(labels, rotation=55, ha="right", rotation_mode="anchor")
+    low.set_xticklabels(labels, rotation=90, ha="right", va="center", rotation_mode="anchor", multialignment="right", linespacing=1.0)
     for g in gaps:                                          # skipped lemmata, upright on the axis
         low.text(g, -0.12, r"\dots", transform=low.get_xaxis_transform(), ha="center", va="top")
     low.set_xlim(-0.6, x - 0.4)
