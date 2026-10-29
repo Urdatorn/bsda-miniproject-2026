@@ -304,8 +304,7 @@ the posterior
 \[p(\theta \mid w_{1:N}) \propto \mathrm{Dirichlet}(\theta \mid \alpha)
   \prod_{n=1}^{N} \sum_{k=1}^{K} \theta_k\, \phi_{k w_n}\]
 has no closed form. It is sampled with NUTS in Stan
-\citep{carpenter2017stan}, one document at a time, by the program shown in the
-frame. This is done for each of the twenty states, and the twenty posteriors
+\citep{carpenter2017stan}, one document at a time, by the program in \cref{fig:stan}. This is done for each of the twenty states, and the twenty posteriors
 are pooled, so that the intervals carry the uncertainty in $\phi$ as well as
 in $\theta$ (diagnostics in \autoref{diagnostics}).
 
@@ -321,7 +320,8 @@ Most lemmata, like the first and the last, get about $4\cdot10^{-5}$.}
 \label{fig:phi}
 \end{figure}
 
-\begin{lstlisting}[float=tp]
+\begin{figure}[t]
+\begin{lstlisting}
 data {
   int<lower=1> N;
   int<lower=1> K;
@@ -342,6 +342,10 @@ model {
       log_theta + logphi[n]');
 }
 \end{lstlisting}
+\caption{The Stan program of one document's posterior: $\theta$
+given its $N$ lemmata under one state $(\phi, \alpha)$ of the LDA.}
+\label{fig:stan}
+\end{figure}
 
 \subsection{Comparing the imputations with Sophocles}
 
