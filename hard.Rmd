@@ -985,6 +985,154 @@ cat(sprintf(sentence, agreement, sum(!is.na(starts$lift_spread)),
             vengeance$chain_q95, marriage$lift_spread), "\n")
 ```
 
+## Forty chains
+
+Sixteen more chains from unrelated starts, `chains_judge235_t4_spread2`,
+make the check larger. Their starts were chosen in the same way from the
+late states of the twenty-four chains above, avoiding the earlier starts
+(89 to 100 per cent of the restored words differ between any two of the
+forty starts), with the same judge and settings, run as four segments of
+2,500 steps each. The walk then has forty chains: sixteen from Eric's text
+and twenty-four from unrelated starts. The chains are pooled in two ways,
+the twenty-four unrelated-start chains alone and all forty, and each pool
+is read three times: by its posterior interval, which treats every
+snapshot as a document of its own; by $\hat R$ over its chains on the
+steps they all cover; and by resampling the chains with replacement, which
+lets whole chains drop out and is the interval that the dependence between
+a chain's snapshots calls for. A topic the walk has settled should be
+raised, or not, under every reading.
+
+```{r spread2_set}
+spread2 <- filter(untilted, restorer == "walk",
+                  chain_set == "chains_judge235_t4_spread2")
+stopifnot(nrow(spread2) > 0)
+spread2$chain_id <- paste(spread2$chain_set, spread2$chain)
+spread2$snapshot <- paste(spread2$chain_id, spread2$iteration)
+# a chain whose last segment has not run yet stops before step 10,000
+spread2_last <- tapply(spread2$iteration, spread2$chain_id, max)
+short_chains <- names(spread2_last)[spread2_last < 10000]
+
+# One pool of chains read three ways: the posterior lift with its interval,
+# R-hat over the chains on their common steps, and the lift's interval when
+# the chains are resampled with replacement. The resampled lift is the mean
+# of the picked chains' mean shares over Sophocles' posterior mean, as in
+# the chain lifts of the agreement section.
+read_pool <- function(pool, replicates = 2000) {
+  documents <- make_documents(pool, pool$snapshot)
+  posterior <- summarise_documents(documents, baseline)
+  lemmata <- lemma_table(pool, pool$snapshot)
+  names(lemmata)[names(lemmata) == "group"] <- "snapshot"
+  counts <- table(lemmata$snapshot,
+                  factor(lemmata$topic, levels = topic_names))
+  pool_shares <- counts / rowSums(counts)
+  row <- match(rownames(counts), pool$snapshot)
+  chain <- pool$chain_id[row]
+  step <- pool$iteration[row]
+  common <- step <= min(tapply(step, chain, max))
+  stopifnot(length(unique(table(chain[common]))) == 1)
+  rhats <- sapply(seq_len(K), function(i) {
+    rhat(pool_shares[common, i], chain[common])
+  })
+  chain_means <- apply(pool_shares, 2, tapply, chain, mean)
+  resampled <- matrix(NA, replicates, K)
+  for (b in seq_len(replicates)) {
+    picked <- sample(nrow(chain_means), replace = TRUE)
+    resampled[b, ] <- colMeans(chain_means[picked, ]) / baseline$mean
+  }
+  data.frame(topic = topic_names, chains = nrow(chain_means),
+             lift = posterior$lift, lift_q05 = posterior$lift_q05,
+             lift_q95 = posterior$lift_q95, rhat = rhats,
+             chain_q05 = apply(resampled, 2, quantile, probs = 0.05),
+             chain_q95 = apply(resampled, 2, quantile, probs = 0.95))
+}
+spread2_pool <- read_pool(spread2)
+unrelated <- read_pool(bind_rows(spread, spread2))
+forty <- read_pool(bind_rows(imputations, spread, spread2))
+```
+
+The lift of every topic in each set and in the two pools, with, for the
+forty chains, the posterior interval, $\hat R$ and the chain-resampled
+interval; ordered by the forty chains' lift.
+
+```{r forty_table}
+pools <- data.frame(topic = topic_names,
+                    eric = rows$lift,
+                    spread = spread_posterior$lift,
+                    spread2 = spread2_pool$lift,
+                    unrelated = unrelated$lift,
+                    forty = forty$lift,
+                    q05 = forty$lift_q05, q95 = forty$lift_q95,
+                    rhat = forty$rhat,
+                    chain_q05 = forty$chain_q05, chain_q95 = forty$chain_q95)
+pools <- arrange(pools, desc(forty))
+knitr::kable(pools, digits = 2, row.names = FALSE,
+             col.names = c("topic", "Eric 16", "spread 8", "spread2 16",
+                           "unrelated 24", "all 40", "q05", "q95", "R-hat",
+                           "chain q05", "chain q95"))
+```
+
+```{r forty_plot, fig.height = 5.5}
+# The forty chains' lift with its two intervals: the posterior's and the
+# chain-resampled one
+forty_long <- bind_rows(
+  data.frame(topic = forty$topic, lift = forty$lift,
+             low = forty$lift_q05, high = forty$lift_q95,
+             interval = "posterior"),
+  data.frame(topic = forty$topic, lift = forty$lift,
+             low = forty$chain_q05, high = forty$chain_q95,
+             interval = "chains resampled"))
+forty_long$topic <- reorder(forty_long$topic, forty_long$lift)
+forty_long$interval <- factor(forty_long$interval,
+                              levels = c("posterior", "chains resampled"))
+ggplot(forty_long, aes(x = lift, y = topic, colour = interval)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_pointrange(aes(xmin = low, xmax = high), size = 0.25,
+                  linewidth = 0.4, position = position_dodge(width = 0.5)) +
+  scale_x_log10() +
+  scale_colour_manual(values = c(okabe_ito[["vermillion"]],
+                                 okabe_ito[["green"]]), name = NULL) +
+  labs(x = "lift against Sophocles over forty chains (log scale)",
+       y = NULL) +
+  theme(legend.position = "bottom")
+```
+
+```{r forty_summary, results = "asis"}
+raised_in <- function(pool, low = "lift_q05") {
+  as.character(arrange(filter(pool, .data[[low]] > 1), desc(lift))$topic)
+}
+or_none <- function(topics) {
+  if (length(topics) == 0) "none" else paste(topics, collapse = ", ")
+}
+# how alike the three sets are: correlations of the log lifts
+log_pools <- log(pools[, c("eric", "spread", "spread2")])
+log_pools[log_pools == -Inf] <- NA
+agreement <- cor(log_pools, use = "pairwise.complete.obs")
+forty_sorted <- arrange(forty, desc(rhat))
+cat(sprintf(paste(
+  "The log lifts of the new sixteen chains correlate at %.2f with the",
+  "eight earlier unrelated starts' and at %.2f with the Eric-start",
+  "chains'. Raised on the posterior interval: %s over the twenty-four",
+  "unrelated-start chains, %s over all forty. Raised when the chains are",
+  "resampled: %s over the twenty-four, %s over all forty. Over the forty",
+  "chains %d of the %d topics with an R-hat have one above 1.1; the",
+  "largest is %.2f for %s.\n\n"),
+  agreement["spread2", "spread"], agreement["spread2", "eric"],
+  or_none(raised_in(unrelated)), or_none(raised_in(forty)),
+  or_none(raised_in(unrelated, "chain_q05")),
+  or_none(raised_in(forty, "chain_q05")),
+  sum(forty$rhat > 1.1, na.rm = TRUE), sum(!is.na(forty$rhat)),
+  forty_sorted$rhat[1], forty_sorted$topic[1]))
+if (length(short_chains) > 0) {
+  cat(sprintf(paste(
+    "This is a provisional reading: %d of the new chains (%s) are still",
+    "running and stop here at step %d, so their last segment is missing",
+    "and R-hat over the pools uses the steps up to %d.\n"),
+    length(short_chains), paste(sub(".* ", "", short_chains),
+                                collapse = ", "),
+    max(spread2_last[short_chains]), min(spread2_last)))
+}
+```
+
 ## A third judge
 
 The judge is the one part of the walk that is a language model's opinion,
