@@ -123,7 +123,7 @@
 }
 \lstset{
   language=Stan,
-  basicstyle=\ttfamily\footnotesize,
+  basicstyle=\ttfamily,
   keywordstyle=\bfseries\color{blue!60!black},
   keywordstyle=[2]\color{teal!70!black},
   keywordstyle=[3]\color{purple!70!black},
@@ -325,7 +325,7 @@ Most lemmata, like the first and the last, get about $4\cdot10^{-5}$.}
 data {
   int<lower=1> N;
   int<lower=1> K;
-  matrix[N, K] logphi; // log phi[:, w_n] for each lemma
+  matrix[N, K] logphi; // log phi[:, w_n]
   vector<lower=0>[K] alpha; // the LDA's prior
 }
 parameters {
@@ -338,7 +338,8 @@ model {
   // likelihood
   vector[K] log_theta = log(theta);
   for (n in 1:N)
-    target += log_sum_exp(log_theta + logphi[n]');
+    target += log_sum_exp(
+      log_theta + logphi[n]');
 }
 \end{lstlisting}
 
