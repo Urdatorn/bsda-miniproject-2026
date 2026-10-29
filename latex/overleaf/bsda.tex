@@ -292,7 +292,8 @@ alone, is now split between two topics: given the word, the free topic
 \textit{god-evil-word} has probability 0.82 and \textit{god-true-lord} 0.16
 ($\phi_{k,w}$ normalised over $k$). The LDA also learns the prior on a
 document's topic shares, a Dirichlet($\alpha$) with one concentration per
-topic: below 1 for every seeded topic (0.04--0.57) and between 4 and 9 for
+topic, the asymmetric prior that \citet{wallach2009rethinking} find to fit
+topic models better than a symmetric one: below 1 for every seeded topic (0.04--0.57) and between 4 and 9 for
 the free ones, which a typical document is thus expected to be mostly made of.
 
 The fit has two stages, and the second never feeds back into the first (a
@@ -374,19 +375,23 @@ stand out under the soft model in bold (interval entirely above 1) or italic
 
 \begin{table}[t]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{lrrrrrr}
+\begin{tabular}{lrrr}
 \toprule
- & \multicolumn{3}{c}{hard} & \multicolumn{3}{c}{soft} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-7}
-Topic & Soph. & A.\,\&\,E. & Attic & Soph. & A.\,\&\,E. & Attic \\
+Topic & Soph. & A.\,\&\,E. & Attic \\
 \midrule
-persuade-man-king & \textbf{1.21} & \textbf{1.19} & 1.04 & \textbf{2.01} & \textbf{2.06} & 1.18 \\
-god-true-lord & \textbf{1.59} & \textbf{1.89} & \textbf{1.48} & 1.11 & \textbf{1.41} & 0.93 \\
-wrong-vengeance-err & \textbf{1.58} & \textbf{1.49} & \textbf{1.61} & 1.06 & 1.08 & 0.99 \\
-marriage-couch-bed & \textbf{1.85} & \textit{0.79} & \textbf{2.97} & 1.04 & \textit{0.77} & 1.13 \\
-child-before-bestow & \textbf{1.26} & \textbf{1.66} & \textbf{4.92} & 1.00 & \textbf{1.31} & \textbf{1.71} \\
+\multicolumn{4}{l}{Hard topics} \\
+persuade-man-king & \textbf{1.21} & \textbf{1.19} & 1.04 \\
+god-true-lord & \textbf{1.59} & \textbf{1.89} & \textbf{1.48} \\
+wrong-vengeance-err & \textbf{1.58} & \textbf{1.49} & \textbf{1.61} \\
+marriage-couch-bed & \textbf{1.85} & \textit{0.79} & \textbf{2.97} \\
+child-before-bestow & \textbf{1.26} & \textbf{1.66} & \textbf{4.92} \\
+\midrule
+\multicolumn{4}{l}{Soft topics} \\
+persuade-man-king & \textbf{2.01} & \textbf{2.06} & 1.18 \\
+god-true-lord & 1.11 & \textbf{1.41} & 0.93 \\
+wrong-vengeance-err & 1.06 & 1.08 & 0.99 \\
+marriage-couch-bed & 1.04 & \textit{0.77} & 1.13 \\
+child-before-bestow & 1.00 & \textbf{1.31} & \textbf{1.71} \\
 \bottomrule
 \end{tabular}
 \caption{Lift of the imputations against the three baselines (Sophocles,
@@ -400,7 +405,8 @@ entirely above 1; italic: entirely below 1.}
 \centering
 \includegraphics[width=\linewidth]{figures/trajectory_persuade.pdf}
 \caption{Soft lift of \textit{persuade-man-king} against Sophocles along
-four chains (windows of 1,000 steps). Dotted: all sixteen chains.}
+four chains, numbered at their ends (windows of 1,000 steps). Dotted: all
+sixteen chains.}
 \label{fig:trajectory}
 \end{figure}
 
@@ -687,7 +693,6 @@ a topic's lift is 0.033 per 1\,000 steps, the steepest 0.107
 
 \begin{table*}[htbp]
 \centering
-\footnotesize
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llrr}
 \toprule
 Topic & Label lemmata & Share of vocabulary (\%) & Share of tragic tokens (\%) \\

@@ -24,7 +24,7 @@ def main(vocab_path, out_path):
     n_lemmata, n_tokens = sum(t["size"] for t in topics), sum(t["tragic_tokens"] for t in topics)
     lines = ["% The topics of the hard model: English gloss, the three label lemmata, and the cluster's shares.",
              "% Needs xelatex (or lualatex) with a main font covering polytonic Greek, and \\usepackage{booktabs}; spans both columns of a two-column layout.",
-             "\\begin{table*}[htbp]", "\\centering", "\\footnotesize", "\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}llrr}", "\\toprule",
+             "\\begin{table*}[htbp]", "\\centering", "\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}llrr}", "\\toprule",
              "Topic & Label lemmata & Share of vocabulary (\\%) & Share of tragic tokens (\\%) \\\\", "\\midrule"]
     for t in topics:
         lines.append(f"{t['label']} & {t['lemmata']} & {100 * t['size'] / n_lemmata:.1f} & {100 * t['tragic_tokens'] / n_tokens:.1f} \\\\")
