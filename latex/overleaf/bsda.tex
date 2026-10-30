@@ -109,7 +109,7 @@
 % Stan code: listings with a small Stan language definition
 \usepackage{listings}
 \usepackage{tikz}
-\usetikzlibrary{shapes.geometric,arrows.meta,positioning,calc}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,calc,decorations.pathreplacing}
 \lstdefinelanguage{Stan}{
   morekeywords={data,transformed,parameters,model,generated,quantities,
     functions,for,in,if,else,while,target,return,print,reject},
@@ -621,7 +621,7 @@ chains do not mix within that budget (\autoref{diagnostics}).
 \centering
 \begin{tikzpicture}[
   node distance=5mm,
-  box/.style={draw, rounded corners=2pt, align=left, text width=110mm, inner sep=5pt, fill=white},
+  box/.style={draw, rounded corners=2pt, align=left, text width=108mm, inner sep=5pt, fill=white},
   model/.style={box, fill=blue!6},
   judge/.style={box, fill=orange!10},
   dec/.style={draw, diamond, aspect=2.6, align=center, inner sep=1.5pt, fill=white},
@@ -651,8 +651,9 @@ chains do not mix within that budget (\autoref{diagnostics}).
 \node[dec, below=of acc] (ok) {accepted?};
 \node[box, below=of ok] (upd) {\textbf{Update} the verse; keep every tenth
   state as a document.};
-\node[left=4mm of pick, align=right] {The Gibbs\\part};
-\node[left=4mm of acc, align=right] {The Metropolis\\part};
+\coordinate (brace) at ($(pick.west)+(-3mm,0)$);
+\draw[decorate, decoration={brace, amplitude=5pt}] (pick.south -| brace) -- node[left=6pt, align=right] {The Gibbs\\part} (pick.north -| brace);
+\draw[decorate, decoration={brace, amplitude=5pt}] (ok.south -| brace) -- node[left=6pt, align=right] {The Metropolis\\part} (sto.north -| brace);
 \draw[arr] (start) -- (pick);
 \draw[arr] (pick) -- (sto);
 \draw[arr] (sto) -- (filt);
