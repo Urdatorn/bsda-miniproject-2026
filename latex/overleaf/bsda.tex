@@ -225,13 +225,15 @@ We are now ready to ask: are there topics that consistently stand out across cha
 
 The imputations come from a complex walk over restorations
 of the seventeen damaged verses (vv.~13--29), whose details are left to \autoref{walk}.
-Sixteen chains start from eight reconstructions by Eric Cullhed, and a state is
-recorded every ten steps after a burn-in of 300, giving 17\,120 restorations.
+Twenty-four chains start from restorations as far apart as possible, any
+two differing in 89--100\,\% of their restored words; each runs 10\,000
+steps, and a state is recorded every ten steps after a burn-in of 300,
+giving 23\,280 restorations.
 Every text is lemmatised and reduced to a bag of lemmata over a vocabulary of
 3\,128 lemmata.
 
 A \textbf{document} is one whole restoration of the seventeen verses, on
-average 26 topic-bearing lemmata; only restored text counts, never the
+average 27 topic-bearing lemmata; only restored text counts, never the
 surviving letters. The baseline is Sophocles himself: his extant trimeters,
 cut into 444 windows of seventeen consecutive verses, the shape of the
 lacuna. Two further baselines tell what is unsophoclean from what is merely
@@ -408,18 +410,18 @@ stand out under the soft model in bold (interval entirely above 1) or italic
 Topic & Soph. & A.\,\&\,E. & Attic \\
 \midrule
 \multicolumn{4}{l}{Hard topics} \\
-persuade-man-king & \textbf{1.21} & \textbf{1.19} & 1.04 \\
-god-true-lord & \textbf{1.59} & \textbf{1.89} & \textbf{1.48} \\
-wrong-vengeance-err & \textbf{1.58} & \textbf{1.49} & \textbf{1.61} \\
-marriage-couch-bed & \textbf{1.85} & \textit{0.79} & \textbf{2.97} \\
-child-before-bestow & \textbf{1.26} & \textbf{1.66} & \textbf{4.92} \\
+persuade-man-king & \textbf{1.26} & \textbf{1.23} & 1.08 \\
+god-true-lord & \textbf{1.83} & \textbf{2.18} & \textbf{1.71} \\
+child-before-bestow & \textbf{1.66} & \textbf{2.19} & \textbf{6.48} \\
+marriage-couch-bed & \textbf{2.13} & 0.91 & \textbf{3.42} \\
+wrong-vengeance-err & \textbf{1.33} & \textbf{1.26} & \textbf{1.36} \\
 \midrule
 \multicolumn{4}{l}{Soft topics} \\
-persuade-man-king & \textbf{2.01} & \textbf{2.06} & 1.18 \\
-god-true-lord & 1.11 & \textbf{1.41} & 0.93 \\
-wrong-vengeance-err & 1.06 & 1.08 & 0.99 \\
-marriage-couch-bed & 1.04 & \textit{0.77} & 1.13 \\
-child-before-bestow & 1.00 & \textbf{1.31} & \textbf{1.71} \\
+persuade-man-king & \textbf{2.62} & \textbf{2.69} & \textbf{1.54} \\
+god-true-lord & \textbf{1.36} & \textbf{1.72} & 1.13 \\
+child-before-bestow & \textbf{1.29} & \textbf{1.69} & \textbf{2.21} \\
+marriage-couch-bed & 1.26 & 0.93 & \textbf{1.37} \\
+wrong-vengeance-err & 1.09 & 1.11 & 1.02 \\
 \bottomrule
 \end{tabular}
 \caption{Lift of the imputations against the three baselines (Sophocles,
@@ -433,60 +435,65 @@ entirely above 1; italic: entirely below 1.}
 \centering
 \includegraphics[width=\linewidth]{figures/trajectory_persuade.pdf}
 \caption{Soft lift of \textit{persuade-man-king} against Sophocles along
-four chains, numbered at their ends (windows of 1,000 steps). Dotted: all
-sixteen chains.}
+four of the twenty-four chains, numbered at their ends (windows of 1,000
+steps). Dotted: all chains.}
 \label{fig:trajectory}
 \end{figure}
 
 \paragraph{Hard topics.} The imputations write tragedy: of nine genres their
-topic profile is nearest to tragedy (Jensen--Shannon divergence 0.044 bits,
-against 0.082 for comedy and 0.150 for epic). It is not, however,
-Sophocles' profile (\cref{fig:lift}). Seven topics stand out above it, led
-by \textit{marriage-couch-bed} (lift 1.85), and fourteen below, the sea and its
-rivers almost vanishing (\textit{ship-sail-hull} 0.05,
-\textit{river-plain-afar} 0.04).
+topic profile is nearest to tragedy (Jensen--Shannon divergence 0.052 bits,
+against 0.089 for comedy and 0.140 for epic). It is not, however,
+Sophocles' profile (\cref{fig:lift}). Six topics stand out above it, led
+by \textit{marriage-couch-bed} (lift 2.13), and fifteen below, the sea and its
+rivers almost vanishing (\textit{ship-sail-hull} 0.12,
+\textit{river-plain-afar} 0.17).
 
 The further baselines separate the unsophoclean from the untragic
 (\cref{tab:key}).
 \textit{god-true-lord}, \textit{wrong-vengeance-err} and
-\textit{child-before-bestow} stand out above all three (lifts 1.26--4.92).
-\textit{marriage-couch-bed} stands out against Sophocles (1.85) and Classical
-Attic (2.97) but falls below Aeschylus and Euripides (0.79, interval
-0.61--0.98), who use that vocabulary more than Sophocles does. Lemma by
-lemma, the excess of \textit{god-true-lord} is a single word: \textgreek{θεός}
-occurs 43.9 times per thousand topic lemmata in the restorations against 15.6
-in Sophocles. That of \textit{wrong-vengeance-err} is spread over the matter
-of the play: \textgreek{χάρις}, \textgreek{πόνος}, \textgreek{δίκη}, \textgreek{πάθος} and \textgreek{τιμωρός}, favour,
-toil, justice, suffering and the avenger.
+\textit{child-before-bestow} stand out above all three (lifts 1.26--6.48).
+\textit{marriage-couch-bed} stands out against Sophocles (2.13) and Classical
+Attic (3.42) but not against Aeschylus and Euripides (0.91, interval
+0.71--1.12), who use that vocabulary more than Sophocles does. Lemma by
+lemma, almost half the excess of \textit{god-true-lord} is a single word:
+\textgreek{θεός} occurs 45.7 times per thousand topic lemmata in the
+restorations against 15.6 in Sophocles. That of \textit{wrong-vengeance-err}
+is spread over the matter of the play: \textgreek{χάρις}, \textgreek{δίκη},
+\textgreek{πάθος}, \textgreek{πόνος} and \textgreek{τιμωρός}, favour,
+justice, suffering, toil and the avenger.
 
-\paragraph{Soft topics.} Under the soft model only
-\textit{persuade-man-king} stands out above Sophocles (lift 2.01, interval
-1.47--2.65), and twelve topics below. It is
-as far above Aeschylus and Euripides (2.06) but not clearly above Classical
-Attic (1.18, interval including 1): an excess over tragedy, not over Greek
-at large. Its excess is one of oaths: per thousand lemmata the
-restorations have \textgreek{ὄμνυμι}, swear, 14.4 times against 0.2 in
-Sophocles and \textgreek{ὅρκος}, oath, 5.1 against 0.4, a theme the papyrus
+\paragraph{Soft topics.} Under the soft model three topics stand out above
+Sophocles and sixteen below. \textit{persuade-man-king} leads by far (lift
+2.62, interval 1.92--3.36), before \textit{god-true-lord} (1.36) and
+\textit{child-before-bestow} (1.29). It stands out above all three
+baselines, Aeschylus and Euripides (2.69) and Classical Attic (1.54) too,
+as does \textit{child-before-bestow}: an excess over Greek at large, not
+only over Sophocles. The excess of \textit{persuade-man-king} is one of
+oaths: per thousand lemmata the
+restorations have \textgreek{ὄμνυμι}, swear, 16.6 times against 0.2 in
+Sophocles and \textgreek{ὅρκος}, oath, 10.2 against 0.4, a theme the papyrus
 itself sets with \textgreek{ὅρκον γάρ} at the start of v.~23. Nor is it
-one chain's: 15 of the 16 chains lie above Sophocles over their whole run,
-though they wander (0.67--4.29, \cref{fig:trajectory}). The other topics that stand out under the hard
-model fall back towards Sophocles, \textit{god-true-lord} to 1.11, \textit{wrong-vengeance-err}
-to 1.06 and \textit{marriage-couch-bed} to 1.04, all with intervals that
-include 1. The reason is visible in $\phi$: the most frequent words of
-tragedy leave their clusters for the free topics, which take three quarters
-of the imputations' mean profile; the hard model's excess of the god topic was
-mostly an excess of \textgreek{θεός}, which goes to \textit{god-evil-word}.
+one chain's: 22 of the 24 chains lie above Sophocles over their whole run,
+though they wander (0.85--7.45, \cref{fig:trajectory}). Of the other topics
+that stand out under the hard model, \textit{marriage-couch-bed} falls back
+to 1.26 and \textit{wrong-vengeance-err} to 1.09, both with intervals that
+include 1, and \textit{god-true-lord} shrinks from 1.83 to 1.36. The reason
+is visible in $\phi$: the most frequent words of tragedy leave their
+clusters for the free topics, which take three quarters of the imputations'
+mean profile, and \textgreek{θεός}, which carried much of the hard model's
+excess of the god topic, goes mostly to \textit{god-evil-word}.
 
-\paragraph{Robustness.} Two rounds of chains from unrelated starts (8 and
-16) give hard log lifts that correlate at 0.73--0.76 with the main set's and
-with each other. Over all forty chains, resampled whole, ten topics stand out
-above Sophocles, the main set's seven among them. A pilot with Claude Sonnet
-5.5 as judge correlates at only 0.30, yet \textit{persuade-man-king} and
-\textit{wrong-vengeance-err} stay above Sophocles. The soft lifts barely move
-between the states of $\phi$ but scale with the prior on $\theta$, whose
-pseudo-lemmata compete with a document's thirty: a flat Dirichlet(1) shrinks
-every log lift to about 0.4 of its learned-prior value. The order does not
-move, and \textit{persuade-man-king} leads under all four priors tried.
+\paragraph{Robustness.} The two rounds of starts, chosen separately (8
+and 16 chains), give hard log lifts that correlate at 0.73. The judge
+matters more: from Eric Cullhed's reconstructions, a pilot with Claude
+Sonnet 5.5 as judge correlates with the Qwen profile at only 0.30, yet
+\textit{persuade-man-king} and \textit{wrong-vengeance-err} stay above
+Sophocles under every judge. The soft lifts barely move between the states
+of $\phi$ but scale with the prior on $\theta$, whose pseudo-lemmata compete
+with a document's thirty: a flat Dirichlet(1) shrinks every log lift to
+about half its learned-prior value. The order barely moves (log lifts
+correlate at 0.89--0.95), and \textit{persuade-man-king} leads under all
+four priors tried.
 
 \section{Conclusions}
 \label{conclusions}
@@ -598,9 +605,14 @@ judge's preference for the more coherent of the old and the new line. Nothing
 in the walk rewards Sophoclean style as such, so it remains a source of
 imputations rather than a search for the most Sophoclean text.
 
-Sixteen chains start from Eric Cullhed's eight reconstructions and run
-10\,000 steps each; after a burn-in of 300 steps every tenth state is kept.
-Twenty-four more chains from unrelated starts serve as a check. The chains do not mix within that budget (\autoref{diagnostics}).
+Twenty-four chains start from restorations as far apart in words as
+possible, chosen in two rounds of eight and sixteen: each start is the
+candidate whose smallest word distance to the starts already chosen is
+largest. One is Eric Cullhed's reconstruction, the others late states of
+earlier chains. Every chain runs 10\,000 steps; after a burn-in of 300 steps
+every tenth state is kept. Sixteen earlier chains from Cullhed's eight
+reconstructions, variants of one text, serve only to compare judges. The
+chains do not mix within that budget (\autoref{diagnostics}).
 
 \begin{center}
 \begin{tikzpicture}[
@@ -663,7 +675,8 @@ of 0.99: with the learned $\alpha_k$ below 1 the prior density is unbounded at
 the faces of the simplex, and Stan's default of 0.8 left divergences in
 nearly every document. The table counts the documents flagged within one
 state (the median over the twenty states), and the worst values over all
-states.
+states. The soft model was fitted while the last chain stood at step
+7\,500, hence 250 imputations fewer than the hard model reads.
 
 \begin{center}
 \begin{tabular}{lrrrrrrr}
@@ -672,10 +685,10 @@ states.
 \cmidrule(lr){3-6}
 Set & Documents & $\hat R > 1.01$ & ESS $< 400$ & Divergent & Tree depth & $\hat R$ & bulk ESS \\
 \midrule
-Imputations & 17\,120 & 1\,390 & 446 & 8 & 345 & 1.46 & 8 \\
-Sophocles & 443 & 60 & 29 & 0 & 21 & 1.22 & 13 \\
+Imputations & 23\,030 & 1\,921 & 568 & 10 & 543 & 1.19 & 15 \\
+Sophocles & 443 & 60 & 29 & 0 & 20 & 1.22 & 13 \\
 Aeschylus, Euripides & 1\,174 & 165 & 93 & 1 & 36 & 1.32 & 10 \\
-Classical Attic & 23\,328 & 2\,541 & 1\,088 & 12 & 600 & 1.50 & 7 \\
+Classical Attic & 23\,328 & 2\,540 & 1\,088 & 12 & 600 & 1.50 & 7 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -684,7 +697,7 @@ Classical Attic & 23\,328 & 2\,541 & 1\,088 & 12 & 600 & 1.50 & 7 \\
 whose chains disagree: a seeded topic with $\alpha_k$ of 0.1 or 0.2 that the
 document does not use piles its mass against $\theta_k = 0$, with a thin
 tail that a chain may stray into. Under a flat Dirichlet(1) prior the same
-documents sample without a single flag. The lifts average over hundreds or
+documents sample with hardly a flag. The lifts average over hundreds or
 thousands of documents, in which one document's Monte Carlo error is
 averaged away, and the twenty states, each a separate run, agree
 (\autoref{results}). One imputation and one Sophoclean window, refitted with
@@ -692,8 +705,9 @@ rstan, reproduce the posterior means of their five largest topics to within
 0.01.
 
 \paragraph{The walk.} The chains are compared by the Gelman--Rubin $\hat R$
-of every topic's share \citep[§11.4]{gelman2013bda3}, in the set from Eric
-Cullhed's starts, in two sets from unrelated starts and over all forty chains.
+of every topic's share \citep[§11.4]{gelman2013bda3}, in each round of
+starts, over all twenty-four chains, and in the earlier set from Eric
+Cullhed's starts.
 
 \begin{center}
 \begin{tabular}{lrrlr}
@@ -701,20 +715,21 @@ Cullhed's starts, in two sets from unrelated starts and over all forty chains.
 & & Topics with & & \textit{wrong-vengeance-err}, \\
 Starts & Chains & $\hat R > 1.1$ & Largest $\hat R$ & chain lifts \\
 \midrule
+First round & 8 & 22 of 34 & 3.07 (\textit{fire-flame-flash}) & 0.98--2.04 \\
+Second round & 16 & 27 of 34 & 1.77 (\textit{rear-sprout-bloom}) & 0.45--1.88 \\
+Both rounds & 24 & 27 of 34 & 2.99 (\textit{fire-flame-flash}) & 0.51--2.01 \\
+\midrule
 Eric Cullhed's & 16 & 28 of 34 & 1.51 (\textit{lament-pitiable-groan}) & 0.74--3.00 \\
-Unrelated & 8 & 22 of 34 & 3.07 (\textit{fire-flame-flash}) & 0.98--2.04 \\
-Unrelated & 16 & 26 of 34 & 1.97 (\textit{rear-sprout-bloom}) & 0.45--1.98 \\
-All & 40 & 30 of 34 & 2.28 (\textit{fire-flame-flash}) & 0.51--2.22 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent The chains have not mixed in 10\,000 steps, whether or not they
 share an origin, which is why both models' intervals resample whole
-chains (chain lifts: 5th to 95th percentile). There is no systematic drift
+chains (chain lifts: 5th to 95th percentile). There is little systematic drift
 after the burn-in: over windows of 1\,000 steps the median absolute slope of
-a topic's lift is 0.033 per 1\,000 steps, the steepest 0.107
-(\textit{contest-rivalry-wrestling}).
+a topic's lift is 0.019 per 1\,000 steps, the steepest 0.148
+(\textit{marriage-couch-bed}).
 
 \newpage
 \section{The 34 unsupervised Word2Vec topics}

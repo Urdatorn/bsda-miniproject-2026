@@ -30,7 +30,7 @@ def main(out_path):
     hard = lifts("results/hard/topic_circles.csv")
     soft = lifts("results/soft/pooled/comparisons.csv", ("lift", "lift_chain_q05", "lift_chain_q95"))
     topics = sorted(soft, key=lambda t: soft[t][0])          # largest soft lift on top
-    floor = 0.02                                            # a lift of zero sits at the left edge
+    floor = 0.002                                           # a lift of zero sits at the left edge
 
     fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 6.1), layout="constrained")
     for offset, (name, values, colour) in zip((0.17, -0.17), (("hard", hard, OKABE_ITO[0]), ("soft", soft, OKABE_ITO[1]))):
@@ -43,8 +43,8 @@ def main(out_path):
     ax.axvline(1, color="grey", linestyle="--", linewidth=0.6)
     ax.set_xscale("log")
     ax.set_xlim(floor, 4)
-    ax.set_xticks([0.05, 0.25, 1, 4])
-    ax.set_xticklabels(["0.05", "0.25", "1", "4"])
+    ax.set_xticks([0.01, 0.1, 1, 4])
+    ax.set_xticklabels(["0.01", "0.1", "1", "4"])
     ax.minorticks_off()
     ax.set_yticks(range(len(topics)))
     # a topic stands out when its soft 90 % interval lies entirely above 1 (bold) or below 1 (italic)

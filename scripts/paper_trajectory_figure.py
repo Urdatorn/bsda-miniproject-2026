@@ -5,10 +5,11 @@ column wide, text set like the body text (figure_style.paper).
 Each line is one of four chains: the posterior mean share of the topic in
 every fifth recorded state (results/soft/trajectory/trajectory.csv, from
 scripts/soft_trajectory.py; the report's section on the lift along the walk
-shows all sixteen), averaged over a moving window of 1,000 steps and divided
+shows all twenty-four), averaged over a moving window of 1,000 steps and divided
 by Sophocles' mean share under the same plug-in model
-(results/soft/mean_alpha_lda). The dotted line is the lift of all sixteen
-chains under that model.
+(results/soft/mean_alpha_lda). The dotted line is the lift of all twenty-four
+chains under that model. A chain is numbered by its place among the
+twenty-four: the first round's eight, then the second round's sixteen.
 
 Usage: python scripts/paper_trajectory_figure.py latex/overleaf/figures/trajectory_persuade.pdf
 """
@@ -21,6 +22,7 @@ TOPIC = "persuade-man-king"
 WINDOW = 20                        # states in the moving window: 20 states 50 steps apart, 1,000 steps
 CHAINS = (("chains_judge235_t4_spread", 0), ("chains_judge235_t4_spread", 4),     # two chains of each round of
           ("chains_judge235_t4_spread2", 0), ("chains_judge235_t4_spread2", 8))   # far-apart starts
+FIRST = {"chains_judge235_t4_spread": 1, "chains_judge235_t4_spread2": 9}   # number of each round's first chain
 # the four Okabe-Ito colours furthest apart under simulated deutan, protan and tritan vision
 COLOURS = [OKABE_ITO[i] for i in (0, 1, 2, 4)]   # blue, vermillion, orange, sky blue
 
@@ -49,14 +51,14 @@ def main(out_path):
         means = [sum(t for _, t in states[i - WINDOW + 1:i + 1]) / WINDOW for i in range(WINDOW - 1, len(states))]
         ax.plot([s / 1000 for s in steps], [m / sophocles for m in means], color=colour, linewidth=0.9)
         # the chain's number at the end of its line, so that no line depends on its colour alone
-        ax.text(steps[-1] / 1000 + 0.15, means[-1] / sophocles, str(chain + 1), color=colour, va="center")
+        chain_set, number = CHAINS[chain]
+        ax.text(steps[-1] / 1000 + 0.15, means[-1] / sophocles, str(FIRST[chain_set] + number), color=colour, va="center")
     ax.axhline(1, color="grey", linestyle="--", linewidth=0.6)
     ax.axhline(pooled, color="black", linestyle=":", linewidth=0.8)
     ax.set_xlabel("step of the walk (thousands)")
     ax.set_ylabel("lift")
     ax.set_ylim(bottom=0)
-    ax.set_yticks([0, 2, 4, 6])
-    ax.set_xlim(right=13); ax.set_xticks([2, 4, 6, 8, 10, 12])
+    ax.set_xlim(right=11); ax.set_xticks([2, 4, 6, 8, 10])
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     save(fig, out_path)
