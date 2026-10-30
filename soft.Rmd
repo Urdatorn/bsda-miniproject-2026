@@ -369,8 +369,8 @@ knitr::kable(diagnostics_table, digits = 3,
 ```
 
 Under the learned prior the sampler has a harder time than under a flat
-one, and the section on the prior shows the same documents sampled without
-a single flag under $\mathrm{Dirichlet}(\mathbf 1)$. A seeded topic with
+one, and the section on the prior shows the same documents sampled with
+hardly a flag under $\mathrm{Dirichlet}(\mathbf 1)$. A seeded topic with
 an $\alpha_k$ of 0.1 or 0.2 is, in a document that does not use it,
 posterior mass piled against $\theta_k = 0$ with a thin tail; a chain that
 strays into the tail for a while shows up as an $\hat R$ above 1.01 and a
@@ -638,15 +638,17 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
        size = "mean share")
 ```
 
-The topics the hard report singles out, *wrong-vengeance-err* and
-*god-true-lord*, the two lifts that hold against every baseline there, and
-*marriage-couch-bed*, raised against Sophocles but not against the other
-tragedians, under the soft model:
+The topics the hard report singles out, the lifts that hold against every
+baseline there, and *marriage-couch-bed*, raised against Sophocles but not
+against the other tragedians, under the soft model:
 
 ```{r soft_held}
+# the hard report's topics whose lift is above 1 against all three baselines
+hard <- read.csv("results/hard/topic_circles.csv", encoding = "UTF-8")
+hard <- filter(hard, grepl("^imputations", comparison))
+hard_held <- names(which(tapply(hard$lift_q05 > 1, hard$topic, all)))
 held <- filter(comparisons,
-               topic %in% c("wrong-vengeance-err", "god-true-lord",
-                            "marriage-couch-bed"))
+               topic %in% c(hard_held, "marriage-couch-bed"))
 held <- held[, c("topic", "comparison", "lift", "lift_q05", "lift_q95",
                  "p_document")]
 knitr::kable(held, digits = 3, row.names = FALSE)
@@ -1003,7 +1005,7 @@ learned <- filter(prior_lifts, alpha == "learned")
 Stan's diagnostics under each prior, counted over the documents as above.
 A prior with concentrations below 1 puts mass against the faces of the
 simplex, where the sampler has a harder time; the two priors at or above 1
-sample without a flag.
+sample with hardly a flag.
 
 ```{r prior_diagnostics, eval = all(prior_done)}
 prior_diagnostics <- bind_rows(lapply(names(priors), function(alpha) {
