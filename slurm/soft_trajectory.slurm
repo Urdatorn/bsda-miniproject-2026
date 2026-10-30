@@ -7,12 +7,12 @@
 #SBATCH --cpus-per-task=96
 #SBATCH --gpus=1
 #SBATCH --mem=96G
-#SBATCH --time=00:45:00
+#SBATCH --time=01:15:00
 #SBATCH --output=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026/.logs/%x-%j.out
 #SBATCH --error=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026/.logs/%x-%j.err
 
 # The soft model along the walk: the posterior mean profile of every fifth
-# recorded state of every chain (3,424 documents), under the mean phi and the
+# recorded state of every chain (about 4,700 documents with the topic round), under the mean phi and the
 # LDA's alpha, by NUTS (CmdStan, one process per core), into
 # results/soft/trajectory/trajectory.csv, which the report's section on the
 # lift along the walk and the paper's figure read. Stage 1 must be in

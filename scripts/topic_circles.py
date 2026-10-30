@@ -42,10 +42,10 @@ ATTIC = ["Aeschylus", "Sophocles", "Euripides", "Aristophanes", "Thucydides", "X
 
 
 def imputation_documents(data_dir, topic_of, K, chain_set=None):
-    """topic counts per imputation (documents x K) and the chain of each document; chain_set picks one walk set"""
+    """topic counts per imputation (documents x K) and the chain of each document; chain_set picks the walk sets (comma-separated)"""
     imp = pq.read_table(os.path.join(data_dir, "imputations.parquet")).to_pandas()
     imputations = imp[(imp.restorer == "walk") & (imp.style_tilted == False)].copy()  # noqa: E712
-    if chain_set: imputations = imputations[imputations.chain_set == chain_set]
+    if chain_set: imputations = imputations[imputations.chain_set.isin(chain_set.split(","))]
     if imputations.empty: raise SystemExit(f"no untilted walk states in {chain_set or 'any set'}")
     imputations["chain_id"] = np.where(imputations.chain.isna(), imputations.chain_set.astype(str),
                                 imputations.chain_set.astype(str) + " " + imputations.chain.astype(str))
@@ -160,7 +160,7 @@ def main():
     ap.add_argument("--out", default="results/hard", help="where the tables go")
     ap.add_argument("--figures", default="figures", help="where the figures go")
     ap.add_argument("--baselines", default=None, help="baseline_windows.parquet (default: in --data)")
-    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
+    ap.add_argument("--chain-set", default="chains_judge235_t4_spread,chains_judge235_t4_spread2,chains_judge235_t4_topic4", help="the walk sets the report analyses, comma-separated (chain_set of imputations.parquet): the chains from maximally different starts; '' = every untilted walk state")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.figures, exist_ok=True)
 

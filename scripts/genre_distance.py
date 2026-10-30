@@ -72,7 +72,7 @@ def main():
     ap.add_argument("--out", default="results/hard", help="where the tables go")
     ap.add_argument("--figures", default="figures", help="where the figure goes")
     ap.add_argument("--baselines", default=None)
-    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
+    ap.add_argument("--chain-set", default="chains_judge235_t4_spread,chains_judge235_t4_spread2,chains_judge235_t4_topic4", help="the walk sets the report analyses, comma-separated (chain_set of imputations.parquet): the chains from maximally different starts; '' = every untilted walk state")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.figures, exist_ok=True)
 

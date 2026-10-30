@@ -39,7 +39,7 @@ def documents(data_dir, max_imputations, rng, chain_set=None):
                      "chain": "", "step": -1, "counts": bag(rows), "text": " / ".join(rows.text)})
 
     imputations = imp[(imp.restorer == "walk") & (imp.style_tilted == False)].copy()  # noqa: E712  (untilted snapshots only)
-    if chain_set: imputations = imputations[imputations.chain_set == chain_set]
+    if chain_set: imputations = imputations[imputations.chain_set.isin(chain_set.split(","))]
     imputations["chain_id"] = np.where(imputations.chain.isna(), imputations.chain_set.astype(str), imputations.chain_set.astype(str) + " " + imputations.chain.astype(str))
     groups = imputations.groupby(["chain_id", "iteration"], sort=True)
     keys = list(groups.groups)
@@ -66,7 +66,7 @@ def main():
     ap.add_argument("--out", default="figures")
     ap.add_argument("--max-imputations", type=int, default=4000, help="imputations drawn at random (all 17,000 would make a 13 MB page)")
     ap.add_argument("--neighbors", type=int, default=15)
-    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
+    ap.add_argument("--chain-set", default="chains_judge235_t4_spread,chains_judge235_t4_spread2,chains_judge235_t4_topic4", help="the walk sets the report analyses, comma-separated (chain_set of imputations.parquet): the chains from maximally different starts; '' = every untilted walk state")
     ap.add_argument("--min-dist", type=float, default=0.1)
     ap.add_argument("--seed", type=int, default=917)
     ap.add_argument("--space", choices=["topics", "word2vec"], default="topics", help="what a document's position is computed from")

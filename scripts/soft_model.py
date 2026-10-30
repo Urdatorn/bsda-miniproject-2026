@@ -120,7 +120,7 @@ def load(data_dir, chain_set=None):
     restorer = np.array(imp["restorer"].to_pylist())
     tilted = np.array([bool(t) for t in imp["style_tilted"].to_pylist()])
     walk_set = np.array([c or "" for c in imp["chain_set"].to_pylist()])
-    imputations = imp.filter((restorer == "walk") & ~tilted & ((walk_set == chain_set) if chain_set else True))
+    imputations = imp.filter((restorer == "walk") & ~tilted & (np.isin(walk_set, chain_set.split(",")) if chain_set else True))
     snapshot = defaultdict(list)
     for key_set, key_chain, key_step, lemmata in zip(imputations["chain_set"].to_pylist(), imputations["chain"].to_pylist(), imputations["iteration"].to_pylist(), row_lemmata(imputations)):
         snapshot[(key_set, key_chain, key_step)] += lemmata
@@ -286,7 +286,7 @@ def main():
     ap.add_argument("--max-docs", type=int, default=0, help="documents read per set, sampled at random if more (0 = all); for dry runs")
     ap.add_argument("--no-draws", action="store_true", help="do not write theta_draws.npz")
     ap.add_argument("--seed", type=int, default=917)
-    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set the report analyses (chain_set of imputations.parquet); '' = every untilted walk state")
+    ap.add_argument("--chain-set", default="chains_judge235_t4_spread,chains_judge235_t4_spread2,chains_judge235_t4_topic4", help="the walk sets the report analyses, comma-separated (chain_set of imputations.parquet): the chains from maximally different starts; '' = every untilted walk state")
     a = ap.parse_args()
     rng = np.random.default_rng(a.seed)
     vocab, cluster, docs, tragic, keys = load(a.data, a.chain_set); V = len(vocab)

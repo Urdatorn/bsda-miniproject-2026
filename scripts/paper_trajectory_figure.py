@@ -19,7 +19,8 @@ from figure_style import paper, save, COLUMN_WIDTH, OKABE_ITO
 
 TOPIC = "persuade-man-king"
 WINDOW = 20                        # states in the moving window: 20 states 50 steps apart, 1,000 steps
-CHAINS = (0, 5, 10, 15)            # two of the 12,000-step chains, two of the 10,000-step ones
+CHAINS = (("chains_judge235_t4_spread", 0), ("chains_judge235_t4_spread", 4),     # two chains of each round of
+          ("chains_judge235_t4_spread2", 0), ("chains_judge235_t4_spread2", 8))   # far-apart starts
 # the four Okabe-Ito colours furthest apart under simulated deutan, protan and tritan vision
 COLOURS = [OKABE_ITO[i] for i in (0, 1, 2, 4)]   # blue, vermillion, orange, sky blue
 
@@ -38,8 +39,8 @@ def main(out_path):
     pooled = plug_in("results/soft/mean_alpha_lda/comparisons.csv", "lift")
     chains = defaultdict(list)
     for r in csv.DictReader(open("results/soft/trajectory/trajectory.csv", encoding="utf-8")):
-        if int(r["chain"]) in CHAINS:
-            chains[int(r["chain"])].append((int(r["step"]), float(r[TOPIC])))
+        if (r["chain_set"], int(r["chain"])) in CHAINS:
+            chains[CHAINS.index((r["chain_set"], int(r["chain"])))].append((int(r["step"]), float(r[TOPIC])))
 
     fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 1.5), layout="constrained")
     for colour, (chain, states) in zip(COLOURS, sorted(chains.items())):

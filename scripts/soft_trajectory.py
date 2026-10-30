@@ -29,7 +29,7 @@ def main():
     ap.add_argument("--lda", default="results/soft/lda", help="stage 1's directory (phi_draws.npz)")
     ap.add_argument("--phi", default="mean", help="the state of phi: 'mean' or the index of a kept state")
     ap.add_argument("--alpha", default="lda", help="the Dirichlet prior on theta: 'lda' or a number for a symmetric prior")
-    ap.add_argument("--chain-set", default="chains_judge235_t4", help="the walk set (chain_set of imputations.parquet)")
+    ap.add_argument("--chain-set", default="chains_judge235_t4_spread,chains_judge235_t4_spread2,chains_judge235_t4_topic4", help="the walk sets, comma-separated (chain_set of imputations.parquet)")
     ap.add_argument("--every", type=int, default=5, help="every n-th recorded state of each chain (a state is recorded every 10 steps)")
     ap.add_argument("--chains", type=int, default=4); ap.add_argument("--warmup", type=int, default=500); ap.add_argument("--samples", type=int, default=1000)
     ap.add_argument("--adapt-delta", type=float, default=0.99, help="as in soft_model.py: the LDA's alpha is below 1 on the seeded topics")
@@ -39,8 +39,8 @@ def main():
 
     vocab, cluster, docs, tragic, keys = load(a.data, a.chain_set)
     by_chain = {}
-    for i, (_, chain, step) in enumerate(keys):
-        by_chain.setdefault(chain, []).append((step, i))
+    for i, (chain_set, chain, step) in enumerate(keys):
+        by_chain.setdefault((chain_set, chain), []).append((step, i))
     picked = [i for chain in sorted(by_chain) for _, i in sorted(by_chain[chain])[::a.every]]
     names, H, phi, alpha, label = choose_phi(a.lda, a.phi, a.alpha)
     K = len(names); logphi = np.log(phi).T                                                # (V, K)

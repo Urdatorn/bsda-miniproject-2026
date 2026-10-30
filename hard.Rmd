@@ -12,7 +12,10 @@ fontsize: 10pt
 geometry: margin=2cm
 params:
   data: "data"
-  chain_set: "chains_judge235_t4"
+  chain_set:
+    - "chains_judge235_t4_spread"
+    - "chains_judge235_t4_spread2"
+    - "chains_judge235_t4_topic4"
   kappa: 1
   draws: 100
   seed: 917
@@ -65,16 +68,31 @@ seventeen damaged ones (vv. 13–29). The judge-steered Markov walk restores
 the seventeen verses together, as one passage: Stoicheia proposes a word,
 the formal rules filter it, and an LLM judge (Qwen3-235B-A22B-Instruct-2507)
 decides by Metropolis–Hastings whether the passage reads better, its
-log-odds taken to the power $1/T_{\text{judge}} = 4$. Sixteen chains start
-from Eric Cullhed's eight reconstructions, two from each: eight run 12,000
-steps and eight 10,000, and a state is kept every ten steps after a burn-in
-of 300. (The data also hold sixteen chains under the smaller judge
-Qwen2.5-72B-Instruct, the set `chains_judge72_t4_v3e`, a short pilot
-under Claude Sonnet 5.5, and eight more chains under the same judge from
-starts unrelated to one another; this report reads one set, named by its
-parameter `chain_set`, and sets the other sets beside it in the checks at
-the end.) Which topics do the imputations put into the lost passage, and
-does that differ from what Sophocles writes elsewhere?
+log-odds taken to the power $1/T_{\text{judge}} = 4$. The imputations
+are chains whose starts are as far apart as possible. Twenty-four start
+from texts as far apart in words as possible: each start is the candidate
+whose smallest word distance to the starts already chosen is largest
+(`scripts/spread_starts.py` in the generation repository). One start is
+Eric Cullhed's reconstruction and the others are late states of earlier
+chains, and between 89 and 100 per cent of the restored words differ
+between any two of the twenty-four, as between unrelated passages. These
+starts were chosen in two rounds, eight (`chains_judge235_t4_spread`) and
+then sixteen more that also keep away from the first eight
+(`chains_judge235_t4_spread2`). A third round of four chains
+(`chains_judge235_t4_topic4`) starts from texts that are far apart in
+topic: four states of the walk, each edited in a few verses, within the
+walk's formal rules, to be rich in one of the four topics that none of the
+twenty-four starts contains (*Greek-sea-barbarian*, *river-plain-afar*,
+*crash-voice-shout*, *ship-sail-hull*). Every chain runs 10,000 steps, and
+a state is kept every ten steps after a burn-in of 300. The report reads
+the sets named by its parameter `chain_set`, those of the three rounds
+that are in the data. (The data also hold sixteen earlier chains under the
+same judge, `chains_judge235_t4`, which start from Eric's eight
+reconstructions. Those starts are variants of one text, about nine per
+cent of the restored words apart, so the report leaves them out, except
+where a comparison of judges needs the same starts under every judge.)
+Which topics do the imputations put into the lost passage, and does that
+differ from what Sophocles writes elsewhere?
 (W. B. Henry's restoration of the same verses is in the data, but a single
 text is not compared with the mean of thousands: it is left out.)
 
@@ -105,8 +123,8 @@ $$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\kappa \mathbf m + \mathbf n),$$
 
 and needs no sampler beyond `rgamma`. Two sets of documents are compared:
 
-- the **imputations**: every recorded state of the sixteen chains, one
-  document each;
+- the **imputations**: every recorded state of the chains, one document
+  each;
 - **Sophocles**, the baseline: every window of seventeen consecutive extant
   trimeters of Sophocles, one document each, the same shape as the lacuna.
 
@@ -311,11 +329,14 @@ baseline <- summarise_documents(sophocles_documents)
 # restorers that were never tilted)
 untilted <- filter(imputations, !coalesce(style_tilted, FALSE))
 
-# The imputations: the walk set named in the parameters, one document per
-# snapshot (one chain at one step, all seventeen verses). Chains run alone
-# have an empty chain number, so there the chain set is the chain.
+# The imputations: the walk sets named in the parameters, one document per
+# snapshot (one chain at one step, all seventeen
+# verses). Chain numbers repeat between sets, so a chain is named by its set
+# and its number; chains run alone have an empty chain number, and there
+# the chain set is the chain.
+report_sets <- params$chain_set
 imputations <- filter(untilted, restorer == "walk",
-                      chain_set == params$chain_set)
+                      chain_set %in% report_sets)
 stopifnot(nrow(imputations) > 0)
 imputations$chain_id <- ifelse(is.na(imputations$chain), imputations$chain_set,
                         paste(imputations$chain_set, imputations$chain))
@@ -549,35 +570,43 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
        size = "mean share (%)")
 ```
 
-Two lifts of the imputations hold against every baseline,
-*wrong-vengeance-err* and *god-true-lord*. A third, *marriage-couch-bed*,
-is raised against Sophocles and against Classical Attic but falls below
-Aeschylus and Euripides, who use that vocabulary more than Sophocles does:
+```{r held_topics, include = FALSE}
+# The topics whose lift has its interval above 1 against all three baselines
+imputation_rows <- filter(circles, grepl("^imputations", comparison))
+above_one <- tapply(imputation_rows$lift_q05 > 1, imputation_rows$topic, all)
+held_everywhere <- names(which(above_one))
+```
+
+The lifts of the imputations that hold against every baseline are those of
+`r knitr::combine_words(paste0("*", held_everywhere, "*"),
+  oxford_comma = FALSE)`.
+*marriage-couch-bed*, the largest lift against Sophocles, is raised against
+Classical Attic too but not against Aeschylus and Euripides, who use that
+vocabulary more than Sophocles does:
 
 ```{r held}
-held <- filter(circles,
-               topic %in% c("wrong-vengeance-err", "god-true-lord",
-                            "marriage-couch-bed"),
-               grepl("^imputations", comparison))
+held <- filter(imputation_rows,
+               topic %in% c(held_everywhere, "marriage-couch-bed"))
 held <- held[, c("topic", "comparison", "lift", "lift_q05", "lift_q95",
                  "p_document")]
 knitr::kable(held, digits = 3, row.names = FALSE)
 ```
 
-Opened up lemma by lemma, the two lifts are of different kinds. That of
-*god-true-lord* is one word: θεός carries almost all of the imputations'
-excess over Sophocles, with πίστις, ἄγγελος and πιστός behind it, so the
-judge's restorer names the god where Sophocles names him less. That of
-*wrong-vengeance-err* is spread over the vocabulary of the play's matter:
-χάρις, πόνος, δίκη, πάθος, ἑκών, αἰτέω, σῴζω and τιμωρός, favour and toil,
-justice and suffering, the willing act, the rescue and the avenger, carry
-the excess, while κέρδος, φίλτατος and τύχη fall below Sophocles' rate. The
-judge keeps the lost verses on the wrong done and its requital. (Under the
-smaller judge of the other set in the data, Qwen2.5-72B-Instruct, the one
-lift that held against every baseline was *marriage-couch-bed*; here its
-excess is carried by μόρος and θεά, two lemmata the clustering placed among
-the marriage words, while the wedding words themselves, γάμος, λέχος, πόσις
-and κόρη, sit at Sophocles' rate or below.)
+Opened up lemma by lemma, two of these lifts are of different kinds. Almost
+half of the imputations' excess of *god-true-lord* over Sophocles is one
+word, θεός, with ἄγγελος, πιστός, ἀληθής and πίστις behind it: the judge's
+restorer names the god, the messenger and the pledge of faith where
+Sophocles names them less. That of *wrong-vengeance-err* is spread over the
+vocabulary of the play's matter: χάρις, δίκη, πάθος, πόνος, ἀέκων, αἰτέω,
+τιμωρός and τίνω, favour and justice, suffering and toil, the unwilling
+act, the asking, the avenger and the paying back, carry the excess, while
+κέρδος, κυρέω, σῴζω and συμφορά fall below Sophocles' rate. The judge keeps
+the lost verses on the wrong done and its requital. (Under the smaller judge
+of the other set in the data, Qwen2.5-72B-Instruct, the one lift that held
+against every baseline was *marriage-couch-bed*; here its excess is carried
+by θεά, ἁγνός and μόρος, lemmata the clustering placed among the marriage
+words, while the wedding words themselves, γάμος, λέχος, πόσις and κόρη,
+sit near Sophocles' rate or below.)
 
 ```{r lemmata, echo = FALSE, out.width = "100%"}
 knitr::include_graphics("figures/hard_topic_lemmata_wrong-vengeance-err.png")
@@ -726,7 +755,7 @@ answer that.
 First, does the lift of a topic drift as the walk proceeds? The snapshots are
 grouped into windows of steps, every window is summarised like all the
 imputations, and the slope of its lift against the step is the rate of change.
-Second, do the sixteen chains agree over the steps they all cover? Each
+Second, do the chains agree over the steps they all cover? Each
 chain's snapshots form a series of topic shares, and the
 Gelman–Rubin $\hat R$ (BDA3 §11.4) compares the spread between chains with the
 spread within them: $\hat R$ near 1 means a chain's share does not depend on
@@ -762,8 +791,8 @@ lift_in_windows <- function(lemmata, breaks) {
   windows
 }
 
-# All chains over their whole run, in windows of 1000 steps; the windows
-# beyond the shorter chains' last step hold only the eight longer chains
+# All chains over their whole run, in windows of 1000 steps (a chain whose
+# last segment has not run yet is missing from the windows beyond its end)
 last_step <- max(imputation_lemmata$step)
 drift <- lift_in_windows(imputation_lemmata, seq(0, last_step, by = 1000))
 
@@ -863,154 +892,34 @@ vengeance <- filter(stability, topic == "wrong-vengeance-err")
 sentence <- paste("%d of the %d topics with an R-hat have one above 1.1: in",
                   "10,000 steps the chains have not mixed over the",
                   "restoration space, and a chain's share of a topic still",
-                  "depends on which chain it is; whether that is the",
-                  "start's doing is the next check's question. The lift of",
+                  "depends on which chain it is. The lift of",
                   "wrong-vengeance-err runs from %.2f to %.2f over the",
-                  "sixteen chains (their 5th and 95th percentiles), so the",
+                  "%d chains (their 5th and 95th percentiles), so the",
                   "pooled lift is an average over the starts rather than a",
                   "converged posterior; the resampling by chain in the",
                   "baseline comparisons above is what gives their intervals",
                   "their width.")
 cat(sprintf(sentence, poorly_mixed, with_rhat, vengeance$chain_lift_q05,
-            vengeance$chain_lift_q95), "\n")
+            vengeance$chain_lift_q95, length(unique(snapshot_chain))), "\n")
 ```
 
-## Unrelated starts
+## Rounds of starts
 
-The sixteen chains start from Eric Cullhed's eight reconstructions, and
-those are variants of one text: about nine per cent of the restored words
-differ between any two of them. Their agreement is therefore agreement
-between chains of one origin, and the poor mixing above may be the mark of
-that origin or of the walk. A second set of eight chains under the same
-judge, `chains_judge235_t4_spread`, tells the two apart. One chain keeps
-Eric's text; the other seven start from late states of the sixteen chains
-above, chosen one per source chain so that the eight starts are as far
-apart in words as possible (`scripts/spread_starts.py` in the generation
-repository: 96 to 100 per cent of the restored words differ between any
-two starts, as between unrelated passages). Everything else is the same:
-the judge, $1/T_{\text{judge}} = 4$, 10,000 steps, burn-in 300, a state
-every ten steps. At the level of words the two sets end alike, with about
-96 per cent of the restored words differing between two chains' final
-states in either set, so what the comparison tests is the topic profile:
-if a chain's topics depend on where it started, the spread set should
-disagree more and its pooled lifts should move; if the walk forgets its
-start, both sets should put the same topics into the passage.
+The chains come in rounds whose starts were chosen separately: eight and
+then sixteen far apart in words, and four seeded with topics no other
+start has. If the topics a chain puts into the passage depended on where
+it began, the rounds would disagree. Each round is read like the whole
+set, and the whole set is read three ways: by its posterior interval,
+which treats every snapshot as a document of its own; by $\hat R$ over
+its chains on the steps they all cover; and by resampling the chains with
+replacement, which lets whole chains drop out and is the interval that the
+dependence between a chain's snapshots calls for. A topic the walk has
+settled should be raised, or not, under every reading.
 
-```{r spread_set}
-# The spread set, one document per snapshot, summarised like the report's
-# set and compared with Sophocles
-spread <- filter(untilted, restorer == "walk",
-                 chain_set == "chains_judge235_t4_spread")
-stopifnot(nrow(spread) > 0)
-spread$chain_id <- paste(spread$chain_set, spread$chain)
-spread$snapshot <- paste(spread$chain_id, spread$iteration)
-spread_documents <- make_documents(spread, spread$snapshot)
-spread_posterior <- summarise_documents(spread_documents, baseline)
-
-# The share of every topic in every snapshot of the spread set, and the
-# chain each snapshot belongs to; every chain has the same number of
-# snapshots, so R-hat needs no trimming here
-spread_lemmata <- lemma_table(spread, spread$snapshot)
-names(spread_lemmata)[names(spread_lemmata) == "group"] <- "snapshot"
-spread_counts <- table(spread_lemmata$snapshot,
-                       factor(spread_lemmata$topic, levels = topic_names))
-spread_shares <- spread_counts / rowSums(spread_counts)
-spread_chain <- spread$chain_id[match(rownames(spread_counts),
-                                      spread$snapshot)]
-stopifnot(length(unique(table(spread_chain))) == 1)
-
-# One row per topic: the lift and R-hat of each set, and the range of the
-# spread set's eight chain lifts
-starts <- data.frame(topic = topic_names,
-                     lift_eric = rows$lift,
-                     lift_spread = spread_posterior$lift,
-                     lift_spread_q05 = spread_posterior$lift_q05,
-                     lift_spread_q95 = spread_posterior$lift_q95,
-                     rhat_eric = stability$rhat[match(topic_names,
-                                                      stability$topic)],
-                     rhat_spread = NA, chain_q05 = NA, chain_q95 = NA)
-for (i in seq_len(K)) {
-  x <- spread_shares[, i]
-  starts$rhat_spread[i] <- rhat(x, spread_chain)
-  chain_lifts <- tapply(x, spread_chain, mean) / baseline$mean[i]
-  starts$chain_q05[i] <- quantile(chain_lifts, 0.05)
-  starts$chain_q95[i] <- quantile(chain_lifts, 0.95)
-}
-starts <- arrange(starts, desc(rhat_eric))
-knitr::kable(starts, digits = 2, row.names = FALSE,
-             col.names = c("topic", "lift, Eric's starts", "lift, spread",
-                           "q05", "q95", "R-hat, Eric's starts",
-                           "R-hat, spread", "chain q05", "chain q95"))
-```
-
-```{r spread_summary, results = "asis"}
-# How alike the two sets' profiles are, how many topics each set's chains
-# disagree on, and the topic the report singles out
-agreement <- cor(log(starts$lift_eric), log(starts$lift_spread),
-                 use = "complete.obs")
-spread_raised <- starts$topic[starts$lift_spread_q05 > 1]
-both_raised <- intersect(rows$topic[rows$raised], spread_raised)
-mixed_eric <- sum(starts$rhat_eric > 1.1, na.rm = TRUE)
-mixed_spread <- sum(starts$rhat_spread > 1.1, na.rm = TRUE)
-vengeance <- filter(starts, topic == "wrong-vengeance-err")
-worst <- starts[which.max(starts$rhat_spread), ]
-marriage <- filter(starts, topic == "marriage-couch-bed")
-sentence <- paste("The log lifts of the two sets correlate at %.2f over the",
-                  "%d topics. Raised in the report's set (the 90 %% interval",
-                  "of the lift above 1) are %s; raised in the spread set",
-                  "are %s;",
-                  "raised in both: %s. %d topics have an R-hat above 1.1",
-                  "among the chains from Eric's starts and %d among the",
-                  "chains from unrelated starts, so the chains disagree",
-                  "about as much whether or not they share an origin: the",
-                  "poor mixing is the walk's, not the starts', and 10,000",
-                  "steps are not enough for one chain to represent the",
-                  "posterior. The largest R-hat in the spread set, %.2f for",
-                  "%s, is one chain's excess (its chains run from %.2f to",
-                  "%.2f). Wrong-vengeance-err has lift %.2f in the spread",
-                  "set, interval %.2f to %.2f, %s, and its eight chains run",
-                  "from %.2f to %.2f; marriage-couch-bed falls to %.2f.")
-cat(sprintf(sentence, agreement, sum(!is.na(starts$lift_spread)),
-            paste(rows$topic[rows$raised], collapse = ", "),
-            paste(spread_raised, collapse = ", "),
-            if (length(both_raised)) paste(both_raised, collapse = ", ")
-            else "none",
-            mixed_eric, mixed_spread, worst$rhat_spread, worst$topic,
-            worst$chain_q05, worst$chain_q95,
-            vengeance$lift_spread, vengeance$lift_spread_q05,
-            vengeance$lift_spread_q95,
-            ifelse(vengeance$lift_spread_q05 > 1, "raised there too",
-                   "so not raised there"),
-            vengeance$chain_q05,
-            vengeance$chain_q95, marriage$lift_spread), "\n")
-```
-
-## Forty chains
-
-Sixteen more chains from unrelated starts, `chains_judge235_t4_spread2`,
-make the check larger. Their starts were chosen in the same way from the
-late states of the twenty-four chains above, avoiding the earlier starts
-(89 to 100 per cent of the restored words differ between any two of the
-forty starts), with the same judge and settings, run as four segments of
-2,500 steps each. The walk then has forty chains: sixteen from Eric's text
-and twenty-four from unrelated starts. The chains are pooled in two ways,
-the twenty-four unrelated-start chains alone and all forty, and each pool
-is read three times: by its posterior interval, which treats every
-snapshot as a document of its own; by $\hat R$ over its chains on the
-steps they all cover; and by resampling the chains with replacement, which
-lets whole chains drop out and is the interval that the dependence between
-a chain's snapshots calls for. A topic the walk has settled should be
-raised, or not, under every reading.
-
-```{r spread2_set}
-spread2 <- filter(untilted, restorer == "walk",
-                  chain_set == "chains_judge235_t4_spread2")
-stopifnot(nrow(spread2) > 0)
-spread2$chain_id <- paste(spread2$chain_set, spread2$chain)
-spread2$snapshot <- paste(spread2$chain_id, spread2$iteration)
-# a chain whose last segment has not run yet stops before step 10,000
-spread2_last <- tapply(spread2$iteration, spread2$chain_id, max)
-short_chains <- names(spread2_last)[spread2_last < 10000]
+```{r rounds}
+# A chain whose last segment has not run yet stops before step 10,000
+chain_last <- tapply(imputations$iteration, imputations$chain_id, max)
+short_chains <- names(chain_last)[chain_last < 10000]
 
 # One pool of chains read three ways: the posterior lift with its interval,
 # R-hat over the chains on their common steps, and the lift's interval when
@@ -1045,99 +954,143 @@ read_pool <- function(pool, replicates = 2000) {
              chain_q05 = apply(resampled, 2, quantile, probs = 0.05),
              chain_q95 = apply(resampled, 2, quantile, probs = 0.95))
 }
-spread2_pool <- read_pool(spread2)
-unrelated <- read_pool(bind_rows(spread, spread2))
-forty <- read_pool(bind_rows(imputations, spread, spread2))
+# Every round in the data, read on its own, and all chains together
+round_labels <- c(chains_judge235_t4_spread = "first",
+                  chains_judge235_t4_spread2 = "second",
+                  chains_judge235_t4_topic4 = "topic starts")
+present <- intersect(names(round_labels), unique(imputations$chain_set))
+rounds <- lapply(present, function(set) {
+  read_pool(filter(imputations, chain_set == set))
+})
+names(rounds) <- present
+all_chains <- read_pool(imputations)
 ```
 
-The lift of every topic in each set and in the two pools, with, for the
-forty chains, the posterior interval, $\hat R$ and the chain-resampled
-interval; ordered by the forty chains' lift.
+The lift of every topic in each round and over all chains, with, for all
+of them, the posterior interval, $\hat R$ and the chain-resampled
+interval; ordered by the lift over all chains.
 
-```{r forty_table}
-pools <- data.frame(topic = topic_names,
-                    eric = rows$lift,
-                    spread = spread_posterior$lift,
-                    spread2 = spread2_pool$lift,
-                    unrelated = unrelated$lift,
-                    forty = forty$lift,
-                    q05 = forty$lift_q05, q95 = forty$lift_q95,
-                    rhat = forty$rhat,
-                    chain_q05 = forty$chain_q05, chain_q95 = forty$chain_q95)
-pools <- arrange(pools, desc(forty))
+```{r rounds_table}
+pools <- data.frame(topic = topic_names)
+for (set in present) pools[[set]] <- rounds[[set]]$lift
+pools$all <- all_chains$lift
+pools$q05 <- all_chains$lift_q05
+pools$q95 <- all_chains$lift_q95
+pools$rhat <- all_chains$rhat
+pools$chain_q05 <- all_chains$chain_q05
+pools$chain_q95 <- all_chains$chain_q95
+pools <- arrange(pools, desc(all))
+# the column names give each round's number of chains
+round_names <- sprintf("%s %d", round_labels[present],
+                       sapply(rounds, function(r) r$chains[1]))
 knitr::kable(pools, digits = 2, row.names = FALSE,
-             col.names = c("topic", "Eric 16", "spread 8", "spread2 16",
-                           "unrelated 24", "all 40", "q05", "q95", "R-hat",
-                           "chain q05", "chain q95"))
+             col.names = c("topic", round_names,
+                           sprintf("all %d", all_chains$chains[1]), "q05",
+                           "q95", "R-hat", "chain q05", "chain q95"))
 ```
 
-```{r forty_plot, fig.height = 5.5}
-# The forty chains' lift with its two intervals: the posterior's and the
+```{r rounds_plot, fig.height = 5.5}
+# The lift over all chains with its two intervals: the posterior's and the
 # chain-resampled one
-forty_long <- bind_rows(
-  data.frame(topic = forty$topic, lift = forty$lift,
-             low = forty$lift_q05, high = forty$lift_q95,
+pool_long <- bind_rows(
+  data.frame(topic = all_chains$topic, lift = all_chains$lift,
+             low = all_chains$lift_q05, high = all_chains$lift_q95,
              interval = "posterior"),
-  data.frame(topic = forty$topic, lift = forty$lift,
-             low = forty$chain_q05, high = forty$chain_q95,
+  data.frame(topic = all_chains$topic, lift = all_chains$lift,
+             low = all_chains$chain_q05, high = all_chains$chain_q95,
              interval = "chains resampled"))
-forty_long$topic <- reorder(forty_long$topic, forty_long$lift)
-forty_long$interval <- factor(forty_long$interval,
-                              levels = c("posterior", "chains resampled"))
-ggplot(forty_long, aes(x = lift, y = topic, colour = interval)) +
+pool_long$topic <- reorder(pool_long$topic, pool_long$lift)
+pool_long$interval <- factor(pool_long$interval,
+                             levels = c("posterior", "chains resampled"))
+ggplot(pool_long, aes(x = lift, y = topic, colour = interval)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_pointrange(aes(xmin = low, xmax = high), size = 0.25,
                   linewidth = 0.4, position = position_dodge(width = 0.5)) +
   scale_x_log10() +
   scale_colour_manual(values = c(okabe_ito[["vermillion"]],
                                  okabe_ito[["green"]]), name = NULL) +
-  labs(x = "lift against Sophocles over forty chains (log scale)",
+  labs(x = "lift against Sophocles over all chains (log scale)",
        y = NULL) +
   theme(legend.position = "bottom")
 ```
 
-```{r forty_summary, results = "asis"}
+```{r rounds_summary, results = "asis"}
 raised_in <- function(pool, low = "lift_q05") {
   as.character(arrange(filter(pool, .data[[low]] > 1), desc(lift))$topic)
 }
 or_none <- function(topics) {
   if (length(topics) == 0) "none" else paste(topics, collapse = ", ")
 }
-# how alike the three sets are: correlations of the log lifts
-log_pools <- log(pools[, c("eric", "spread", "spread2")])
-log_pools[log_pools == -Inf] <- NA
-agreement <- cor(log_pools, use = "pairwise.complete.obs")
-forty_sorted <- arrange(forty, desc(rhat))
+# how alike the first two rounds are: the correlation of their log lifts
+log_rounds <- log(pools[, present])
+log_rounds[log_rounds == -Inf] <- NA
+agreement <- cor(log_rounds, use = "pairwise.complete.obs")
+by_rhat <- arrange(all_chains, desc(rhat))
 cat(sprintf(paste(
-  "The log lifts of the new sixteen chains correlate at %.2f with the",
-  "eight earlier unrelated starts' and at %.2f with the Eric-start",
-  "chains'. Raised on the posterior interval: %s over the twenty-four",
-  "unrelated-start chains, %s over all forty. Raised when the chains are",
-  "resampled: %s over the twenty-four, %s over all forty. Over the forty",
-  "chains %d of the %d topics with an R-hat have one above 1.1; the",
-  "largest is %.2f for %s.\n\n"),
-  agreement["spread2", "spread"], agreement["spread2", "eric"],
-  or_none(raised_in(unrelated)), or_none(raised_in(forty)),
-  or_none(raised_in(unrelated, "chain_q05")),
-  or_none(raised_in(forty, "chain_q05")),
-  sum(forty$rhat > 1.1, na.rm = TRUE), sum(!is.na(forty$rhat)),
-  forty_sorted$rhat[1], forty_sorted$topic[1]))
+  "The log lifts of the first two rounds correlate at %.2f. Raised on the",
+  "posterior interval: %s in the first round, %s in the second. Over all",
+  "chains, raised when the chains are resampled: %s. %d of the %d topics",
+  "with an R-hat have one above 1.1; the largest is %.2f for %s.\n\n"),
+  agreement[present[1], present[2]],
+  or_none(raised_in(rounds[[present[1]]])),
+  or_none(raised_in(rounds[[present[2]]])),
+  or_none(raised_in(all_chains, "chain_q05")),
+  sum(all_chains$rhat > 1.1, na.rm = TRUE), sum(!is.na(all_chains$rhat)),
+  by_rhat$rhat[1], by_rhat$topic[1]))
 if (length(short_chains) > 0) {
+  # "1 chain is", "2 chains are"
+  verb <- if (length(short_chains) == 1) "chain is" else "chains are"
   cat(sprintf(paste(
-    "This is a provisional reading: %d of the new chains (%s) are still",
-    "running and stop here at step %d, so their last segment is missing",
-    "and R-hat over the pools uses the steps up to %d.\n"),
-    length(short_chains), paste(sub(".* ", "", short_chains),
-                                collapse = ", "),
-    max(spread2_last[short_chains]), min(spread2_last)))
+    "This is a provisional reading: %d %s still running (%s) and stops",
+    "here at step %d, so its last segment is missing and R-hat uses the",
+    "steps up to %d.\n"),
+    length(short_chains), verb, paste(short_chains, collapse = ", "),
+    max(chain_last[short_chains]), min(chain_last)))
+}
+```
+
+```{r topic_starts, results = "asis"}
+# Chain k of the topic round starts rich in seeded[k + 1]. For each, the
+# lift of its seeded topic in the chain's first 1,000 steps after the
+# burn-in, in the rest of the chain, and in all the other chains. Nothing
+# is printed until the round is in the data.
+seeded <- c("Greek-sea-barbarian", "river-plain-afar", "crash-voice-shout",
+            "ship-sail-hull")
+lift_of <- function(lemmata, topic) {
+  documents <- split(lemmata$topic, lemmata$snapshot)
+  summarise_documents(documents, baseline)$lift[topic_names == topic]
+}
+if ("chains_judge235_t4_topic4" %in% present) {
+  memory <- data.frame(topic = seeded, early = NA, late = NA, others = NA,
+                       all = all_chains$lift[match(seeded, topic_names)])
+  for (k in seq_along(seeded)) {
+    this <- paste("chains_judge235_t4_topic4", k - 1)
+    own <- filter(imputation_lemmata, chain_id == this)
+    others <- filter(imputation_lemmata, chain_id != this)
+    memory$early[k] <- lift_of(filter(own, step <= 1300), seeded[k])
+    memory$late[k] <- lift_of(filter(own, step > 1300), seeded[k])
+    memory$others[k] <- lift_of(others, seeded[k])
+  }
+  cat("Each topic-seeded chain against its own topic: the lift in the",
+      "chain's first 1,000 steps after the burn-in, in the rest of the",
+      "chain, in all the other chains, and over all chains.\n\n")
+  print(knitr::kable(memory, digits = 2, row.names = FALSE,
+                     col.names = c("seeded topic", "steps 300-1,300",
+                                   "steps after 1,300", "other chains",
+                                   "all chains")))
 }
 ```
 
 ## A third judge
 
 The judge is the one part of the walk that is a language model's opinion,
-so how much of the profile is the judge's? Beside the two Qwen sets the data
-hold a pilot with a closed model as judge, Claude Sonnet 5.5 (the set
+so how much of the profile is the judge's? The other judges were run only
+from Eric Cullhed's eight reconstructions, and a comparison of judges needs
+the same starts under each. This section therefore reads the earlier
+Qwen3-235B chains from those starts (`chains_judge235_t4`), not the report's
+twenty-four, beside sixteen chains under the smaller judge
+Qwen2.5-72B-Instruct (`chains_judge72_t4_v3e`) and a pilot with a closed
+model as judge, Claude Sonnet 5.5 (the set
 `chains_judge_claude-sonnet-5-5_t4`): eight chains from the same starts, the
 same $1/T_{\text{judge}} = 4$ and the same prompt, each capped at 3.10 USD of
 API calls, which bought about 1,500 steps. Three economies that the Qwen sets

@@ -62,8 +62,9 @@ results_dir <- params$results
 # The question
 
 The same question as the hard report asks, with soft topics: which topics
-does the judge-steered Markov walk (sixteen chains under the judge
-Qwen3-235B-A22B-Instruct-2507, as described there) put into the seventeen lost
+does the judge-steered Markov walk (the chains from far-apart starts under
+the judge Qwen3-235B-A22B-Instruct-2507, as described there) put into the
+seventeen lost
 verses of P.Oxy. 5292 (vv. 13–29), and does that differ from what Sophocles
 writes elsewhere? Here a lemma belongs to every topic with some
 probability, so the posterior over a document's topic profile has no closed
@@ -368,8 +369,8 @@ knitr::kable(diagnostics_table, digits = 3,
 ```
 
 Under the learned prior the sampler has a harder time than under a flat
-one, and the section on the prior shows the same documents sampled without
-a single flag under $\mathrm{Dirichlet}(\mathbf 1)$. A seeded topic with
+one, and the section on the prior shows the same documents sampled with
+hardly a flag under $\mathrm{Dirichlet}(\mathbf 1)$. A seeded topic with
 an $\alpha_k$ of 0.1 or 0.2 is, in a document that does not use it,
 posterior mass piled against $\theta_k = 0$ with a thin tail; a chain that
 strays into the tail for a while shows up as an $\hat R$ above 1.01 and a
@@ -637,15 +638,17 @@ ggplot(scatter, aes(x = lift_attic, y = lift_sophocles)) +
        size = "mean share")
 ```
 
-The topics the hard report singles out, *wrong-vengeance-err* and
-*god-true-lord*, the two lifts that hold against every baseline there, and
-*marriage-couch-bed*, raised against Sophocles but not against the other
-tragedians, under the soft model:
+The topics the hard report singles out, the lifts that hold against every
+baseline there, and *marriage-couch-bed*, raised against Sophocles but not
+against the other tragedians, under the soft model:
 
 ```{r soft_held}
+# the hard report's topics whose lift is above 1 against all three baselines
+hard <- read.csv("results/hard/topic_circles.csv", encoding = "UTF-8")
+hard <- filter(hard, grepl("^imputations", comparison))
+hard_held <- names(which(tapply(hard$lift_q05 > 1, hard$topic, all)))
 held <- filter(comparisons,
-               topic %in% c("wrong-vengeance-err", "god-true-lord",
-                            "marriage-couch-bed"))
+               topic %in% c(hard_held, "marriage-couch-bed"))
 held <- held[, c("topic", "comparison", "lift", "lift_q05", "lift_q95",
                  "p_document")]
 knitr::kable(held, digits = 3, row.names = FALSE)
@@ -896,6 +899,13 @@ cat("The states along the walk have not been sampled yet: missing",
 ```{r trajectory_read, eval = trajectory_done}
 trajectory <- read.csv(trajectory_path, check.names = FALSE,
                        encoding = "UTF-8")
+# Chain numbers repeat between the rounds of starts, so a chain is named by
+# its round and its number (counted from 1)
+round_of <- c(chains_judge235_t4_spread = "first",
+              chains_judge235_t4_spread2 = "second",
+              chains_judge235_t4_topic4 = "topic")
+trajectory$chain <- paste(round_of[trajectory$chain_set],
+                          trajectory$chain + 1)
 plugin_profiles <- read.csv(file.path(plugin_dir, "profiles.csv"),
                             encoding = "UTF-8")
 plugin_lift <- read.csv(file.path(plugin_dir, "comparisons.csv"),
@@ -921,13 +931,12 @@ chain_lifts <- along %>%
   summarise(lift = mean(share) / sophocles_share)
 ```
 
-```{r trajectory_plot, eval = trajectory_done, fig.height = 4.5}
+```{r trajectory_plot, eval = trajectory_done, fig.height = 6.5}
 ggplot(filter(along, !is.na(lift)), aes(x = step / 1000, y = lift)) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_hline(yintercept = pooled_lift, linetype = "dotted") +
   geom_line(colour = okabe_ito[["vermillion"]], linewidth = 0.4) +
-  facet_wrap(~ chain, ncol = 4,
-             labeller = labeller(chain = function(x) paste("chain", as.integer(x) + 1))) +
+  facet_wrap(~ chain, ncol = 6) +
   labs(x = "step of the walk (thousands)",
        y = paste("lift of", top_topic, "against Sophocles"))
 ```
@@ -996,7 +1005,7 @@ learned <- filter(prior_lifts, alpha == "learned")
 Stan's diagnostics under each prior, counted over the documents as above.
 A prior with concentrations below 1 puts mass against the faces of the
 simplex, where the sampler has a harder time; the two priors at or above 1
-sample without a flag.
+sample with hardly a flag.
 
 ```{r prior_diagnostics, eval = all(prior_done)}
 prior_diagnostics <- bind_rows(lapply(names(priors), function(alpha) {
