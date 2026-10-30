@@ -216,9 +216,9 @@ As a case study, we use the papyrus \textit{P.Oxy 5292} first published in \cite
 \section{Research questions}
 \label{questions}
 
-Let us in this context define a `topic' as a probability distribution over a set vocabulary of lemmata (the normalized and uninflected dictionary form a given word token is marked as belonging to by a lemmatizer). That a certain topic $t$ `stands out' in a corpus of texts or windows of texts is then defined as the posterior probability that its mean lemma rates are closer to $t$ than the rates of some baseline are. 
+First some definitions. Let us in this context define a `topic' as a probability distribution over a set vocabulary of lemmata. Given a baseline corpus, the corpus of imputations' `lift' \textit{r} is defined as the ratio between its mean lemma rates and that of the baseline's. We say that a certain topic $t$ `stands out' in the imputation corpus relative to a baseline when the credible interval of the lift is either entirely greater than or entirely less than 1. 
 
-We are now ready to ask: are there topics that consistently stand out across chains and iterations of generated papyrus imputations? 
+The most pertinent baseline is Sophocles' other works, but gradually zooming out we will also consider the other two preserved authors of the genre of tragedy, as well as the Attic dialect as a whole, including prose. We are now ready to ask: are there topics that stand out across chains and iterations of generated papyrus imputations? 
 
 \section{Data}
 \label{data}
@@ -441,8 +441,8 @@ steps). Dotted: all chains.}
 \end{figure}
 
 \paragraph{Hard topics.} The imputations write tragedy: of nine genres their
-topic profile is nearest to tragedy (Jensen--Shannon divergence 0.052 bits,
-against 0.089 for comedy and 0.140 for epic). It is not, however,
+topic profile is nearest to tragedy.\footnote{Jensen--Shannon divergence 0.052 bits,
+against 0.089 for comedy and 0.140 for epic.} It is not, however,
 Sophocles' profile (\cref{fig:lift}). Six topics stand out above it, led
 by \textit{marriage-couch-bed} (lift 2.13), and fifteen below, the sea and its
 rivers almost vanishing (\textit{ship-sail-hull} 0.12,
