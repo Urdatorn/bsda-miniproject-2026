@@ -631,7 +631,7 @@ chains do not mix within that budget (\autoref{diagnostics}).
 \node[box] (start) {\textbf{Start} from a restoration of vv.~13--29; vv.~1--12
   survive and stay fixed.};
 \node[box, below=of start] (pick) {\textbf{Pick a site}: a damaged verse and a
-  span of its restored letters, at random. (The Gibbs part)};
+  span of its restored letters, at random.};
 \node[model, below=of pick] (sto) {\textbf{Stoicheia proposes} replacements for
   the masked span, conditioned on the whole passage.};
 \node[box, below=of sto] (filt) {\textbf{Formal checks} discard candidates that
@@ -647,10 +647,12 @@ chains do not mix within that budget (\autoref{diagnostics}).
   both orders.};
 \node[judge, below=of jud] (acc) {\textbf{Accept} with probability
   $\min\bigl\{1,\ \exp(\Delta_{\text{formal}} + \Delta_{\text{judge}}/T)\bigr\}$,
-  $T$ the judge's temperature. (The Metropolis part)};
+  $T$ the judge's temperature.};
 \node[dec, below=of acc] (ok) {accepted?};
 \node[box, below=of ok] (upd) {\textbf{Update} the verse; keep every tenth
   state as a document.};
+\node[left=4mm of pick, align=right] {The Gibbs\\part};
+\node[left=4mm of acc, align=right] {The Metropolis\\part};
 \draw[arr] (start) -- (pick);
 \draw[arr] (pick) -- (sto);
 \draw[arr] (sto) -- (filt);
