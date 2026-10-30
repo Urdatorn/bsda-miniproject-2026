@@ -62,8 +62,9 @@ results_dir <- params$results
 # The question
 
 The same question as the hard report asks, with soft topics: which topics
-does the judge-steered Markov walk (sixteen chains under the judge
-Qwen3-235B-A22B-Instruct-2507, as described there) put into the seventeen lost
+does the judge-steered Markov walk (the chains from far-apart starts under
+the judge Qwen3-235B-A22B-Instruct-2507, as described there) put into the
+seventeen lost
 verses of P.Oxy. 5292 (vv. 13–29), and does that differ from what Sophocles
 writes elsewhere? Here a lemma belongs to every topic with some
 probability, so the posterior over a document's topic profile has no closed
@@ -896,6 +897,13 @@ cat("The states along the walk have not been sampled yet: missing",
 ```{r trajectory_read, eval = trajectory_done}
 trajectory <- read.csv(trajectory_path, check.names = FALSE,
                        encoding = "UTF-8")
+# Chain numbers repeat between the rounds of starts, so a chain is named by
+# its round and its number (counted from 1)
+round_of <- c(chains_judge235_t4_spread = "first",
+              chains_judge235_t4_spread2 = "second",
+              chains_judge235_t4_topic4 = "topic")
+trajectory$chain <- paste(round_of[trajectory$chain_set],
+                          trajectory$chain + 1)
 plugin_profiles <- read.csv(file.path(plugin_dir, "profiles.csv"),
                             encoding = "UTF-8")
 plugin_lift <- read.csv(file.path(plugin_dir, "comparisons.csv"),
@@ -921,13 +929,12 @@ chain_lifts <- along %>%
   summarise(lift = mean(share) / sophocles_share)
 ```
 
-```{r trajectory_plot, eval = trajectory_done, fig.height = 4.5}
+```{r trajectory_plot, eval = trajectory_done, fig.height = 6.5}
 ggplot(filter(along, !is.na(lift)), aes(x = step / 1000, y = lift)) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_hline(yintercept = pooled_lift, linetype = "dotted") +
   geom_line(colour = okabe_ito[["vermillion"]], linewidth = 0.4) +
-  facet_wrap(~ chain, ncol = 4,
-             labeller = labeller(chain = function(x) paste("chain", as.integer(x) + 1))) +
+  facet_wrap(~ chain, ncol = 6) +
   labs(x = "step of the walk (thousands)",
        y = paste("lift of", top_topic, "against Sophocles"))
 ```

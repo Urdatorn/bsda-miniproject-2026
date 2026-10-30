@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=96
 #SBATCH --gpus=1
 #SBATCH --mem=96G
-#SBATCH --time=03:30:00
+#SBATCH --time=04:30:00
 #SBATCH --array=0-23
 #SBATCH --output=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026/.logs/%x-%A_%a.out
 #SBATCH --error=/nobackup/proj/flash/dionysus/personal/cleland/bsda-miniproject-2026/.logs/%x-%A_%a.err
