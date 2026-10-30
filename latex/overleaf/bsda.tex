@@ -599,19 +599,22 @@ character-level diffusion model Stoicheia
 \citep{cullhed2026stoicheiacharacterlevelmaskeddiffusion} proposes new text for
 a span of one verse, hard formal checks discard impossible candidates, and a
 surviving candidate is accepted with probability $\min(1, r)$. The ratio $r$
-has two parts: small calibration terms that bring the restorer's habits
-(finite verbs, particles, word repetition) to Sophocles' rates, and an LLM
-judge's preference for the more coherent of the old and the new line. Nothing
-in the walk rewards Sophoclean style as such, so it remains a source of
-imputations rather than a search for the most Sophoclean text.
+has two parts:
+
+\begin{enumerate}
+    \item small calibration terms that bring the restorer's habits
+(finite verbs, particles, word repetition) to Sophocles' rates,
+    \item and an LLM judge's preference for the more coherent of the old and the new line.
+\end{enumerate}
+
+Importantly, nothing in the walk rewards Sophoclean style as such, so it remains a source of imputations rather than a search for the most Sophoclean text.
 
 Twenty-four chains start from restorations as far apart in words as
 possible, chosen in two rounds of eight and sixteen: each start is the
 candidate whose smallest word distance to the starts already chosen is
 largest. One is Eric Cullhed's reconstruction, the others late states of
 earlier chains. Every chain runs 10\,000 steps; after a burn-in of 300 steps
-every tenth state is kept. Sixteen earlier chains from Cullhed's eight
-reconstructions, variants of one text, serve only to compare judges. The
+every tenth state is kept. The
 chains do not mix within that budget (\autoref{diagnostics}).
 
 \begin{center}
