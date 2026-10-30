@@ -578,7 +578,8 @@ held_everywhere <- names(which(above_one))
 ```
 
 The lifts of the imputations that hold against every baseline are those of
-`r knitr::combine_words(paste0("*", held_everywhere, "*"))`.
+`r knitr::combine_words(paste0("*", held_everywhere, "*"),
+  oxford_comma = FALSE)`.
 *marriage-couch-bed*, the largest lift against Sophocles, is raised against
 Classical Attic too but not against Aeschylus and Euripides, who use that
 vocabulary more than Sophocles does:
@@ -593,7 +594,7 @@ knitr::kable(held, digits = 3, row.names = FALSE)
 
 Opened up lemma by lemma, two of these lifts are of different kinds. Almost
 half of the imputations' excess of *god-true-lord* over Sophocles is one
-word, θεός, with ἄγγελος, πιστός, πίστις and ἀληθής behind it: the judge's
+word, θεός, with ἄγγελος, πιστός, ἀληθής and πίστις behind it: the judge's
 restorer names the god, the messenger and the pledge of faith where
 Sophocles names them less. That of *wrong-vengeance-err* is spread over the
 vocabulary of the play's matter: χάρις, δίκη, πάθος, πόνος, ἀέκων, αἰτέω,
