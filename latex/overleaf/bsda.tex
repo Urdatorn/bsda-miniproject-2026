@@ -206,12 +206,12 @@ We conduct the first large-scale evaluation of machine-generated imputations for
 \section{Introduction}
 \label{introduction}
 
-Conjectural text criticism is one of the most methodologically controversial parts of classical philology, but also one of the most well-established.\footnote{See \citet{olson2020tereus} for a recent critique of what the author sees as the shaky methodological foundation of conjectural text criticism.} Since Hellenistic times, scholars have made informed conjectures as to what the lacunae of damaged or corrupted texts could have said, conjectures that are sometimes vindicated or falsified by newly found papyri and palimpsests.\footnote{For example, Stiebitz had conjectured ἰ]ο̣κ[ό]λ̣π[ων ("purple-girdled"; square brackets indicate papyrus edges) in a poem by Sappho, a reading later proved correct by a papyrus. \citep{hammerstaedt2009cologne} Inversely, given ]κ’ ἐπιβο̣[  Furley 2013 conjectured γυναῖ]κ’ ἐπιβο̣[υλον, ``treacherous woman'', which a new discovery reading φάρμακ’ ἐπιβο̣[ (``treacherous potions'') falsified. \citep{goldberg2023menander}} Large language models like \citet{cullhed2026stoicheiacharacterlevelmaskeddiffusion} hold the promise to let scholars avoid criticisms of subjectivity and anachronism by shifting the basic method from the ingenuity of individual editors \citep{conte2013ope} to statistical treatments of large arrays of machine generated conjectures. With this radical change of method, the research question ``what is the best imputation?'' obsolesces in favour of ``what are the tendencies of this set of $N$ machine imputations?''. Like \textit{New philology} fragmented the medieval text into a ``manuscript matrix'' that can only be studied by computational methods \citep{nichols1990philology}, we fragment the ingenious conjecture into an ``imputation matrix''.
+Conjectural text criticism is one of the most methodologically controversial parts of classical philology, but also one of the most well-established.\footnote{See \citet{olson2020tereus} for a recent critique of what the author sees as the shaky methodological foundation of conjectural text criticism.} Since Hellenistic times, scholars have made informed conjectures as to what the lacunae of damaged or corrupted texts could have said, conjectures that are sometimes vindicated or falsified by newly found papyri and palimpsests.\footnote{For example, Stiebitz had conjectured ἰ]ο̣κ[ό]λ̣π[ων (``purple-girdled''; square brackets indicate papyrus edges) in a poem by Sappho, a reading later proved correct by a papyrus. \citep{hammerstaedt2009cologne} Inversely, given ]κ’ ἐπιβο̣[  Furley 2013 conjectured γυναῖ]κ’ ἐπιβο̣[υλον, ``treacherous woman'', which a new discovery reading φάρμακ’ ἐπιβο̣[ (``treacherous potions'') falsified. \citep{goldberg2023menander}} Large language models like \citet{cullhed2026stoicheiacharacterlevelmaskeddiffusion} hold the promise to let scholars avoid criticisms of subjectivity and anachronism by shifting the basic method from the ingenuity of individual editors \citep{conte2013ope} to statistical treatments of large arrays of machine generated conjectures. With this radical change of method, the research question ``what is the best imputation?'' obsolesces in favour of ``what are the tendencies of this set of $N$ machine imputations?''. Like \textit{New philology} fragmented the medieval text into a ``manuscript matrix'' that can only be studied by computational methods \citep{nichols1990philology}, we fragment the ingenious conjecture into an ``imputation matrix''.
 
 As a case study, we use the papyrus \textit{P.Oxy 5292} first published in \citet{slattery2016tereus}, which preserves a fragmentary continuation of a preserved quote from Sophocles' otherwise lost play \textit{Tereus}, a staging of the myth of Philomela (see \autoref{papyrus}). The tendencies we will look for in this article are topics.
 
-% \epigraph{[I]dentifying the point at which "same" turns into "different" is a fundamentally subjective enterprise.}{Olson, \emph{Methodological Reflections on the Text and Action of Sophocles' \emph{Tereus}}, p.\ 184}
-% \epigraph{Some people ask "Who is to be the official guesser of priors?" and "Won't different people get different results?." The answers are "No one," and "Yes."}{Mosteller and Wallace, p.\ 303}
+% \epigraph{[I]dentifying the point at which ``same'' turns into ``different'' is a fundamentally subjective enterprise.}{Olson, \emph{Methodological Reflections on the Text and Action of Sophocles' \emph{Tereus}}, p.\ 184}
+% \epigraph{Some people ask ``Who is to be the official guesser of priors?'' and ``Won't different people get different results?.'' The answers are ``No one,'' and ``Yes.''}{Mosteller and Wallace, p.\ 303}
 
 \section{Research questions}
 \label{questions}
@@ -293,7 +293,7 @@ topic models better than a symmetric one: below 1 for every seeded topic (0.04--
 the free ones, which a typical document is thus expected to be mostly made of.
 
 The fit has two stages, and the second never feeds back into the first (a
-cut model, \citealt{plummer2015cuts}). Given one state $(\phi, \alpha)$ of
+cut model, \citealt{plummer2015cuts}; \cref{fig:cut}). Given one state $(\phi, \alpha)$ of
 the LDA's chain, a document's lemmata are drawn from the mixture
 $\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\alpha)$, and
 the posterior
@@ -303,6 +303,33 @@ has no closed form. It is sampled with NUTS in Stan
 \citep{carpenter2017stan}, one document at a time, by the program in \cref{fig:stan}. This is done for each of the twenty states, and the twenty posteriors
 are pooled, so that the intervals carry the uncertainty in $\phi$ as well as
 in $\theta$ (diagnostics in \autoref{diagnostics}).
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  data/.style={rectangle, draw, fill=gray!20, minimum size=9mm},
+  param/.style={circle, draw, fill=gray!20, minimum size=11mm, inner sep=1pt},
+  arr/.style={-{Latex[length=2.2mm]}},
+]
+\node[param] (phi) at (0, 0) {$\phi, \alpha$};
+\node[data] (z) at (0, 2.0) {$z$};
+\node[param] (theta) at (3.2, 0) {$\theta$};
+\node[data] (y) at (3.2, 2.0) {$y$};
+\draw[arr] (phi) -- (z);
+\draw[arr] (phi) -- (y);
+\draw[arr] (phi) -- (theta);
+\draw[arr] (theta) -- (y);
+\draw[dashed, gray] (1.6, -0.8) -- (1.6, 2.6);
+\node[gray] at (-1.1, 1.0) {$G_1$};
+\node[gray] at (4.3, 1.0) {$G_2$};
+\end{tikzpicture}
+\caption{The cut model, after \citet[Fig.~1]{plummer2015cuts}. Stage~1
+($G_1$) fits the LDA's $(\phi, \alpha)$ to the windows of Aeschylus and
+Euripides, $z$; stage~2 ($G_2$) takes them as given and samples a
+document's topic shares $\theta$ from its lemmata $y$. Nothing flows back
+across the cut.}
+\label{fig:cut}
+\end{figure}
 
 \begin{figure}[t]
 \centering
