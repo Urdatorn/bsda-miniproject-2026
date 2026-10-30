@@ -594,7 +594,7 @@ The content of the prompt sent to Stoicheia to infer an imputation then looks li
 \section{The Metropolis walk}\label{walk}
 
 The restorations are the states of a Metropolis-within-Gibbs walk over the
-seventeen damaged verses; the chart below shows one step. The
+seventeen damaged verses; \cref{fig:walk} shows one step. The
 character-level diffusion model Stoicheia
 \citep{cullhed2026stoicheiacharacterlevelmaskeddiffusion} proposes new text for
 a span of one verse, hard formal checks discard impossible candidates, and a
@@ -617,7 +617,8 @@ earlier chains. Every chain runs 10\,000 steps; after a burn-in of 300 steps
 every tenth state is kept. The
 chains do not mix within that budget (\autoref{diagnostics}).
 
-\begin{center}
+\begin{figure}[htbp]
+\centering
 \begin{tikzpicture}[
   node distance=5mm,
   box/.style={draw, rounded corners=2pt, align=left, text width=110mm, inner sep=5pt, fill=white},
@@ -666,7 +667,9 @@ chains do not mix within that budget (\autoref{diagnostics}).
 \draw[thick] (any.east) -- node[lab, above] {no} (any.east -| rail);
 \draw[thick] (ok.east) -- node[lab, above] {no: keep the old line} (ok.east -| rail);
 \end{tikzpicture}
-\end{center}
+\caption{One step of the walk. Blue: the diffusion model's proposal; orange: the LLM judge's part in the acceptance.}
+\label{fig:walk}
+\end{figure}
 
 \newpage
 \section{Sampler and chain diagnostics}\label{diagnostics}
