@@ -247,12 +247,11 @@ The data $y$ for the second graph is the posterior draws of the first graph: pro
 \subsection{Dirichlet-Multinomial for hard topics}
 \label{sec:hard}
 
-For the first model, we assume that each lemma of the vocabulary belongs to exactly one of 34 semantic clusters
-(Word2Vec, \citealt{mikolov2013efficient}, on the lemmatised Greek corpus,
+For the first model, we assume that each lemma of the vocabulary belongs to exactly one of 34 semantic clusters.\footnote{Word2Vec, \citealt{mikolov2013efficient}, on the lemmatised Greek corpus,
 Ward's method cut at $K = 40$, two rare-lemma and four function-word clusters
 dropped), named by the English glosses of the three non-cognate lemmata
 nearest its centroid, for example \textit{lament-pitiable-groan}
-(\cref{tab:topics}). A document's topic counts $\mathbf n$ are then
+(\cref{tab:topics}).} A document's topic counts $\mathbf n$ are then
 \[\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta), \qquad
   \theta \sim \mathrm{Dirichlet}(\kappa \mathbf m),\]
 where $N$ is the document's own length, $\mathbf m$ is Sophocles' topic
