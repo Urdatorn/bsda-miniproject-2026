@@ -244,7 +244,7 @@ The data $y$ for the second graph is the posterior draws of the first graph: pro
 \section{Models and methods}
 \label{sec:models}
 
-\subsection{Conjugate posterior}
+\subsection{Dirichlet-Multinomial for hard topics}
 \label{sec:hard}
 
 For the first model, we assume that each lemma of the vocabulary belongs to exactly one of 34 semantic clusters
@@ -263,26 +263,12 @@ so fabricate lift for topics they simply lack. The posterior
 $\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\kappa \mathbf m + \mathbf n)$
 is exact and is sampled by normalised gamma draws.
 
-\subsection{MCMC posterior}
+\subsection{Cut two-stage LDA for soft topics}
 \label{sec:soft}
 
 Hard clusters put every occurrence of a lemma into one topic, which is a less than ideal model assumption, since it ignores the phenomena of polysemy and topic overlap, which are both central to the study of literature. Letting go of this simplification, the soft model instead gives each topic a distribution $\phi_k$ over the vocabulary (\cref{fig:phi}), fitted once by a seeded
 latent Dirichlet allocation \citep{blei2003latent} on Aeschylus and Euripides
-only (tomotopy, \citealt{lee2022tomotopy}),\footnote{In LDA each
-document $d$ has topic shares $\theta_d \sim \mathrm{Dirichlet}(\alpha)$ and
-each topic a word distribution $\phi_k \sim \mathrm{Dirichlet}(\beta_k)$;
-every lemma token first draws a topic $z \sim \theta_d$, then the lemma from
-$\phi_z$. Tomotopy fits this by collapsed Gibbs sampling
-\citep{griffiths2004finding}: $\theta$ and $\phi$ are integrated out, and each
-token's topic, a discrete variable that HMC cannot sample since it needs a
-gradient, is redrawn in turn from its full conditional given all the others, and $\alpha$, one concentration per topic, is re-estimated every ten
-sweeps by maximising the marginal likelihood. After 10\,000 sweeps of
-burn-in, twenty states 500 sweeps apart are kept, and in each
-$\phi_{k,w} \propto n_{k,w} + \beta_{k,w}$ is read off the counts $n$. Seeding changes only the prior: a lemma of
-cluster $k$ has $\beta_{k,w} = 200$, two hundred pseudo-occurrences in its own
-topic, and $0.01$ in every other, while unclustered lemmata and the four free
-topics get $0.01$ throughout. Here $K = 38$, and the documents
-are the 1\,174 windows of Aeschylus and Euripides.} so that Sophocles is a test corpus
+only (tomotopy, \citealt{lee2022tomotopy}), so that Sophocles is a test corpus
 like the restorations. Each hard cluster seeds one topic with a strong prior
 on its lemmata, and four free topics take up what the clusters miss.
 \textgreek{θεός}, god, which the hard model puts in \textit{god-true-lord}
@@ -327,7 +313,7 @@ in $\theta$ (diagnostics in \autoref{diagnostics}).
 \node[gray] at (-1.4, 1.1) {$G_1$};
 \node[gray] at (4.3, 1.1) {$G_2$};
 \end{tikzpicture}
-\caption{The cut model, adapted based on \citet[Fig.~1]{plummer2015cuts}. Stage~1
+\caption{The cut model graph. Stage~1
 ($G_1$) fits the LDA's topics $\phi$ and prior $\alpha$ to the windows of Aeschylus and
 Euripides, $z$; stage~2 ($G_2$) takes them as given and samples a
 document's topic shares $\theta$ from its lemmata $y$. Nothing flows back
@@ -597,9 +583,9 @@ The content of the prompt sent to Stoicheia to infer an imputation then looks li
     \end{verbatim}
 
 \newpage
-\section{The Metropolis walk}\label{walk}
+\section{The Metropolis-in-Gibbs walk}\label{walk}
 
-The restorations are the states of a Metropolis-within-Gibbs walk over the
+The restorations are the states of a Metropolis-in-Gibbs walk over the
 seventeen damaged verses; \cref{fig:walk} shows one step. The
 character-level diffusion model Stoicheia
 \citep{cullhed2026stoicheiacharacterlevelmaskeddiffusion} proposes new text for
