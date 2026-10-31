@@ -594,7 +594,7 @@ knitr::kable(held, digits = 3, row.names = FALSE)
 
 Opened up lemma by lemma, two of these lifts are of different kinds. Almost
 half of the imputations' excess of *god-true-lord* over Sophocles is one
-word, θεός, with ἄγγελος, πιστός, ἀληθής and πίστις behind it: the judge's
+word, θεός, with πιστός, ἄγγελος, πίστις and ἀληθής behind it: the judge's
 restorer names the god, the messenger and the pledge of faith where
 Sophocles names them less. That of *wrong-vengeance-err* is spread over the
 vocabulary of the play's matter: χάρις, δίκη, πάθος, πόνος, ἀέκων, αἰτέω,
@@ -1078,6 +1078,23 @@ if ("chains_judge235_t4_topic4" %in% present) {
                      col.names = c("seeded topic", "steps 300-1,300",
                                    "steps after 1,300", "other chains",
                                    "all chains")))
+  # The topics the round raises on its own, and how many of them the
+  # resampled chains of all rounds also raise
+  topic_round <- raised_in(rounds[["chains_judge235_t4_topic4"]])
+  claimed <- raised_in(all_chains, "chain_q05")
+  kept <- sum(memory$late > 1)
+  lead <- if (kept == 0) "No seeded chain keeps its topic." else
+    sprintf("%d of the four seeded chains keep their topic.", kept)
+  cat(sprintf(paste(
+    "\n%s After step 1,300 the four lifts are %s, at most %.2f, where in",
+    "the first 1,000 steps they were %s. What the round raises instead",
+    "is, on the posterior interval, %s: %d of the %d topics that all",
+    "chains raise when the chains are resampled.\n\n"),
+    lead, paste(sprintf("%.2f", memory$late), collapse = ", "),
+    max(memory$late),
+    paste(sprintf("%.2f", memory$early), collapse = ", "),
+    or_none(topic_round), length(intersect(topic_round, claimed)),
+    length(claimed)))
 }
 ```
 
