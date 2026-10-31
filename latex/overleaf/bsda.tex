@@ -208,7 +208,9 @@ We conduct the first large-scale evaluation of machine-generated imputations for
 \section{Introduction}
 \label{introduction}
 
-Conjectural text criticism is one of the most methodologically controversial parts of classical philology, but also one of the most well-established.\footnote{See \citet{olson2020tereus} for a recent critique of what the author sees as the shaky methodological foundation of conjectural text criticism.} Since Hellenistic times, scholars have made informed conjectures as to what the lacunae of damaged or corrupted texts could have said, conjectures that are sometimes vindicated or falsified by newly found papyri and palimpsests.\footnote{For example, Stiebitz had conjectured ἰ]ο̣κ[ό]λ̣π[ων (``purple-girdled''; square brackets indicate papyrus edges) in a poem by Sappho, a reading later proved correct by a papyrus. \citep{hammerstaedt2009cologne} Inversely, given ]κ’ ἐπιβο̣[  Furley 2013 conjectured γυναῖ]κ’ ἐπιβο̣[υλον, ``treacherous woman'', which a new discovery reading φάρμακ’ ἐπιβο̣[ (``treacherous potions'') falsified. \citep{goldberg2023menander}} Large language models like \citet{cullhed2026stoicheiacharacterlevelmaskeddiffusion} hold the promise to let scholars avoid criticisms of subjectivity and anachronism by shifting the basic method from the ingenuity of individual editors \citep{conte2013ope} to statistical treatments of large arrays of machine generated conjectures. With this radical change of method, the research question ``what is the best imputation?'' obsolesces in favour of ``what are the tendencies of this set of $N$ machine imputations?''. Like \textit{New philology} fragmented the medieval text into a ``manuscript matrix'' that can only be studied by computational methods \citep{nichols1990philology}, we fragment the ingenious conjecture into an ``imputation matrix''.
+Conjectural text criticism is one of the most methodologically controversial parts of classical philology, but also one of the most well-established.\footnote{See \citet{olson2020tereus} for a recent critique of what the author sees as the shaky methodological foundation of conjectural text criticism.} Since Hellenistic times, scholars have made informed conjectures as to what the lacunae of damaged or corrupted texts could have said, conjectures that are sometimes vindicated or falsified by newly found papyri and palimpsests.\footnote{For example, Stiebitz had conjectured ἰ]ο̣κ[ό]λ̣π[ων (``purple-girdled''; square brackets indicate papyrus edges) in a poem by Sappho, a reading later proved correct by a papyrus. \citep{hammerstaedt2009cologne} Inversely, given ]κ’ ἐπιβο̣[  Furley 2013 conjectured γυναῖ]κ’ ἐπιβο̣[υλον, ``treacherous woman'', which a new discovery reading φάρμακ’ ἐπιβο̣[ (``treacherous potions'') falsified. \citep{goldberg2023menander}} 
+
+Large language models like \citet{cullhed2026stoicheiacharacterlevelmaskeddiffusion} hold the promise to let scholars avoid criticisms of subjectivity and anachronism by shifting the basic method from the ingenuity of individual editors \citep{conte2013ope} to statistical treatments of large arrays of machine generated conjectures. With this radical change of method, the research question ``what is the best imputation?'' obsolesces in favour of ``what are the tendencies of this large set of $N$ machine imputations?''. Like \textit{New philology} fragmented the medieval text into a ``manuscript matrix'' that can only be studied by computational methods \citep{nichols1990philology}, we fragment the ingenious conjecture into an ``imputation matrix'' that is not intended to ever be read by humans.
 
 As a case study, we use the papyrus \textit{P.Oxy 5292} first published in \citet{slattery2016tereus}, which preserves a fragmentary continuation of a preserved quote from Sophocles' otherwise lost play \textit{Tereus}, a staging of the myth of Philomela (see \autoref{papyrus}). The tendencies we will look for in this article are topics.
 
@@ -226,28 +228,26 @@ The most pertinent baseline is Sophocles' other works, but gradually zooming out
 \label{sec:data}
 
 \subsection{Hard topics}
-For the Dirichlet-Multinomial analytic model that assumes hard topics, the data is one lemmata vector (with average length 27 lemmata) for each of the \imputations generated imputations (details of the generation method are left to \autoref{walk}). Lemmata from the surviving letters is not counted, only the imputed. The main baseline is Sophocles' extant verses of the same meter as the fragment,
-cut into 444 windows of seventeen consecutive verses, which is the shape of the papyrus fragment. There are two further baselines, one capturing tragedy in general and consisting of Sophocles' peers Aeschylus and Euripides (1\,174 windows), and one capturing Sophocles' dialect, Classical Attic, and consisting of all Attic authors before Alexander the Great (23\,328 windows); both baselines are cut in windows of 30
+For the Dirichlet-Multinomial analytic model that assumes hard topics, the data is one lemmata vector (with average length 27 lemmata) for each of the \imputations generated imputations (details of the generation method are left to \autoref{walk}). Lemmata from the surviving letters is not counted, only the imputed. 
+
+The main baseline is Sophocles' extant verses of the same meter as the fragment, cut into 444 windows of seventeen consecutive verses, which is the shape of the papyrus fragment. There are two further baselines, one capturing tragedy in general and consisting of Sophocles' peers Aeschylus and Euripides (1\,174 windows), and one capturing Sophocles' dialect, Classical Attic, and consisting of all Attic authors before Alexander the Great (23\,328 windows); both baselines are cut in windows of 30
 lemmata each.
 
 Every text and window is machine lemmatised and reduced to a bag of lemmata over a vocabulary of
 3\,128 lemmata.
 
-\subsection{Hard topics}
-Each of the two stages or graphs of the cut Bayesian model presented in the \autoref{sec:soft} and in \autoref{fig:cut} has its own data. 
+\subsection{Soft topics}
+Each of the two stages or graphs of the cut Bayesian model presented in the \autoref{sec:soft} and in \autoref{fig:cut} has its own data. The data $z$ for the first graph is lemmata count vectors for Aeschylus' and Euripides' text windows.
 
-The data for the second graph is the posterior draws of the first graph: probability vectors $\phi_{kw_n}$ over the $K$ topics and $N$ lemmata of the vocabulary as well as Dirichlet concentration parameters $\alpha$.
-
-
-  
+The data $y$ for the second graph is the posterior draws of the first graph: probability vectors $\phi_{kw_n}$ over the $K$ topics and $N$ lemmata of the vocabulary as well as Dirichlet concentration parameters $\alpha$.
 
 \section{Models and methods}
 \label{sec:models}
 
-\subsection{Hard topics: conjugate posterior}
+\subsection{Conjugate posterior}
 \label{sec:hard}
 
-Every lemma of the vocabulary belongs to exactly one of 34 semantic clusters
+For the first model, we assume that each lemma of the vocabulary belongs to exactly one of 34 semantic clusters
 (Word2Vec, \citealt{mikolov2013efficient}, on the lemmatised Greek corpus,
 Ward's method cut at $K = 40$, two rare-lemma and four function-word clusters
 dropped), named by the English glosses of the three non-cognate lemmata
@@ -263,12 +263,10 @@ so fabricate lift for topics they simply lack. The posterior
 $\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\kappa \mathbf m + \mathbf n)$
 is exact and is sampled by normalised gamma draws.
 
-\subsection{Soft topics: MCMC posterior}
+\subsection{MCMC posterior}
 \label{sec:soft}
 
-Hard clusters put every occurrence of a lemma into one topic, although a
-frequent word can serve several. The soft model gives each topic a
-distribution $\phi_k$ over the vocabulary (\cref{fig:phi}), fitted once by a seeded
+Hard clusters put every occurrence of a lemma into one topic, which is a less than ideal model assumption, since it ignores the phenomena of polysemy and topic overlap, which are both central to the study of literature. Letting go of this simplification, the soft model instead gives each topic a distribution $\phi_k$ over the vocabulary (\cref{fig:phi}), fitted once by a seeded
 latent Dirichlet allocation \citep{blei2003latent} on Aeschylus and Euripides
 only (tomotopy, \citealt{lee2022tomotopy}),\footnote{In LDA each
 document $d$ has topic shares $\theta_d \sim \mathrm{Dirichlet}(\alpha)$ and
@@ -329,7 +327,7 @@ in $\theta$ (diagnostics in \autoref{diagnostics}).
 \node[gray] at (-1.4, 1.1) {$G_1$};
 \node[gray] at (4.3, 1.1) {$G_2$};
 \end{tikzpicture}
-\caption{The cut model, after \citet[Fig.~1]{plummer2015cuts}. Stage~1
+\caption{The cut model, adapted based on \citet[Fig.~1]{plummer2015cuts}. Stage~1
 ($G_1$) fits the LDA's topics $\phi$ and prior $\alpha$ to the windows of Aeschylus and
 Euripides, $z$; stage~2 ($G_2$) takes them as given and samples a
 document's topic shares $\theta$ from its lemmata $y$. Nothing flows back
@@ -499,9 +497,10 @@ about half its learned-prior value. The order barely moves (log lifts
 correlate at 0.89--0.95), and \textit{persuade-man-king} leads under all
 four priors tried.
 
-\section{Conclusions}
+\section{Conclusions: Towards Artificial Philology}
 \label{conclusions}
 
+This is the first intimation of a new science, which could perhaps be called artificial classical philology, where for the first time the philologist is engaging solely with corpora of artificial texts. In an important way, this science should be seen as subsidiary to the field of \textit{machine interpretability}, since the goal is to approximate with limited computational power traits of the intractably large posterior of the underlying generative language model. It is my hypothesis that a decade from now, something akin to the method of this paper, although standing to it in the relationship of an oil painting to a quick sketch, will be standard procedure in the analysis of ancient fragmentary texts.
 
 \section{Data availability statement}
 
