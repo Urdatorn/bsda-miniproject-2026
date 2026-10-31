@@ -24,7 +24,7 @@
  ],
  "keep_per_state": 100,
  "bootstrap": 2000,
- "chains": 24,
+ "chains": 28,
  "alpha_mean": [
   0.39729,
   0.56783,
