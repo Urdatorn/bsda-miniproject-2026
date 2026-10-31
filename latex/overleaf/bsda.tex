@@ -384,10 +384,9 @@ lies entirely above 1 or entirely below it.
 \centering
 \includegraphics[width=\linewidth]{figures/lift_hard_soft.pdf}
 \caption{Lift of the imputations against Sophocles for the 24 topics that
-stand out under at least one model, with 90\,\% intervals resampling whole chains (soft: pooled over twenty states
-of $\phi$). Dashed: no difference. Topics ordered by the soft lift; those that
-stand out under the soft model in bold (interval entirely above 1) or italic
-(entirely below 1).}
+stand out under at least one model, with 90\,\% intervals. Dashed: no
+difference. Ordered by the soft lift; bold: stands out above under the soft
+model, italic: below.}
 \label{fig:lift}
 \end{figure}
 
@@ -414,8 +413,7 @@ wrong-vengeance-err & 1.13 & \textbf{1.15} & 1.06 \\
 \end{tabular}
 \caption{Lift of the imputations against the three baselines (Sophocles,
 Aeschylus and Euripides, Classical Attic), ordered by the soft lift against
-Sophocles. Bold: the 90\,\% interval lies
-entirely above 1; italic: entirely below 1.}
+Sophocles. Bold: stands out above; italic: below.}
 \label{tab:key}
 \end{table}
 
@@ -464,12 +462,10 @@ itself sets with \textgreek{ὅρκον γάρ} at the start of v.~23. Nor is it
 one chain's: 26 of the 28 chains lie above Sophocles over their whole run,
 though they wander (0.85--7.45, \cref{fig:trajectory}). Of the other topics
 that stand out under the hard model, \textit{marriage-couch-bed} falls back
-to 1.26 and \textit{wrong-vengeance-err} to 1.13, both with intervals that
-include 1, and \textit{god-true-lord} shrinks from 1.77 to 1.28. The reason
+to 1.26 and \textit{wrong-vengeance-err} to 1.13, neither standing out, and \textit{god-true-lord} shrinks from 1.77 to 1.28. The reason
 is visible in $\phi$: the most frequent words of tragedy leave their
 clusters for the free topics, which take three quarters of the imputations'
-mean profile, and \textgreek{θεός}, which carried much of the hard model's
-excess of the god topic, goes mostly to \textit{god-evil-word}.
+mean profile, \textgreek{θεός} among them.
 
 \paragraph{Robustness.} The two rounds of starts chosen for distance (8
 and 16 chains) give hard log lifts that correlate at 0.73. Four more chains,
