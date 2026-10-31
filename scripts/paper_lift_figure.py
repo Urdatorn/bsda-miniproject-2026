@@ -8,7 +8,11 @@ interval from the same resampling by chain, with a state of phi drawn in each
 replicate (results/soft/pooled/comparisons.csv). Only the topics that stand
 out under at least one model (90 % interval entirely above or below 1) are
 drawn. Topics ordered by the soft lift; a topic whose soft interval lies entirely above 1 is
-set in bold, one whose soft interval lies entirely below 1 in italic.
+set in bold, one whose soft interval lies entirely below 1 in italic. A dagger
+marks a topic whose soft lift against Classical Attic stands out in the same
+direction as against Sophocles, a double dagger one whose hard lift does
+(results/hard/topic_circles.csv and results/soft/pooled/comparisons.csv,
+imputations vs attic).
 
 Usage: python scripts/paper_lift_figure.py latex/overleaf/figures/lift_hard_soft.pdf
 """
@@ -31,7 +35,12 @@ def main(out_path):
 
     hard = lifts("results/hard/topic_circles.csv")
     soft = lifts("results/soft/pooled/comparisons.csv", ("lift", "lift_chain_q05", "lift_chain_q95"))
+    hard_attic = lifts("results/hard/topic_circles.csv", comparison="imputations vs attic")
+    soft_attic = lifts("results/soft/pooled/comparisons.csv", ("lift", "lift_chain_q05", "lift_chain_q95"), "imputations vs attic")
     stands_out = lambda v: v[1] > 1 or v[2] < 1
+    side = lambda v: 1 if v[1] > 1 else -1 if v[2] < 1 else 0
+    # the same side of 1 against Classical Attic as against Sophocles
+    also_attic = lambda sophocles, attic: side(sophocles) != 0 and side(attic) == side(sophocles)
     topics = sorted((t for t in soft if stands_out(soft[t]) or stands_out(hard[t])),
                     key=lambda t: soft[t][0])               # largest soft lift on top
     floor = 0.002                                           # a lift of zero sits at the left edge
@@ -53,9 +62,11 @@ def main(out_path):
     ax.set_yticks(range(len(topics)))
     # a topic stands out when its soft 90 % interval lies entirely above 1 (bold) or below 1 (italic)
     def label(t):
-        if soft[t][1] > 1: return r"\textbf{%s}" % t
-        if soft[t][2] < 1: return r"\textit{%s}" % t
-        return t
+        marks = (r"\dag" if also_attic(soft[t], soft_attic[t]) else "") + (r"\ddag" if also_attic(hard[t], hard_attic[t]) else "")
+        name = t + (r"\textsuperscript{%s}" % marks if marks else "")
+        if soft[t][1] > 1: return r"\textbf{%s}" % name
+        if soft[t][2] < 1: return r"\textit{%s}" % name
+        return name
     ax.set_yticklabels([label(t) for t in topics])
     ax.set_ylim(-0.7, len(topics) - 0.3)
     ax.set_xlabel("lift (log scale)")
