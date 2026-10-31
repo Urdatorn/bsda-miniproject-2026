@@ -220,24 +220,24 @@ As a case study, we use the papyrus \textit{P.Oxy 5292} first published in \cite
 \section{Research questions}
 \label{questions}
 
-First some definitions. Let us in this context define a `topic' as a probability distribution over a set vocabulary of lemmata. A topic `stands out' in the imputations when its lift over a baseline corpus, the ratio of its share in the imputations to its share in the baseline, is clearly above or below 1, as made exact in \cref{sec:compare}.
+First some definitions. Let us in this context define a hard `topic' as a set of lemmata, so that every lemma belongs to at most one topic, and a soft `topic' as a probability distribution over the vocabulary of lemmata, so that a lemma can have weight in several. A topic `stands out' in the imputations when its lift over a baseline corpus, the ratio of its share in the imputations to its share in the baseline, is clearly above or below 1, as made exact in \cref{sec:compare}.
 
-The most pertinent baseline is Sophocles' other works, but gradually zooming out we will also consider the other two preserved authors of the genre of tragedy, as well as the Attic dialect as a whole, including prose. We are now ready to ask: are there topics that stand out across chains and iterations of generated papyrus imputations? 
+The most pertinent baseline is Sophocles' extant trimeters, but zooming out we will also consider the Attic dialect as a whole, including prose. We are now ready to ask: are there topics that stand out across chains and iterations of generated papyrus imputations? 
 
 \section{Data}
 \label{sec:data}
 
 \subsection{Hard topics}
-For the Dirichlet-Multinomial analytic model that assumes hard topics, the data is one lemmata vector (with average length 27 lemmata) for each of the \imputations generated imputations (details of the generation method are left to \autoref{walk}). Lemmata from the surviving letters is not counted, only the imputed. 
+For the Dirichlet-Multinomial analytic model that assumes hard topics, the data are one vector of lemma counts for each of the \imputations generated imputations (details of the generation method are left to \autoref{walk}). Only the 2\,499 lemmata of the vocabulary that belong to a hard topic are counted, on average 27 per imputation, and only in the imputed text: lemmata from the surviving letters are not counted.
 
-The main baseline is Sophocles' extant verses of the same meter as the fragment, cut into 444 windows of seventeen consecutive verses, which is the shape of the papyrus fragment. There are two further baselines, one capturing tragedy in general and consisting of Sophocles' peers Aeschylus and Euripides (1\,174 windows), and one capturing Sophocles' dialect, Classical Attic, and consisting of all Attic authors before Alexander the Great (23\,328 windows); both baselines are cut in windows of 30
-lemmata each.
+The main baseline is Sophocles' extant verses of the same meter as the fragment, cut into 444 windows of seventeen consecutive verses, which is the shape of the papyrus fragment. A further baseline captures Sophocles' dialect, Classical Attic: all Attic authors before Alexander the Great, cut into 23\,328 windows of 30
+lemmata each. It overlaps a little with the other data: 13\,\% of its windows are from Aeschylus and Euripides, the soft model's training data (\cref{sec:soft}), and 3\,\% from Sophocles.
 
 Every text and window is machine lemmatised and reduced to a bag of lemmata over a vocabulary of
 3\,128 lemmata.
 
 \subsection{Soft topics}
-Each of the two stages or graphs of the cut Bayesian model presented in the \autoref{sec:soft} and in \autoref{fig:cut} has its own data. The data $z$ for the first graph is lemmata count vectors for Aeschylus' and Euripides' text windows. The data $y$ for the second graph is the lemmata of each imputation (and of each baseline window).
+Each of the two stages or graphs of the cut Bayesian model presented in \autoref{sec:soft} and in \autoref{fig:cut} has its own data. The data $z$ for the first graph are the lemma counts of 1\,174 windows of Aeschylus and Euripides. The data $y$ for the second graph are the lemmata of each imputation (and of each baseline window).
 
 \section{Models and methods}
 \label{sec:models}
@@ -394,27 +394,26 @@ model, italic: below.}
 
 \begin{table}[t]
 \centering
-\begin{tabular}{lrrr}
+\begin{tabular}{lrr}
 \toprule
-Topic & Soph. & A.\,\&\,E. & Attic \\
+Topic & Sophocles & Attic \\
 \midrule
-\multicolumn{4}{l}{Hard topics} \\
-persuade-man-king & \textbf{1.24} & \textbf{1.21} & 1.06 \\
-child-before-bestow & \textbf{1.66} & \textbf{2.19} & \textbf{6.50} \\
-god-true-lord & \textbf{1.77} & \textbf{2.12} & \textbf{1.66} \\
-marriage-couch-bed & \textbf{2.15} & 0.92 & \textbf{3.44} \\
-wrong-vengeance-err & \textbf{1.37} & \textbf{1.29} & \textbf{1.40} \\
+\multicolumn{3}{l}{Hard topics} \\
+persuade-man-king & \textbf{1.24} & 1.06 \\
+child-before-bestow & \textbf{1.66} & \textbf{6.50} \\
+god-true-lord & \textbf{1.77} & \textbf{1.66} \\
+marriage-couch-bed & \textbf{2.15} & \textbf{3.44} \\
+wrong-vengeance-err & \textbf{1.37} & \textbf{1.40} \\
 \midrule
-\multicolumn{4}{l}{Soft topics} \\
-persuade-man-king & \textbf{2.58} & \textbf{2.65} & \textbf{1.52} \\
-child-before-bestow & \textbf{1.36} & \textbf{1.78} & \textbf{2.33} \\
-god-true-lord & \textbf{1.28} & \textbf{1.63} & 1.07 \\
-marriage-couch-bed & 1.26 & 0.93 & \textbf{1.37} \\
-wrong-vengeance-err & 1.13 & \textbf{1.15} & 1.06 \\
+\multicolumn{3}{l}{Soft topics} \\
+persuade-man-king & \textbf{2.58} & \textbf{1.52} \\
+child-before-bestow & \textbf{1.36} & \textbf{2.33} \\
+god-true-lord & \textbf{1.28} & 1.07 \\
+marriage-couch-bed & 1.26 & \textbf{1.37} \\
+wrong-vengeance-err & 1.13 & 1.06 \\
 \bottomrule
 \end{tabular}
-\caption{Lift of the imputations against the three baselines (Sophocles,
-Aeschylus and Euripides, Classical Attic), ordered by the soft lift against
+\caption{Lift of the imputations against the two baselines, ordered by the soft lift against
 Sophocles. Bold: stands out above; italic: below.}
 \label{tab:key}
 \end{table}
@@ -436,13 +435,9 @@ by \textit{marriage-couch-bed} (lift 2.15), and sixteen below, the sea and its
 rivers almost vanishing (\textit{ship-sail-hull} 0.11,
 \textit{river-plain-afar} 0.15).
 
-The further baselines separate the unsophoclean from the untragic
-(\cref{tab:key}).
-\textit{god-true-lord}, \textit{wrong-vengeance-err} and
-\textit{child-before-bestow} stand out above all three (lifts 1.29--6.50).
-\textit{marriage-couch-bed} stands out against Sophocles (2.15) and Classical
-Attic (3.44) but not against Aeschylus and Euripides (0.92, interval
-0.74--1.12), who use that vocabulary more than Sophocles does. Lemma by
+Four of them, \textit{marriage-couch-bed}, \textit{child-before-bestow},
+\textit{god-true-lord} and \textit{wrong-vengeance-err}, stand out against
+Classical Attic too (lifts 1.40--6.50, \cref{tab:key}). Lemma by
 lemma, almost half the excess of \textit{god-true-lord} is a single word:
 \textgreek{θεός} occurs 45.7 times per thousand topic lemmata in the
 restorations against 15.6 in Sophocles. That of \textit{wrong-vengeance-err}
@@ -453,9 +448,8 @@ justice, suffering, toil and the avenger.
 \paragraph{Soft topics.} Under the soft model three topics stand out above
 Sophocles and sixteen below. \textit{persuade-man-king} leads by far (lift
 2.58, interval 1.98--3.31), before \textit{child-before-bestow} (1.36) and
-\textit{god-true-lord} (1.28). It stands out above all three
-baselines, Aeschylus and Euripides (2.65) and Classical Attic (1.52) too,
-as does \textit{child-before-bestow}: an excess over Greek at large, not
+\textit{god-true-lord} (1.28). It stands out against
+Classical Attic too (1.52), as does \textit{child-before-bestow} (2.33): an excess over Greek at large, not
 only over Sophocles. The excess of \textit{persuade-man-king} is one of
 oaths: per thousand lemmata the
 restorations have \textgreek{ὄμνυμι}, swear, 16.4 times against 0.2 in
@@ -691,7 +685,6 @@ Set & Documents & $\hat R > 1.01$ & ESS $< 400$ & Divergent & Tree depth & $\hat
 \midrule
 Imputations & 27\,160 & 2\,241 & 616 & 12 & 632 & 1.21 & 13 \\
 Sophocles & 443 & 60 & 29 & 0 & 20 & 1.22 & 13 \\
-Aeschylus, Euripides & 1\,174 & 165 & 93 & 1 & 36 & 1.32 & 10 \\
 Classical Attic & 23\,328 & 2\,540 & 1\,088 & 12 & 600 & 1.50 & 7 \\
 \bottomrule
 \end{tabular}
