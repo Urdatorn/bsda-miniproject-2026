@@ -220,7 +220,7 @@ As a case study, we use the papyrus \textit{P.Oxy 5292} first published in \cite
 \section{Research questions}
 \label{questions}
 
-First some definitions. Let us in this context define a `topic' as a probability distribution over a set vocabulary of lemmata. Given a baseline corpus, the corpus of imputations' `lift' \textit{r} is defined as the ratio between its mean lemma rates and that of the baseline's. We say that a certain topic $t$ `stands out' in the imputation corpus relative to a baseline when the credible interval of the lift is either entirely greater than or entirely less than 1. 
+First some definitions. Let us in this context define a `topic' as a probability distribution over a set vocabulary of lemmata. A topic `stands out' in the imputations when its lift over a baseline corpus, the ratio of its share in the imputations to its share in the baseline, is clearly above or below 1, as made exact in \cref{sec:compare}.
 
 The most pertinent baseline is Sophocles' other works, but gradually zooming out we will also consider the other two preserved authors of the genre of tragedy, as well as the Attic dialect as a whole, including prose. We are now ready to ask: are there topics that stand out across chains and iterations of generated papyrus imputations? 
 
@@ -361,6 +361,7 @@ given its $N$ lemmata under one state $(\phi, \alpha)$ of the LDA.}
 \end{figure}
 
 \subsection{Comparing the imputations with Sophocles}
+\label{sec:compare}
 
 The \textbf{mean profile}
 $\bar\theta$ of a set of documents averages their posteriors draw by draw and says what
