@@ -247,20 +247,27 @@ The data $y$ for the second graph is the posterior draws of the first graph: pro
 \subsection{Dirichlet-Multinomial for hard topics}
 \label{sec:hard}
 
-For the first model, we assume that each lemma of the vocabulary belongs to exactly one of 34 semantic clusters.\footnote{Word2Vec, \citealt{mikolov2013efficient}, on the lemmatised Greek corpus,
-Ward's method cut at $K = 40$, two rare-lemma and four function-word clusters
-dropped), named by the English glosses of the three non-cognate lemmata
-nearest its centroid, for example \textit{lament-pitiable-groan}
-(\cref{tab:topics}).} A document's topic counts $\mathbf n$ are then
-\[\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta), \qquad
-  \theta \sim \mathrm{Dirichlet}(\kappa \mathbf m),\]
-where $N$ is the document's own length, $\mathbf m$ is Sophocles' topic
-profile and $\kappa = 1$: a restoration is a priori Sophoclean, but the prior
-is worth a single lemma, so a document of twenty lemmata is 95\,\% data. A
-symmetric prior would pull short documents towards the uniform profile and
-so fabricate lift for topics they simply lack. The posterior
-$\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\kappa \mathbf m + \mathbf n)$
-is exact and is sampled by normalised gamma draws.
+The first model makes the topics \emph{hard}: every lemma of the vocabulary
+belongs to exactly one of 34 topics, clusters of lemmata that occur in
+similar contexts.\footnote{Word2Vec vectors \citep{mikolov2013efficient}
+trained on the lemmatised Greek corpus, clustered by Ward's method into 40
+clusters, of which two of rare lemmata and four of function words are
+dropped.} Each topic is named by three lemmata near its centre, for example
+\textit{lament-pitiable-groan} (\cref{tab:topics}). A document then reduces
+to its topic counts $\mathbf n = (n_1, \dots, n_{34})$, how many of its $N$
+lemmata fall in each topic, and these are modelled as draws from the
+document's unknown topic shares $\theta$:
+\[\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta).\]
+The prior on $\theta$ is a Dirichlet centred on Sophocles' topic profile
+$\mathbf m$, his average share of each topic, with a total weight of one
+lemma:
+\[\theta \sim \mathrm{Dirichlet}(\mathbf m).\]
+A restoration is thus Sophoclean until its own lemmata say otherwise, and a
+document of twenty lemmata outweighs the prior twenty to one. Since the
+Dirichlet is conjugate to the multinomial, the posterior is again a
+Dirichlet, the prior's pseudo-counts plus the document's counts,
+\[\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\mathbf m + \mathbf n),\]
+and is sampled directly, without MCMC.
 
 \subsection{Cut two-stage LDA for soft topics}
 \label{sec:soft}
