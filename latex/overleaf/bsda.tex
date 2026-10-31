@@ -315,20 +315,22 @@ in $\theta$ (diagnostics in \autoref{diagnostics}).
   param/.style={circle, draw, fill=gray!20, minimum size=11mm, inner sep=1pt},
   arr/.style={-{Latex[length=2.2mm]}},
 ]
-\node[param] (phi) at (0, 0) {$\phi, \alpha$};
-\node[data] (z) at (0, 2.0) {$z$};
-\node[param] (theta) at (3.2, 0) {$\theta$};
-\node[data] (y) at (3.2, 2.0) {$y$};
+\node[data] (z) at (0, 2.6) {$z$};
+\node[param] (phi) at (0, 1.1) {$\phi$};
+\node[param] (alpha) at (0, -0.4) {$\alpha$};
+\node[data] (y) at (3.2, 2.6) {$y$};
+\node[param] (theta) at (3.2, -0.4) {$\theta$};
 \draw[arr] (phi) -- (z);
+\draw[arr] (alpha) to[bend left=50] (z);
 \draw[arr] (phi) -- (y);
-\draw[arr] (phi) -- (theta);
+\draw[arr] (alpha) -- (theta);
 \draw[arr] (theta) -- (y);
-\draw[dashed, gray] (1.6, -0.8) -- (1.6, 2.6);
-\node[gray] at (-1.1, 1.0) {$G_1$};
-\node[gray] at (4.3, 1.0) {$G_2$};
+\draw[dashed, gray] (1.6, -1.1) -- (1.6, 3.2);
+\node[gray] at (-1.4, 1.1) {$G_1$};
+\node[gray] at (4.3, 1.1) {$G_2$};
 \end{tikzpicture}
 \caption{The cut model, after \citet[Fig.~1]{plummer2015cuts}. Stage~1
-($G_1$) fits the LDA's $(\phi, \alpha)$ to the windows of Aeschylus and
+($G_1$) fits the LDA's topics $\phi$ and prior $\alpha$ to the windows of Aeschylus and
 Euripides, $z$; stage~2 ($G_2$) takes them as given and samples a
 document's topic shares $\theta$ from its lemmata $y$. Nothing flows back
 across the cut.}
