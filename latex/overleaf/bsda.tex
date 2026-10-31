@@ -239,7 +239,7 @@ Every text and window is machine lemmatised and reduced to a bag of lemmata over
 \subsection{Soft topics}
 Each of the two stages or graphs of the cut Bayesian model presented in the \autoref{sec:soft} and in \autoref{fig:cut} has its own data. The data $z$ for the first graph is lemmata count vectors for Aeschylus' and Euripides' text windows.
 
-The data $y$ for the second graph is the posterior draws of the first graph: probability vectors $\phi_{kw_n}$ over the $K$ topics and $N$ lemmata of the vocabulary as well as Dirichlet concentration parameters $\alpha$.
+The data $y$ for the second graph is the lemmata of each imputation (and of each baseline window).
 
 \section{Models and methods}
 \label{sec:models}
