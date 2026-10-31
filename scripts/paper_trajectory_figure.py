@@ -5,11 +5,12 @@ column wide, text set like the body text (figure_style.paper).
 Each line is one of four chains: the posterior mean share of the topic in
 every fifth recorded state (results/soft/trajectory/trajectory.csv, from
 scripts/soft_trajectory.py; the report's section on the lift along the walk
-shows all twenty-four), averaged over a moving window of 1,000 steps and divided
+shows all twenty-eight), averaged over a moving window of 1,000 steps and divided
 by Sophocles' mean share under the same plug-in model
-(results/soft/mean_alpha_lda). The dotted line is the lift of all twenty-four
+(results/soft/mean_alpha_lda). The dotted line is the lift of all twenty-eight
 chains under that model. A chain is numbered by its place among the
-twenty-four: the first round's eight, then the second round's sixteen.
+twenty-eight: the first round's eight, the second round's sixteen, then the
+four topic-seeded ones.
 
 Usage: python scripts/paper_trajectory_figure.py latex/overleaf/figures/trajectory_persuade.pdf
 """
@@ -22,7 +23,7 @@ TOPIC = "persuade-man-king"
 WINDOW = 20                        # states in the moving window: 20 states 50 steps apart, 1,000 steps
 CHAINS = (("chains_judge235_t4_spread", 0), ("chains_judge235_t4_spread", 4),     # two chains of each round of
           ("chains_judge235_t4_spread2", 0), ("chains_judge235_t4_spread2", 8))   # far-apart starts
-FIRST = {"chains_judge235_t4_spread": 1, "chains_judge235_t4_spread2": 9}   # number of each round's first chain
+FIRST = {"chains_judge235_t4_spread": 1, "chains_judge235_t4_spread2": 9, "chains_judge235_t4_topic4": 25}   # number of each round's first chain
 # the four Okabe-Ito colours furthest apart under simulated deutan, protan and tritan vision
 COLOURS = [OKABE_ITO[i] for i in (0, 1, 2, 4)]   # blue, vermillion, orange, sky blue
 
