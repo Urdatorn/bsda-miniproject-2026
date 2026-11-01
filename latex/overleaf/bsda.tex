@@ -534,7 +534,7 @@ Attic & 23\,328 & 2\,540 & 1\,088 & 12 & 600 & 1.50 & 7 \\
 
 \noindent About a tenth of the documents have, at a given state, a topic whose chains disagree: a seeded topic with $\alpha_k$ of 0.1 or 0.2 that the document does not use piles its mass against $\theta_k = 0$, with a thin tail that a chain may stray into. Under a flat Dirichlet(1) prior the same documents sample with hardly a flag. The lifts average over hundreds or thousands of documents, in which one document's Monte Carlo error is averaged away, and the twenty states, each a separate run, agree (\autoref{results}). One imputation and one Sophoclean window, refitted with rstan, reproduce the posterior means of their five largest topics to within 0.01.
 
-\paragraph{The walk.} The chains are compared by the Gelman--Rubin $\hat R$ of every topic's share \citep[§11.4]{gelman2013bda3}, in each round of starts, over all twenty-eight chains, and in the earlier set from Eric Cullhed's starts.
+\paragraph{The walk.} The chains are compared by the Gelman--Rubin $\hat R$ of every topic's share \citep[§11.4]{gelman2013bda3}, in each round of starts, and over all twenty-eight chains.
 
 \begin{center}
 \begin{tabular}{lrrlr}
@@ -546,8 +546,6 @@ First round & 8 & 22 of 34 & 3.07 (\textit{fire-flame-flash}) & 0.98--2.04 \\
 Second round & 16 & 27 of 34 & 1.77 (\textit{rear-sprout-bloom}) & 0.45--1.88 \\
 Topic-seeded & 4 & 19 of 32 & 2.28 (\textit{child-before-bestow}) & 1.13--1.79 \\
 All rounds & 28 & 27 of 34 & 2.82 (\textit{fire-flame-flash}) & 0.52--1.97 \\
-\midrule
-Eric Cullhed's & 16 & 28 of 34 & 1.51 (\textit{lament-pitiable-groan}) & 0.74--3.00 \\
 \bottomrule
 \end{tabular}
 \end{center}
