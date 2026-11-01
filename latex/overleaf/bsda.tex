@@ -232,7 +232,7 @@ The most pertinent baseline is Sophocles' extant trimeters, but zooming out we w
 \paragraph{Hard topics.}
 For the Dirichlet-Multinomial analytic model that assumes hard topics, the data are one vector of lemma counts for each of the \imputations generated imputations (details of the generation method are left to \autoref{walk}). Only the 2\,499 lemmata of the vocabulary that belong to a hard topic are counted, on average 27 per imputation, and only in the imputed text: lemmata from the surviving letters are not counted.
 
-The main baseline is Sophocles' extant verses of the same meter as the fragment, cut into 444 windows of seventeen consecutive verses, which is the shape of the papyrus fragment. A further baseline captures Sophocles' dialect, Classical Attic: all Attic authors before Alexander the Great, cut into 23\,328 windows of 30 lemmata each. It overlaps a little with the other data: 13\,\% of its windows are from Aeschylus and Euripides, the soft model's training data (\autoref{sec:soft}), and 3\,\% from Sophocles.
+The main baseline is Sophocles' extant verses of the same meter as the fragment, cut into 444 windows of seventeen consecutive verses, which is the shape of the papyrus fragment. A further baseline captures Sophocles' dialect, Attic: all Attic authors before Alexander the Great, cut into 23\,328 windows of 30 lemmata each. It overlaps a little with the other data: 13\,\% of its windows are from Aeschylus and Euripides, the soft model's training data (\autoref{sec:soft}), and 3\,\% from Sophocles.
 
 Every text and window is machine lemmatised and reduced to a bag of lemmata over a vocabulary of 3\,128 lemmata.
 
@@ -331,9 +331,9 @@ The restorations are not independent, since successive states of a chain share m
 \label{fig:lift}
 \end{figure}
 
-\paragraph{Hard topics.} It is immediately clear that the imputations semantically speaking write tragedy, since out of nine genres their topic profile is nearest to tragedy.\footnote{Jensen--Shannon divergence 0.052 bits, against 0.089 for comedy and 0.140 for epic.} Their topic profile is, however, not Sophocles' (\autoref{fig:lift}). Seven topics stand out above Sophocles, and sixteen below.\footnote{The topics vary greatly in how many lemmata contribute to their lifts. Lemma by lemma, almost half the excess of \textit{god-true-lord} is a single word: \textgreek{θεός} occurs 45.7 times per thousand topic lemmata in the restorations against 15.6 in Sophocles.} Four of them stand out against Classical Attic too (lifts 1.40--6.50, \autoref{fig:lift}).
+\paragraph{Hard topics.} It is immediately clear that the imputations semantically speaking write tragedy, since out of nine genres their topic profile is nearest to tragedy.\footnote{Jensen--Shannon divergence 0.052 bits, against 0.089 for comedy and 0.140 for epic.} Their topic profile is, however, not Sophocles' (\autoref{fig:lift}). Seven topics stand out above Sophocles, and sixteen below.\footnote{The topics vary greatly in how many lemmata contribute to their lifts. Lemma by lemma, almost half the excess of \textit{god-true-lord} is a single word: \textgreek{θεός} occurs 45.7 times per thousand topic lemmata in the restorations against 15.6 in Sophocles.} Four of them stand out against Attic too (lifts 1.40--6.50, \autoref{fig:lift}).
 
-\paragraph{Soft topics.} Under the soft model three topics stand out above Sophocles and sixteen below. \textit{persuade-man-king} leads by far (lift 2.58, interval 1.98--3.31)\footnote{The excess of \textit{persuade-man-king} is driven by a subtopic of oath-related words. Per thousand lemmata the restorations have \textgreek{ὄμνυμι}, swear, 16.4 times against 0.2 in Sophocles and \textgreek{ὅρκος}, oath, 10.0 against 0.4.}, before \textit{child-before-bestow} (1.36) and \textit{god-true-lord} (1.28), and both stand out against Classical Attic too. The lead of \textit{persuade-man-king} is partly an echo or parroting of the immediate context: the papyrus itself sets the theme of oaths with \textgreek{ὅρκον γάρ} at the start of v.~23.
+\paragraph{Soft topics.} Under the soft model three topics stand out above Sophocles and sixteen below. \textit{persuade-man-king} leads by far (lift 2.58, interval 1.98--3.31)\footnote{The excess of \textit{persuade-man-king} is driven by a subtopic of oath-related words. Per thousand lemmata the restorations have \textgreek{ὄμνυμι}, swear, 16.4 times against 0.2 in Sophocles and \textgreek{ὅρκος}, oath, 10.0 against 0.4.}, before \textit{child-before-bestow} (1.36) and \textit{god-true-lord} (1.28), and both stand out against Attic too. The lead of \textit{persuade-man-king} is partly an echo or parroting of the immediate context: the papyrus itself sets the theme of oaths with \textgreek{ὅρκον γάρ} at the start of v.~23.
 
 Methodologically, an important result is that although the chains have not mixed (\autoref{diagnostics}), they agree on the sign of this lift: 26 of the 28 chains lie above Sophocles over their whole run, though they wander (0.85--7.45, \autoref{fig:trajectory}). 
 
@@ -527,7 +527,7 @@ Set & Documents & $\hat R > 1.01$ & ESS $< 400$ & Divergent & Tree depth & $\hat
 \midrule
 Imputations & 27\,160 & 2\,241 & 616 & 12 & 632 & 1.21 & 13 \\
 Sophocles & 443 & 60 & 29 & 0 & 20 & 1.22 & 13 \\
-Classical Attic & 23\,328 & 2\,540 & 1\,088 & 12 & 600 & 1.50 & 7 \\
+Attic & 23\,328 & 2\,540 & 1\,088 & 12 & 600 & 1.50 & 7 \\
 \bottomrule
 \end{tabular}
 \end{center}

@@ -9,7 +9,7 @@ replicate (results/soft/pooled/comparisons.csv). Only the topics that stand
 out under at least one model (90 % interval entirely above or below 1) are
 drawn. Topics ordered by the soft lift; a topic whose soft interval lies entirely above 1 is
 set in bold, one whose soft interval lies entirely below 1 in italic. A dagger
-marks a topic whose soft lift against Classical Attic stands out in the same
+marks a topic whose soft lift against Attic stands out in the same
 direction as against Sophocles, a double dagger one whose hard lift does
 (results/hard/topic_circles.csv and results/soft/pooled/comparisons.csv,
 imputations vs attic). The number after a topic is the rank, in its soft word
@@ -65,7 +65,7 @@ def main(out_path):
     ranks = preserved_ranks()
     stands_out = lambda v: v[1] > 1 or v[2] < 1
     side = lambda v: 1 if v[1] > 1 else -1 if v[2] < 1 else 0
-    # the same side of 1 against Classical Attic as against Sophocles
+    # the same side of 1 against Attic as against Sophocles
     also_attic = lambda sophocles, attic: side(sophocles) != 0 and side(attic) == side(sophocles)
     topics = sorted((t for t in soft if stands_out(soft[t]) or stands_out(hard[t])),
                     key=lambda t: soft[t][0])               # largest soft lift on top
