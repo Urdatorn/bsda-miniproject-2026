@@ -234,7 +234,7 @@ For the Dirichlet-Multinomial analytic model that assumes hard topics, the data 
 
 The main baseline is Sophocles' extant verses of the same meter as the fragment, cut into 443 windows of seventeen consecutive verses, which is the shape of the papyrus fragment (the hard model also keeps the last fourteen verses as a 444th). A further baseline captures Sophocles' dialect, Attic: all Attic authors before Alexander the Great, cut into 23\,328 windows of 30 lemmata each. It overlaps a little with the other data: 13\,\% of its windows are from Aeschylus and Euripides, the soft model's training data (\autoref{sec:soft}), and 3\,\% from Sophocles.
 
-Every text and window is machine lemmatised and reduced to a bag of lemmata over a vocabulary of 3\,128 lemmata.
+Every text and window is lemmatised and reduced to a bag of lemmata over a vocabulary of 3\,128 lemmata.
 
 \paragraph{Soft topics.}
 Each of the two stages or graphs of the cut Bayesian model presented in \autoref{sec:soft} and in \autoref{fig:cut} has its own data. The data $z$ for the first graph are the lemma counts of 1\,174 windows of Aeschylus and Euripides. The data $y$ for the second graph are the lemmata of each imputation (and of each baseline window).
@@ -245,7 +245,7 @@ Each of the two stages or graphs of the cut Bayesian model presented in \autoref
 \subsection{Dirichlet-Multinomial for hard topics}
 \label{sec:hard}
 
-The first model makes the topics \emph{hard}: every lemma of the vocabulary belongs to exactly one of 34 topics, clusters of lemmata that occur in similar contexts.\footnote{Word2Vec vectors \citep{mikolov2013efficient} trained on the lemmatised Greek corpus, clustered by Ward's method into 40 clusters, of which two of rare lemmata and four of function words are dropped.} Each topic is named by three lemmata near its centre, for example \textit{lament-pitiable-groan} (\autoref{tab:topics}). A document then reduces to its topic counts $\mathbf n = (n_1, \dots, n_{34})$, how many of its $N$ lemmata fall in each topic, and these are modelled as draws from the document's unknown topic shares $\theta$: \[\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta).\] The prior on $\theta$ is a Dirichlet centred on Sophocles' topic profile $\mathbf m$, his average share of each topic, with a total weight of one lemma: \[\theta \sim \mathrm{Dirichlet}(\mathbf m).\] A restoration is thus Sophoclean until its own lemmata say otherwise, and a document of twenty lemmata outweighs the prior twenty to one. Since the Dirichlet is conjugate to the multinomial, the posterior is \[\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\mathbf m + \mathbf n),\] and is sampled directly in R, without MCMC.
+The first model makes the topics \emph{hard}: every lemma of the vocabulary belongs to exactly one of 34 topics, clusters of lemmata that occur in similar contexts.\footnote{Word2Vec vectors \citep{mikolov2013efficient} trained on the lemmatised Greek corpus, clustered by Ward's method into 40 clusters, six of which (rare lemmata, function words) are dropped.} Each topic is named by three lemmata near its centre, for example \textit{lament-pitiable-groan} (\autoref{tab:topics}). A document then reduces to its topic counts $\mathbf n = (n_1, \dots, n_{34})$, how many of its $N$ lemmata fall in each topic, and these are modelled as draws from the document's unknown topic shares $\theta$: \[\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta).\] The prior on $\theta$ is a Dirichlet centred on Sophocles' topic profile $\mathbf m$, his average share of each topic, with a total weight of one lemma: \[\theta \sim \mathrm{Dirichlet}(\mathbf m).\] A restoration is thus Sophoclean until its own lemmata say otherwise, and a document of twenty lemmata outweighs the prior twenty to one. Since the Dirichlet is conjugate to the multinomial, the posterior is \[\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\mathbf m + \mathbf n),\] and is sampled directly in R, without MCMC.
 
 \subsection{Cut two-stage LDA for soft topics}
 \label{sec:soft}
@@ -314,12 +314,12 @@ model {
 \label{fig:stan}
 \end{figure}
 
-\subsection{The Sophocles baseline: relative lift and outstanding topics}
+\subsection{Lift and outstanding topics}
 \label{sec:compare}
 
 The mean profile $\bar\theta$ of a set of documents averages their posteriors draw by draw and says what the imputations put into the lacunae on average. The `lift' of topic $k$ is the ratio of the imputations' mean share to Sophocles'.
 
-The restorations are not independent, since successive states of a chain share most of their words; the 90\,\% intervals for a lift therefore resample whole chains (and Sophocles by window), and for the soft model each replicate also draws one of the twenty states of $\phi$ and adds back the posterior noise of the two profiles. A topic `stands out' when this interval lies entirely above 1 or entirely below it. With 34 topics, about three would stand out at this level by chance even if none truly differed.
+The restorations are not independent, since successive states of a chain share most of their words; the 90\,\% intervals for a lift therefore resample whole chains (and Sophocles by window), and for the soft model each replicate also draws one of the twenty states of $\phi$ and adds back the posterior noise of the two profiles. A topic `stands out' when this interval lies entirely above 1 or entirely below it. With 34 topics, about three would stand out by chance even if none differed.
 
 \section{Results}
 \label{results}
@@ -333,7 +333,7 @@ The restorations are not independent, since successive states of a chain share m
 
 \paragraph{Hard topics.} It is immediately clear that the imputations semantically speaking write tragedy, since out of nine genres their topic profile is nearest to tragedy. Their topic profile is, however, not Sophocles' (\autoref{fig:lift}). Seven topics stand out above Sophocles, and sixteen below.\footnote{The topics vary greatly in how many lemmata contribute to their lifts. Lemma by lemma, almost half the excess of \textit{god-true-lord} is the single word \textgreek{θεός}.} Six of them stand out against Attic too (lifts 1.40--6.50, \autoref{fig:lift}).
 
-\paragraph{Soft topics.} Under the soft model three topics stand out above Sophocles and sixteen below. Two of the three also stand out against Attic: \textit{persuade-man-king}, which leads by far (lift 2.58, interval 1.98--3.31), and \textit{child-before-bestow} (1.36). The context echoes in some lifts, notably \textit{persuade-man-king} through \textgreek{ὅρκον} in v.~23, but a topic's lift is unrelated to how high its best surviving lemma ranks (Spearman $-0.17$). Document by document the differences are modest: a random imputation has more of \textit{persuade-man-king} than a random window of Sophocles with probability 0.69, and more of the other two topics that stand out above with probability 0.56 and 0.55, where 0.5 would mean no difference.
+\paragraph{Soft topics.} Under the soft model three topics stand out above Sophocles and sixteen below. Two of the three also stand out against Attic: \textit{persuade-man-king}, which leads by far (lift 2.58, interval 1.98--3.31), and \textit{child-before-bestow} (1.36). The context echoes in some lifts, notably \textit{persuade-man-king} through \textgreek{ὅρκον} in v.~23, but a topic's lift is unrelated to how high its best surviving lemma ranks (Spearman $-0.17$). Document by document the differences are modest: a random imputation has more of \textit{persuade-man-king} than a random window of Sophocles with probability 0.69, and more of the other two topics that stand out above with probability 0.56 and 0.55.
 
 Although the chains have not mixed (\autoref{diagnostics}), they agree on the sign of \textit{persuade-man-king}'s lift: 26 of the 28 chains lie above Sophocles over their whole run, though they wander (0.85--7.45, \autoref{fig:trajectory}). 
 
@@ -350,7 +350,7 @@ The soft lifts barely move between the twenty states of $\phi$, but they scale w
 \section{Conclusions: Towards Artificial Philology}
 \label{conclusions}
 
-The research question can be answered in the affirmative: the topics of the imputation corpus do stand out vis-à-vis both Sophocles himself and Attic texts at large. The topic that stood out the most, persuade-man-king, is relevant to the context of the fragment, but so is marriage-couch-bed, which stood out only under the hard model. The most interesting result is that the lead of persuade-man-king held both over long stretches of iterations within chains and between chains, although the chains have not mixed. 
+The research question can be answered in the affirmative: the topics of the imputation corpus do stand out vis-à-vis both Sophocles himself and Attic texts at large. The topic that stood out the most, persuade-man-king, is relevant to the context of the fragment, but so is marriage-couch-bed, which stood out only under the hard model. The most interesting result is that the lead of persuade-man-king held within and between chains, although the chains have not mixed. 
 
 Deeper interpretation of the topics remains to be done, as well as more ablation studies to grasp the causal structure. A limitation that a rerun can remove is that the imputations cover only the ends of verses, while the Sophoclean windows are whole verses, and the imputations are shorter (31 against 39.5 lemmata), so the soft prior pulls them harder towards $\alpha$.
 
