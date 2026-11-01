@@ -333,16 +333,16 @@ The restorations are not independent, since successive states of a chain share m
 
 Methodologically, an important result is that although the chains have not mixed (\autoref{diagnostics}), they agree on the sign of this lift: 26 of the 28 chains lie above Sophocles over their whole run, though they wander (0.85--7.45, \cref{fig:trajectory}). 
 
+\paragraph{Robustness.} The twenty-four first chains give hard log lifts that correlate at 0.73. Four more additional chains, started from texts rich in topics no other start has (ships, rivers, noise, barbarians), lose them within 1\,000 steps, their lifts for those topics falling to 0.03--0.38, and raise 8 of the 9 topics that all chains raise. 
 
-
-\paragraph{Robustness.} The two rounds of starts chosen for distance (8 and 16 chains) give hard log lifts that correlate at 0.73. Four more chains, started from texts rich in topics no other start has (ships, rivers, noise, barbarians), lose them within 1\,000 steps, their lifts for those topics falling to 0.03--0.38, and raise 8 of the 9 topics that all chains raise. The soft lifts barely move between the states of $\phi$ but scale with the prior on $\theta$, whose pseudo-lemmata compete with a document's thirty: a flat Dirichlet(1) shrinks every log lift to about half its learned-prior value. The order barely moves (log lifts correlate at 0.88--0.95), and \textit{persuade-man-king} leads under all four priors tried.
+The soft lifts barely move between the states of $\phi$ but scale with the prior on $\theta$, whose pseudo-lemmata compete with a document's thirty: a flat Dirichlet(1) shrinks every log lift to about half its learned-prior value. The order barely moves (log lifts correlate at 0.88--0.95), and \textit{persuade-man-king} leads under all four priors tried.
 
 \section{Conclusions: Towards Artificial Philology}
 \label{conclusions}
 
 The research question can be answered in the affirmative: the topics of the imputations do not tend to match
 
-This is the first intimation of a new science, which could perhaps be called artificial classical philology, where for the first time the philologist is engaging solely with corpora of artificial texts. In an important way, this science should be seen as subsidiary to the field of \textit{machine interpretability}, since the goal is to approximate with limited computational power traits of the intractably large posterior of the underlying generative language model. It is my hypothesis that a decade from now, something akin to the method of this paper, although standing to it in the relationship of an oil painting to a quick sketch, will be standard procedure in the analysis of ancient fragmentary texts.
+This is the first intimation of a new science, which could perhaps be called artificial classical philology, where for the first time the philologist is engaging solely with corpora of artificial texts. In an important way, this science should be seen as subsidiary to the field of \textit{machine interpretability}, since the goal is to approximate with limited computational power traits of the intractably large posterior of the underlying generative language model.\footnote{\citet[p.\ 8]{nichols1990philology} conceived of the gaps and variance of the manuscript matrix, a compound of mistakes and agendas from many times and places, as a way for the philologist to, as it were, glimpse the unconscious of ``poet, artist or artisan'', i.e\ of going beyond monolithic artistic intention. Analogously, the ``imputation matrix'' lets the philologist glimpse, to speak with  the machinic unconscious of the } It is my hypothesis that a decade from now, something akin to the method of this paper, although standing to it in the relationship of an oil painting to a quick sketch, will be standard procedure in the analysis of ancient fragmentary texts.
 
 \bibliography{bsda}
 \bibliographystyle{icml2025}
@@ -544,7 +544,7 @@ Eric Cullhed's & 16 & 28 of 34 & 1.51 (\textit{lament-pitiable-groan}) & 0.74--3
 
 \noindent The chains have not mixed in 10\,000 steps, whether or not they share an origin, which is why both models' intervals resample whole chains (chain lifts: 5th to 95th percentile). There is little systematic drift after the burn-in: over windows of 1\,000 steps the median absolute slope of a topic's lift is 0.021 per 1\,000 steps, the steepest 0.105 (\textit{marriage-couch-bed}).
 
-\begin{figure}[t]
+\begin{figure}[ht]
 \centering
 \includegraphics{figures/trajectory_persuade.pdf}
 \caption{Soft lift of \textit{persuade-man-king} against Sophocles along four of the twenty-eight chains, numbered at their ends (windows of 1,000 steps). Dotted: all chains.}
