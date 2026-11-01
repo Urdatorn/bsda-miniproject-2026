@@ -76,8 +76,10 @@
 \usepackage{mathtools}
 \usepackage{amsthm}
 
-% if you use cleveref..
-\usepackage[capitalize,noabbrev]{cleveref}
+% \autoref names, capitalised
+\def\sectionautorefname{Section}
+\def\subsectionautorefname{Section}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % THEOREMS
@@ -220,7 +222,7 @@ As a case study, we use the papyrus \textit{P.Oxy 5292} first published in \cite
 \section{Research questions}
 \label{questions}
 
-First some definitions. Let us in this context define a hard `topic' as a set of lemmata, so that every lemma belongs to at most one topic, and a soft `topic' as a probability distribution over the vocabulary of lemmata, so that a lemma can have weight in several. A topic `stands out' in the imputations when its lift over a baseline corpus, the ratio of its share in the imputations to its share in the baseline, is clearly above or below 1, as made exact in \cref{sec:compare}.
+First some definitions. Let us in this context define a hard `topic' as a set of lemmata, so that every lemma belongs to at most one topic, and a soft `topic' as a probability distribution over the vocabulary of lemmata, so that a lemma can have weight in several. A topic `stands out' in the imputations when its lift over a baseline corpus, the ratio of its share in the imputations to its share in the baseline, is clearly above or below 1, as made exact in \autoref{sec:compare}.
 
 The most pertinent baseline is Sophocles' extant trimeters, but zooming out we will also consider the Attic dialect as a whole, including prose. We are now ready to ask: are there topics that stand out across chains and iterations of generated papyrus imputations? 
 
@@ -230,7 +232,7 @@ The most pertinent baseline is Sophocles' extant trimeters, but zooming out we w
 \subsection{Hard topics}
 For the Dirichlet-Multinomial analytic model that assumes hard topics, the data are one vector of lemma counts for each of the \imputations generated imputations (details of the generation method are left to \autoref{walk}). Only the 2\,499 lemmata of the vocabulary that belong to a hard topic are counted, on average 27 per imputation, and only in the imputed text: lemmata from the surviving letters are not counted.
 
-The main baseline is Sophocles' extant verses of the same meter as the fragment, cut into 444 windows of seventeen consecutive verses, which is the shape of the papyrus fragment. A further baseline captures Sophocles' dialect, Classical Attic: all Attic authors before Alexander the Great, cut into 23\,328 windows of 30 lemmata each. It overlaps a little with the other data: 13\,\% of its windows are from Aeschylus and Euripides, the soft model's training data (\cref{sec:soft}), and 3\,\% from Sophocles.
+The main baseline is Sophocles' extant verses of the same meter as the fragment, cut into 444 windows of seventeen consecutive verses, which is the shape of the papyrus fragment. A further baseline captures Sophocles' dialect, Classical Attic: all Attic authors before Alexander the Great, cut into 23\,328 windows of 30 lemmata each. It overlaps a little with the other data: 13\,\% of its windows are from Aeschylus and Euripides, the soft model's training data (\autoref{sec:soft}), and 3\,\% from Sophocles.
 
 Every text and window is machine lemmatised and reduced to a bag of lemmata over a vocabulary of 3\,128 lemmata.
 
@@ -243,16 +245,16 @@ Each of the two stages or graphs of the cut Bayesian model presented in \autoref
 \subsection{Dirichlet-Multinomial for hard topics}
 \label{sec:hard}
 
-The first model makes the topics \emph{hard}: every lemma of the vocabulary belongs to exactly one of 34 topics, clusters of lemmata that occur in similar contexts.\footnote{Word2Vec vectors \citep{mikolov2013efficient} trained on the lemmatised Greek corpus, clustered by Ward's method into 40 clusters, of which two of rare lemmata and four of function words are dropped.} Each topic is named by three lemmata near its centre, for example \textit{lament-pitiable-groan} (\cref{tab:topics}). A document then reduces to its topic counts $\mathbf n = (n_1, \dots, n_{34})$, how many of its $N$ lemmata fall in each topic, and these are modelled as draws from the document's unknown topic shares $\theta$: \[\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta).\] The prior on $\theta$ is a Dirichlet centred on Sophocles' topic profile $\mathbf m$, his average share of each topic, with a total weight of one lemma: \[\theta \sim \mathrm{Dirichlet}(\mathbf m).\] A restoration is thus Sophoclean until its own lemmata say otherwise, and a document of twenty lemmata outweighs the prior twenty to one. Since the Dirichlet is conjugate to the multinomial, the posterior is again a Dirichlet, the prior's pseudo-counts plus the document's counts, \[\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\mathbf m + \mathbf n),\] and is sampled directly, without MCMC.
+The first model makes the topics \emph{hard}: every lemma of the vocabulary belongs to exactly one of 34 topics, clusters of lemmata that occur in similar contexts.\footnote{Word2Vec vectors \citep{mikolov2013efficient} trained on the lemmatised Greek corpus, clustered by Ward's method into 40 clusters, of which two of rare lemmata and four of function words are dropped.} Each topic is named by three lemmata near its centre, for example \textit{lament-pitiable-groan} (\autoref{tab:topics}). A document then reduces to its topic counts $\mathbf n = (n_1, \dots, n_{34})$, how many of its $N$ lemmata fall in each topic, and these are modelled as draws from the document's unknown topic shares $\theta$: \[\mathbf n \mid \theta \sim \mathrm{Multinomial}(N, \theta).\] The prior on $\theta$ is a Dirichlet centred on Sophocles' topic profile $\mathbf m$, his average share of each topic, with a total weight of one lemma: \[\theta \sim \mathrm{Dirichlet}(\mathbf m).\] A restoration is thus Sophoclean until its own lemmata say otherwise, and a document of twenty lemmata outweighs the prior twenty to one. Since the Dirichlet is conjugate to the multinomial, the posterior is again a Dirichlet, the prior's pseudo-counts plus the document's counts, \[\theta \mid \mathbf n \sim \mathrm{Dirichlet}(\mathbf m + \mathbf n),\] and is sampled directly, without MCMC.
 
 \subsection{Cut two-stage LDA for soft topics}
 \label{sec:soft}
 
-Hard clusters put every occurrence of a lemma into one topic, which is a less than ideal model assumption, since it ignores the phenomena of polysemy and topic overlap, which are both central to the study of literature. Letting go of this simplification, the soft model instead gives each topic a distribution $\phi_k$ over the vocabulary (\cref{fig:phi}), fitted once by a seeded latent Dirichlet allocation \citep{blei2003latent} on Aeschylus and Euripides only (tomotopy, \citealt{lee2022tomotopy}), so that Sophocles is a test corpus like the restorations. 
+Hard clusters put every occurrence of a lemma into one topic, which is a less than ideal model assumption, since it ignores the phenomena of polysemy and topic overlap, which are both central to the study of literature. Letting go of this simplification, the soft model instead gives each topic a distribution $\phi_k$ over the vocabulary (\autoref{fig:phi}), fitted once by a seeded latent Dirichlet allocation \citep{blei2003latent} on Aeschylus and Euripides only (tomotopy, \citealt{lee2022tomotopy}), so that Sophocles is a test corpus like the restorations. 
 
 Each hard cluster seeds one topic with a strong prior on its lemmata, and four free topics take up what the clusters miss. The LDA also learns the prior on a document's topic shares, a Dirichlet($\alpha$) with one concentration per topic, the asymmetric prior found by \citet{wallach2009rethinking} to fit topic models better than a symmetric one. The learnt prior is below 1 for every seeded topic (0.04--0.57) and between 4 and 9 for the free ones, which a typical document is thus expected to be mostly made of.
 
-The fit has two stages, and the second never feeds back into the first (a cut model, \citealt{plummer2015cuts}; \cref{fig:cut}). Given one state $(\phi, \alpha)$ of the LDA's chain, a document's lemmata are drawn from the mixture $\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\alpha)$, and the posterior \[p(\theta \mid w_{1:N}) \propto \mathrm{Dirichlet}(\theta \mid \alpha) \prod_{n=1}^{N} \sum_{k=1}^{K} \theta_k\, \phi_{k w_n}\] has no closed form. It is sampled with NUTS in Stan \citep{carpenter2017stan}, one document at a time, by the program in \cref{fig:stan}. This is done for each of the twenty states, and the twenty posteriors are pooled, so that the intervals carry the uncertainty in $\phi$ as well as in $\theta$ (diagnostics in \autoref{diagnostics}).
+The fit has two stages, and the second never feeds back into the first (a cut model, \citealt{plummer2015cuts}; \autoref{fig:cut}). Given one state $(\phi, \alpha)$ of the LDA's chain, a document's lemmata are drawn from the mixture $\sum_k \theta_k \phi_k$ with $\theta \sim \mathrm{Dirichlet}(\alpha)$, and the posterior \[p(\theta \mid w_{1:N}) \propto \mathrm{Dirichlet}(\theta \mid \alpha) \prod_{n=1}^{N} \sum_{k=1}^{K} \theta_k\, \phi_{k w_n}\] has no closed form. It is sampled with NUTS in Stan \citep{carpenter2017stan}, one document at a time, by the program in \autoref{fig:stan}. This is done for each of the twenty states, and the twenty posteriors are pooled, so that the intervals carry the uncertainty in $\phi$ as well as in $\theta$ (diagnostics in \autoref{diagnostics}).
 
 \begin{figure}[t]
 \centering
@@ -329,11 +331,11 @@ The restorations are not independent, since successive states of a chain share m
 \label{fig:lift}
 \end{figure}
 
-\paragraph{Hard topics.} It is immediately clear that the imputations semantically speaking write tragedy, since out of nine genres their topic profile is nearest to tragedy.\footnote{Jensen--Shannon divergence 0.052 bits, against 0.089 for comedy and 0.140 for epic.} Their topic profile is, however, not Sophocles' (\cref{fig:lift}). Seven topics stand out above Sophocles, and sixteen below.\footnote{The topics vary greatly in how many lemmata contribute to their lifts. Lemma by lemma, almost half the excess of \textit{god-true-lord} is a single word: \textgreek{θεός} occurs 45.7 times per thousand topic lemmata in the restorations against 15.6 in Sophocles. That of \textit{wrong-vengeance-err} is spread over the matter of the play: \textgreek{χάρις}, \textgreek{δίκη}, \textgreek{πάθος}, \textgreek{πόνος} and \textgreek{τιμωρός}, favour, justice, suffering, toil and the avenger. } Four of them stand out against Classical Attic too (lifts 1.40--6.50, \cref{fig:lift}).
+\paragraph{Hard topics.} It is immediately clear that the imputations semantically speaking write tragedy, since out of nine genres their topic profile is nearest to tragedy.\footnote{Jensen--Shannon divergence 0.052 bits, against 0.089 for comedy and 0.140 for epic.} Their topic profile is, however, not Sophocles' (\autoref{fig:lift}). Seven topics stand out above Sophocles, and sixteen below.\footnote{The topics vary greatly in how many lemmata contribute to their lifts. Lemma by lemma, almost half the excess of \textit{god-true-lord} is a single word: \textgreek{θεός} occurs 45.7 times per thousand topic lemmata in the restorations against 15.6 in Sophocles. That of \textit{wrong-vengeance-err} is spread over the matter of the play: \textgreek{χάρις}, \textgreek{δίκη}, \textgreek{πάθος}, \textgreek{πόνος} and \textgreek{τιμωρός}, favour, justice, suffering, toil and the avenger. } Four of them stand out against Classical Attic too (lifts 1.40--6.50, \autoref{fig:lift}).
 
 \paragraph{Soft topics.} Under the soft model three topics stand out above Sophocles and sixteen below. \textit{persuade-man-king} leads by far (lift 2.58, interval 1.98--3.31)\footnote{The excess of \textit{persuade-man-king} is one of oaths: per thousand lemmata the restorations have \textgreek{ὄμνυμι}, swear, 16.4 times against 0.2 in Sophocles and \textgreek{ὅρκος}, oath, 10.0 against 0.4, a theme the papyrus itself sets with \textgreek{ὅρκον γάρ} at the start of v.~23.}, before \textit{child-before-bestow} (1.36) and \textit{god-true-lord} (1.28), and both stand out against Classical Attic too (1.52).\footnote{Of the other topics that stand out under the hard model, \textit{marriage-couch-bed} falls back to 1.26 and \textit{wrong-vengeance-err} to 1.13, neither standing out, and \textit{god-true-lord} shrinks from 1.77 to 1.28. The reason is visible in $\phi$: the most frequent words of tragedy leave their clusters for the free topics, which take three quarters of every corpus’s mean profile, Sophocles’ and the imputations’ alike.}
 
-Methodologically, an important result is that although the chains have not mixed (\autoref{diagnostics}), they agree on the sign of this lift: 26 of the 28 chains lie above Sophocles over their whole run, though they wander (0.85--7.45, \cref{fig:trajectory}). 
+Methodologically, an important result is that although the chains have not mixed (\autoref{diagnostics}), they agree on the sign of this lift: 26 of the 28 chains lie above Sophocles over their whole run, though they wander (0.85--7.45, \autoref{fig:trajectory}). 
 
 \subsection{Robustness} 
 
@@ -442,7 +444,7 @@ The content of the prompt sent to Stoicheia to infer an imputation then looks li
 \newpage
 \section{The Metropolis-in-Gibbs walk}\label{walk}
 
-The restorations are the states of a Metropolis-in-Gibbs walk over the seventeen damaged verses; \cref{fig:walk} shows one step. The character-level diffusion model Stoicheia \citep{cullhed2026stoicheiacharacterlevelmaskeddiffusion} proposes new text for a span of one verse, hard formal checks discard impossible candidates, and a surviving candidate is accepted with probability $\min(1, r)$. The ratio $r$ has two parts:
+The restorations are the states of a Metropolis-in-Gibbs walk over the seventeen damaged verses; \autoref{fig:walk} shows one step. The character-level diffusion model Stoicheia \citep{cullhed2026stoicheiacharacterlevelmaskeddiffusion} proposes new text for a span of one verse, hard formal checks discard impossible candidates, and a surviving candidate is accepted with probability $\min(1, r)$. The ratio $r$ has two parts:
 
 \begin{enumerate}
     \item small calibration terms that bring the restorer's habits
