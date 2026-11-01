@@ -12,13 +12,38 @@ set in bold, one whose soft interval lies entirely below 1 in italic. A dagger
 marks a topic whose soft lift against Classical Attic stands out in the same
 direction as against Sophocles, a double dagger one whose hard lift does
 (results/hard/topic_circles.csv and results/soft/pooled/comparisons.csv,
-imputations vs attic).
+imputations vs attic). The number after a topic is the rank, in its soft word
+distribution phi_k (data/soft/phi_matrix.csv.gz), of its highest-ranking
+preserved lemma: a lemma of the papyrus's surviving words, those of the intact
+verses 1-12 (their bags in data/corpus.parquet, with the three the tagger
+missed) and the whole words before the lacunae of verses 13-29.
 
 Usage: python scripts/paper_lift_figure.py latex/overleaf/figures/lift_hard_soft.pdf
 """
-import csv, sys
+import csv, gzip, sys
+
+import pandas as pd
 
 from figure_style import paper, save, COLUMN_WIDTH, OKABE_ITO
+
+
+# lemmata of the surviving words that the intact verses' bags lack: δώματα (v. 10), φυσάντων (v. 8),
+# χρεών (v. 12), which the tagger missed, and the whole words before the lacunae of vv. 13-29
+PRESERVED_EXTRA = ["δῶμα", "φύω", "χρεών", "νόμος", "ὁράω", "χρηστός", "δέσποινα", "λόγος", "ὅρκος", "φράζω",
+                   "κοινός", "ἕρπω", "ἄγρα"]
+
+
+def preserved_ranks():
+    """Each topic's best rank (1 = its most probable lemma) among the preserved lemmata."""
+    rows = csv.reader(gzip.open("data/soft/phi_matrix.csv.gz", "rt", encoding="utf-8"))
+    vocab = next(rows)[1:]
+    corpus = pd.read_parquet("data/corpus.parquet")
+    preserved = {vocab[i] for bag in corpus[corpus.source == "intact"].lemma_idx for i in bag} | set(PRESERVED_EXTRA)
+    ranks = {}
+    for r in rows:
+        order = sorted(range(len(vocab)), key=lambda j: -float(r[j + 1]))
+        ranks[r[0]] = next(k + 1 for k, j in enumerate(order) if vocab[j] in preserved)
+    return ranks
 
 
 def lifts(path, columns=("lift", "lift_q05", "lift_q95"), comparison="imputations vs sophocles"):
@@ -37,6 +62,7 @@ def main(out_path):
     soft = lifts("results/soft/pooled/comparisons.csv", ("lift", "lift_chain_q05", "lift_chain_q95"))
     hard_attic = lifts("results/hard/topic_circles.csv", comparison="imputations vs attic")
     soft_attic = lifts("results/soft/pooled/comparisons.csv", ("lift", "lift_chain_q05", "lift_chain_q95"), "imputations vs attic")
+    ranks = preserved_ranks()
     stands_out = lambda v: v[1] > 1 or v[2] < 1
     side = lambda v: 1 if v[1] > 1 else -1 if v[2] < 1 else 0
     # the same side of 1 against Classical Attic as against Sophocles
@@ -63,7 +89,7 @@ def main(out_path):
     # a topic stands out when its soft 90 % interval lies entirely above 1 (bold) or below 1 (italic)
     def label(t):
         marks = (r"\dag" if also_attic(soft[t], soft_attic[t]) else "") + (r"\ddag" if also_attic(hard[t], hard_attic[t]) else "")
-        name = t + (r"\textsuperscript{%s}" % marks if marks else "")
+        name = t + (r"\textsuperscript{%s}" % marks if marks else "") + " (%d)" % ranks[t]
         if soft[t][1] > 1: return r"\textbf{%s}" % name
         if soft[t][2] < 1: return r"\textit{%s}" % name
         return name
