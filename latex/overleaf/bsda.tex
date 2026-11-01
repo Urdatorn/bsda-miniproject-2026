@@ -342,7 +342,7 @@ Methodologically, an important result is that although the chains have not mixed
 The two models rank the topics alike (Spearman 0.84, log lifts $r = 0.71$), but the soft lifts are compressed towards 1, as is visible in \autoref{fig:lift}.
 
 \paragraph{Hard topics.} 
-The three rounds of starts (8, 16 and 4 chains) give hard log lifts that correlate at 0.70--0.81. The four chains of the last round, started from texts rich in topics no other start has (ships, rivers, noise, barbarians), lose those topics within 1\,000 steps and raise 8 of the 9 topics that the pooled chains raise. 
+The three rounds of starts (8, 16 and 4 chains) give hard log lifts that correlate at 0.70--0.81. The four chains of the last round, started from texts rich in topics no other start has (ships, rivers, noise, barbarians), lose those topics within 1\,000 steps and raise 8 of the 9 topics that the pooled chains raise. A hierarchical model with the chain as unit agrees: the same seven topics stand out above Sophocles (log lifts $r = 0.93$). 
 
 \paragraph{Soft topics.}
 The soft lifts barely move between the twenty states of $\phi$, but they scale with the prior on $\theta$, whose pseudo-lemmata compete with a document's own. With symmetric Dirichlet(0.1), (1) and (2) priors in place of the learned $\alpha$, the log lifts stretch or shrink (slopes 1.52, 0.47 and 0.29) but keep their order (correlations 0.88--0.95), and \textit{persuade-man-king} stands out above Sophocles under all three.

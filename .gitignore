@@ -10,6 +10,8 @@ fonts/times/
 lda_given_phi
 lda_given_phi.hpp
 lda_given_phi.rds
+hard_hierarchical
+hard_hierarchical.hpp
 results/soft/**/theta_draws.npz
 results/soft/**/set_draws.npz
 results/soft/lda/phi_draws.npz
