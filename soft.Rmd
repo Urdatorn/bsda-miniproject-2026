@@ -111,7 +111,8 @@ and every interval below pools the draws of the twenty states.
 
 The documents are those of the hard report: the imputations, one document per
 untilted snapshot, and Sophocles' extant trimeters in windows of seventeen,
-the baseline. The imputations are read on two levels: their **mean
+the baseline, each line masked at its beginning like the papyrus verse it
+stands for. The imputations are read on two levels: their **mean
 profile**, the documents' posteriors averaged draw by draw, compared with
 Sophocles' by
 $P(\bar\theta_k^{\text{imp}} > \bar\theta_k^{\text{Soph}})$ and the lift

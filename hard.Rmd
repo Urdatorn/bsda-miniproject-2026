@@ -126,7 +126,9 @@ and needs no sampler beyond `rgamma`. Two sets of documents are compared:
 - the **imputations**: every recorded state of the chains, one document
   each;
 - **Sophocles**, the baseline: every window of seventeen consecutive extant
-  trimeters of Sophocles, one document each, the same shape as the lacuna.
+  trimeters of Sophocles, one document each, the same shape as the lacuna,
+  and damaged like it: the *k*-th line of a window loses as many letters at
+  its beginning as verse 12 + *k* of the papyrus keeps (6 to 11).
 
 Two posteriors are read from each set. The posterior of a **random
 document** is the equal mixture of the documents' posteriors: its spread is
@@ -143,7 +145,11 @@ populations overlap. A topic counts as **raised** when the whole 90 %
 interval of its lift lies above 1, so that the mean-profile probability is
 at least 0.95; a threshold on the lift itself would depend on how far the
 prior shrinks the profiles. Only the restored text enters a document:
-the surviving letters of a damaged verse are never counted.
+the surviving letters of a damaged verse are never counted. The papyrus
+keeps the beginnings of its lines, so the imputations hold only line
+middles and ends; Sophocles' windows are masked the same way, letter for
+letter, so that a word Sophocles tends to put early in the trimeter, or
+late, cannot pass for a difference between the two.
 
 # Data
 
@@ -451,10 +457,11 @@ the works of the Attic authors before Alexander in the Open Greek and Latin
 texts parsed by the same tagger (the tragedians with their lyrics,
 Aristophanes, Thucydides, Xenophon, Plato, Aristotle, the Attic orators and
 the sophists who wrote Attic, 23,328 windows). Sophocles is cut the same
-way. The shares here are plain rates per thousand topic lemmata, pooled
-over the documents of each set; a lift's 90 % interval comes from resampling the
-imputations by chain and a baseline by window. The figures are drawn by
-`scripts/topic_circles.py`, `scripts/topic_lemmata.py` and
+way, from his masked lines; Aeschylus, Euripides and the Attic texts are
+counted whole. The shares here are plain rates per thousand topic lemmata,
+pooled over the documents of each set; a lift's 90 % interval comes from
+resampling the imputations by chain and a baseline by window. The figures
+are drawn by `scripts/topic_circles.py`, `scripts/topic_lemmata.py` and
 `scripts/genre_distance.py` from `data/baseline_windows.parquet`
 (`scripts/window_baselines.py`); their tables are in `results/hard/`.
 
@@ -594,7 +601,7 @@ knitr::kable(held, digits = 3, row.names = FALSE)
 
 Opened up lemma by lemma, two of these lifts are of different kinds. Almost
 half of the imputations' excess of *god-true-lord* over Sophocles is one
-word, θεός, with πιστός, ἄγγελος, πίστις and ἀληθής behind it: the judge's
+word, θεός, with ἄγγελος, πιστός, πίστις and ἀληθής behind it: the judge's
 restorer names the god, the messenger and the pledge of faith where
 Sophocles names them less. That of *wrong-vengeance-err* is spread over the
 vocabulary of the play's matter: χάρις, δίκη, πάθος, πόνος, ἀέκων, αἰτέω,
@@ -1082,19 +1089,25 @@ if ("chains_judge235_t4_topic4" %in% present) {
   # resampled chains of all rounds also raise
   topic_round <- raised_in(rounds[["chains_judge235_t4_topic4"]])
   claimed <- raised_in(all_chains, "chain_q05")
+  # "all 8 of the" or "7 of the 8"
+  n_shared <- length(intersect(topic_round, claimed))
+  shared <- if (n_shared == length(claimed)) {
+    sprintf("all %d of the", n_shared)
+  } else {
+    sprintf("%d of the %d", n_shared, length(claimed))
+  }
   kept <- sum(memory$late > 1)
   lead <- if (kept == 0) "No seeded chain keeps its topic." else
     sprintf("%d of the four seeded chains keep their topic.", kept)
   cat(sprintf(paste(
     "\n%s After step 1,300 the four lifts are %s, at most %.2f, where in",
     "the first 1,000 steps they were %s. What the round raises instead",
-    "is, on the posterior interval, %s: %d of the %d topics that all",
-    "chains raise when the chains are resampled.\n\n"),
+    "is, on the posterior interval, %s: %s topics that all chains raise",
+    "when the chains are resampled.\n\n"),
     lead, paste(sprintf("%.2f", memory$late), collapse = ", "),
     max(memory$late),
     paste(sprintf("%.2f", memory$early), collapse = ", "),
-    or_none(topic_round), length(intersect(topic_round, claimed)),
-    length(claimed)))
+    or_none(topic_round), shared))
 }
 ```
 
